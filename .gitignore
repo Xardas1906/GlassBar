@@ -1,0 +1,10 @@
+# Build-Ausgaben
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# Veröffentlichte Releases (werden als Release-Datei hochgeladen, nicht eingecheckt)
+publish/
+*.zip
