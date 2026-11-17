@@ -15,13 +15,36 @@ public partial class SettingsWindow : Window
     private static SettingsWindow? _open;
 
     /// <summary>Öffnet das Fenster (oder holt ein schon offenes nach vorne).</summary>
-    public static void ShowSingle()
+    public static void ShowSingle() => ShowSingle(null);
+
+    /// <summary>Öffnet das Fenster bei einem Abschnitt (Name wie „SecSystem“, siehe Tag der Navigation).</summary>
+    public static void ShowSingle(string? section)
     {
-        if (_open != null) { _open.Activate(); return; }
-        _open = new SettingsWindow();
-        _open.Closed += (_, _) => _open = null;
-        _open.Show();
+        if (_open == null)
+        {
+            _open = new SettingsWindow();
+            _open.Closed += (_, _) => _open = null;
+            _open.Show();
+        }
         _open.Activate();
+        if (section != null)
+        {
+            var w = _open;
+            w.Dispatcher.BeginInvoke(() =>
+            {
+                if (FindNav(w, section) is { } nav) nav.IsChecked = true;
+            }, System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+    }
+
+    private static RadioButton? FindNav(DependencyObject parent, string tag)
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<DependencyObject>())
+        {
+            if (child is RadioButton { GroupName: "Nav" } rb && rb.Tag as string == tag) return rb;
+            if (FindNav(child, tag) is { } found) return found;
+        }
+        return null;
     }
 
     private SettingsWindow()
@@ -435,6 +458,7 @@ public partial class SettingsWindow : Window
     private async void CheckUpdateQuietly()
     {
         ShowVersion();
+        if (Updater.Available is { } known) { OfferUpdate(known); return; }
         try
         {
             var r = await Updater.GetLatestAsync();
@@ -446,6 +470,7 @@ public partial class SettingsWindow : Window
     private void OfferUpdate(Updater.Release r)
     {
         _update = r;
+        Updater.Remember(r);
         ShowVersion(L.F("Neu: Version {0}", r.Version.ToString(3)));
         UpdateButton.Content = L.F("Auf {0} aktualisieren", r.Version.ToString(3));
         UpdateButton.ToolTip = string.IsNullOrWhiteSpace(r.Notes) ? r.Name : r.Notes;
@@ -474,9 +499,17 @@ public partial class SettingsWindow : Window
 
             var release = _update;
             var progress = new Progress<double>(p => UpdateButton.Content = L.F("Lade … {0} %", Math.Round(p * 100)));
-            await Updater.PrepareAsync(release, progress);
-            UpdateButton.Content = L.T("Starte neu …");
-            App.Instance.Quit(); // das Update-Skript ersetzt die Dateien und startet GlassBar wieder
+            if (await Updater.PrepareAsync(release, progress))
+            {
+                UpdateButton.Content = L.T("Starte neu …");
+                App.Instance.Quit(); // das Update-Skript ersetzt die Dateien und startet GlassBar wieder
+            }
+            else
+            {
+                // Setup läuft: es beendet GlassBar gleich selbst und startet die neue Version
+                UpdateButton.Content = L.T("Installiere …");
+                return;
+            }
         }
         catch (System.ComponentModel.Win32Exception)
         {

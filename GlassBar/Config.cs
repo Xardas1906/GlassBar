@@ -4,8 +4,13 @@ namespace GlassBar;
 
 public class Config
 {
+    /// <summary>
+    /// %AppData%\GlassBar – oder der Ordner aus der Umgebungsvariablen GLASSBAR_DATA
+    /// (für die Tests, damit sie nie die echten Einstellungen anfassen).
+    /// </summary>
     public static string Folder { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GlassBar");
+        Environment.GetEnvironmentVariable("GLASSBAR_DATA") is { Length: > 0 } custom ? custom
+        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GlassBar");
     private static string FilePath => Path.Combine(Folder, "config.json");
 
     // ---------- Inhalte (werden nicht im Einstellungsfenster geändert) ----------
@@ -118,16 +123,24 @@ public class Config
     /// <summary>Was hinter Uhr und Pillen liegt: "Light" (Lichtfeld), "Image" (Windows-Hintergrundbild) oder "Solid" (einfarbig).</summary>
     public string WallpaperField { get; set; } = "Light";
 
-    // ---------- Startmenü-Glas ----------
-    /// <summary>Glas-Effekt auf das Windows-Startmenü und die Suche anwenden.</summary>
-    public bool StartMenuGlass { get; set; }
-    /// <summary>Deckkraft des Startmenü-Glases, 0–100 %.</summary>
-    public double StartMenuGlassOpacity { get; set; } = 19;
-
     // ---------- Aufklapp-Fenster ----------
     public bool HoverOpensFolders { get; set; } = true;
     public bool WindowPreviews { get; set; } = true;
     public double HoverDelayMs { get; set; } = 400;
+
+    // ---------- Design ----------
+    /// <summary>Dock, Aufklapp-Fenster und Menüs: "Dark", "Light" oder "Auto" (wie die Windows-Taskleiste).</summary>
+    public string Theme { get; set; } = "Dark";
+
+    // ---------- Tastatur und Maus ----------
+    /// <summary>Win+1…9 öffnet das Programm an dieser Stelle im Dock (Umschalt: neue Instanz).</summary>
+    public bool WinNumberKeys { get; set; } = true;
+    /// <summary>Mausrad über Musik/Schnelleinstellungen = Lautstärke, über einem Programm = zwischen seinen Fenstern wechseln.</summary>
+    public bool WheelActions { get; set; } = true;
+
+    // ---------- System ----------
+    /// <summary>Einmal am Tag leise nach Updates suchen; ein neues Update erscheint im Rechtsklick-Menü des Docks.</summary>
+    public bool AutoCheckUpdates { get; set; } = true;
 
     /// <summary>ARGB-Wert aus Farbe und Deckkraft.</summary>
     public uint Tint(double opacityPercent)
@@ -166,7 +179,7 @@ public class Config
     public void Save()
     {
         try { SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true })); }
-        catch { }
+        catch (Exception ex) { Log.Error("Einstellungen speichern", ex); }
     }
 }
 

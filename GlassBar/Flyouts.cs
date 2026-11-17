@@ -22,10 +22,10 @@ public class FlyoutBase : Window
     public FrameworkElement? Anchor { get; set; }
 
     /// <summary>Tönung des Glases (ARGB). Kleinerer Alpha-Wert = durchsichtiger.</summary>
-    public uint GlassTint => App.Config.Tint(App.Config.FlyoutOpacity);
+    public uint GlassTint => Theme.Tint(App.Config, App.Config.FlyoutOpacity);
 
     /// <summary>Glas neu anwenden (nach Änderung in den Einstellungen).</summary>
-    public void ApplyGlass() { if (Handle != IntPtr.Zero) Native.ApplyGlass(Handle, GlassTint); }
+    public void ApplyGlass() { if (Handle != IntPtr.Zero) Theme.ApplyGlass(this, Handle, App.Config.FlyoutOpacity); }
 
     /// <summary>Per Klick geöffnet: bleibt offen, bis man woanders hinklickt.</summary>
     public bool Sticky { get; private set; }
@@ -44,7 +44,7 @@ public class FlyoutBase : Window
         ShowActivated = false;
         SizeToContent = SizeToContent.WidthAndHeight;
         Background = Brushes.Transparent;
-        Foreground = Brushes.White;
+        SetResourceReference(ForegroundProperty, "Fg"); // helles oder dunkles Design (Theme)
         Left = Top = -30000;
         UseLayoutRounding = true;
 
@@ -62,7 +62,7 @@ public class FlyoutBase : Window
             Handle = new WindowInteropHelper(this).Handle;
             if (HwndSource.FromHwnd(Handle) is { CompositionTarget: { } ct }) ct.BackgroundColor = Colors.Transparent;
             Native.AddExStyle(Handle, Native.WS_EX_TOOLWINDOW);
-            Native.ApplyGlass(Handle, GlassTint);
+            Theme.ApplyGlass(this, Handle, App.Config.FlyoutOpacity);
         };
 
         SizeChanged += (_, _) => Reposition();
@@ -186,7 +186,7 @@ public class PreviewFlyout : FlyoutBase
         {
             var title = new TextBlock
             {
-                FontSize = 12, Foreground = Brushes.White, TextTrimming = TextTrimming.CharacterEllipsis,
+                FontSize = 12, Foreground = Theme.Get("Fg"), TextTrimming = TextTrimming.CharacterEllipsis,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 4, 0),
             };
             title.SetBinding(TextBlock.TextProperty, new Binding(nameof(ApplicationWindow.Title)) { Source = w });
@@ -200,7 +200,7 @@ public class PreviewFlyout : FlyoutBase
                 Visibility = Visibility.Hidden, ToolTip = L.T("Schließen"),
                 Child = new TextBlock
                 {
-                    Text = "", FontFamily = IconFont, FontSize = 10, Foreground = Brushes.White,
+                    Text = "", FontFamily = IconFont, FontSize = 10, Foreground = Theme.Get("Fg"),
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
                 },
             };
@@ -222,11 +222,11 @@ public class PreviewFlyout : FlyoutBase
             {
                 Width = 236, Padding = new Thickness(8), Margin = new Thickness(2), CornerRadius = new CornerRadius(8),
                 Background = w.State == ApplicationWindow.WindowState.Active
-                    ? new SolidColorBrush(Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF)) : Brushes.Transparent,
+                    ? Theme.Get("Hover") : Brushes.Transparent,
                 Child = new StackPanel { Children = { header, host } },
             };
             var normalBg = card.Background;
-            card.MouseEnter += (_, _) => { card.Background = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)); close.Visibility = Visibility.Visible; };
+            card.MouseEnter += (_, _) => { card.Background = Theme.Get("Pressed"); close.Visibility = Visibility.Visible; };
             card.MouseLeave += (_, _) => { card.Background = normalBg; close.Visibility = Visibility.Hidden; };
             card.MouseUp += (_, e) =>
             {
@@ -306,7 +306,7 @@ public class TrayFlyout : FlyoutBase
         var hint = new TextBlock
         {
             Text = L.T("Umschalt + Rechtsklick: im Dock anzeigen / ausblenden"),
-            Foreground = new SolidColorBrush(Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF)),
+            Foreground = Theme.Get("FgDim"),
             FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Width = 7 * 30.0, Margin = new Thickness(2, 8, 2, 0),
         };
 

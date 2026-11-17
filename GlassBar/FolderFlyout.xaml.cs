@@ -551,7 +551,7 @@ public partial class FolderFlyout : FlyoutBase
                 },
                 true, new ShellMenuCommandBuilder(), post);
         }
-        catch { }
+        catch (Exception ex) { Log.Error("Kontextmenü im Ordner", ex); }
         finally { SuppressClose = false; }
     }
 

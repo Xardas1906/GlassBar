@@ -1,0 +1,27 @@
+# Baut GlassBar und führt die Tests aus – bei jedem Push auf main und jedem Pull Request.
+name: Build und Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Bauen
+        run: dotnet build GlassBar/GlassBar.csproj -c Release
+
+      - name: Testen
+        run: dotnet test GlassBar.Tests/GlassBar.Tests.csproj -c Release --logger "console;verbosity=normal"

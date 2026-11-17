@@ -113,7 +113,7 @@ internal static class Native
     /// Glas-Effekt: Unschärfe hinter dem Fenster, getönt mit <paramref name="tint"/> (ARGB, z. B. 0x60202020 =
     /// dunkelgrau, ca. 38 % deckend). Rundung und dunkler Rahmen kommen von Windows 11.
     /// </summary>
-    public static void ApplyGlass(IntPtr hwnd, uint tint, bool blur = true)
+    public static void ApplyGlass(IntPtr hwnd, uint tint, bool blur = true, bool plainBlur = false)
     {
         int dark = 1, round = 2, none = 1;
         DwmSetWindowAttribute(hwnd, 20, ref dark, 4);   // dunkler Modus
@@ -126,7 +126,9 @@ internal static class Native
         uint a = tint >> 24, r = (tint >> 16) & 0xFF, g = (tint >> 8) & 0xFF, b = tint & 0xFF;
         var accent = new AccentPolicy
         {
-            AccentState = blur ? 4 : 2, // 4 = ACRYLICBLURBEHIND, 2 = TRANSPARENTGRADIENT (ohne Unschärfe); Tönung = GradientColor
+            // 4 = ACRYLICBLURBEHIND (Tönung = GradientColor), 3 = BLURBEHIND (nur Unschärfe, die Tönung malt dann WPF,
+            // siehe Theme.ApplyGlass), 2 = TRANSPARENTGRADIENT (ohne Unschärfe)
+            AccentState = !blur ? 2 : plainBlur ? 3 : 4,
             AccentFlags = 2,
             GradientColor = unchecked((int)((a << 24) | (b << 16) | (g << 8) | r)),
         };
@@ -152,11 +154,14 @@ internal static class Native
     [DllImport("uxtheme.dll", EntryPoint = "#136")] private static extern void FlushMenuThemes();
 
     /// <summary>Schaltet für diesen Prozess den dunklen Modus für Win32-Menüs ein (wie im Explorer).</summary>
-    public static void EnableDarkMenus()
+    public static void EnableDarkMenus() => SetMenuTheme(light: false);
+
+    /// <summary>Win32-Menüs dieses Prozesses hell oder dunkel (passend zum Design, siehe Theme).</summary>
+    public static void SetMenuTheme(bool light)
     {
         try
         {
-            SetPreferredAppMode(2); // ForceDark
+            SetPreferredAppMode(light ? 3 /* ForceLight */ : 2 /* ForceDark */);
             FlushMenuThemes();
         }
         catch { }

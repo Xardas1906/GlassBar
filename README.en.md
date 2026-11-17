@@ -26,6 +26,9 @@
 - Slides out of view when a window covers it; Windows key: first the dock, then Start
 - In games: the first press of the Windows key brings up the dock and releases the mouse
 - Optionally one dock per monitor, each can be pinned to stay visible
+- Progress bars (e.g. downloads) and badges (e.g. unread messages) on app icons
+- Win+1 … 9 opens the app at that position in the dock; the mouse wheel over music/quick settings changes the volume
+- Theme: dark, light or like Windows
 - Customizable start icon: tile, glass, logo only or your own image, with colors and logo styles
 
 **Wallpaper “Still” (native, no browser)**
@@ -37,7 +40,8 @@
 **Settings**
 - Everything applies immediately, with search; values next to sliders can be typed in
 - Starts with Windows via the Task Scheduler
-- One-click updates: Settings › System › Updates
+- One-click updates: Settings › System › Updates (verified with SHA-256; GlassBar checks once a day by itself)
+- If GlassBar crashes, a small watchdog process brings back the Windows taskbar and restarts GlassBar
 - Language: automatic (like Windows), German or English
 
 ## Installation
@@ -56,7 +60,8 @@ If Wallpaper Engine is running, stop its wallpaper before turning on “Still”
 ## Quit and uninstall
 
 - **Quit:** right-click the dock › *Quit GlassBar* – the normal Windows taskbar comes back.
-  If it is missing after a crash, start GlassBar once and quit it, or restart Windows Explorer in Task Manager.
+  After a crash the watchdog brings it back automatically. If it is still missing, start GlassBar once and quit it,
+  or restart Windows Explorer in Task Manager.
 - **Uninstall:** Windows Settings › Apps › GlassBar › Uninstall. GlassBar is closed, autostart is removed,
   and you can choose whether your settings are deleted as well.
 
@@ -72,6 +77,15 @@ Requirements: Windows 11, .NET 10 SDK.
 ```
 dotnet build GlassBar/GlassBar.csproj -c Release
 ```
+
+Tests (they use their own temp folder, never your real settings):
+
+```
+dotnet test GlassBar.Tests/GlassBar.Tests.csproj
+```
+
+GitHub Actions builds and tests every push. A version tag (e.g. `v1.3.0`, matching `<Version>` in `GlassBar.csproj`)
+automatically creates a draft release with the zip and the installer.
 
 Release with zip and installer (requires [Inno Setup 6](https://jrsoftware.org/isinfo.php), e.g. `winget install JRSoftware.InnoSetup`):
 

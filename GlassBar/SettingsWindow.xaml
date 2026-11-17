@@ -18,6 +18,21 @@
         <SolidColorBrush x:Key="CardBorder" Color="#22FFFFFF"/>
         <SolidColorBrush x:Key="Sub" Color="#99FFFFFF"/>
 
+        <!-- Das Einstellungsfenster bleibt dunkel, auch wenn Dock und Menüs hell sind (siehe Theme):
+             die Design-Farben hier mit den dunklen Werten überschreiben -->
+        <SolidColorBrush x:Key="Fg" Color="White"/>
+        <SolidColorBrush x:Key="FgSub" Color="#D0FFFFFF"/>
+        <SolidColorBrush x:Key="FgDim" Color="#80FFFFFF"/>
+        <SolidColorBrush x:Key="FgDisabled" Color="#60FFFFFF"/>
+        <SolidColorBrush x:Key="Hover" Color="#22FFFFFF"/>
+        <SolidColorBrush x:Key="Pressed" Color="#33FFFFFF"/>
+        <SolidColorBrush x:Key="MenuBg" Color="#F82B2B2B"/>
+        <SolidColorBrush x:Key="MenuBorder" Color="#30FFFFFF"/>
+        <SolidColorBrush x:Key="MenuHover" Color="#18FFFFFF"/>
+        <SolidColorBrush x:Key="MenuLine" Color="#28FFFFFF"/>
+        <SolidColorBrush x:Key="Field" Color="#18FFFFFF"/>
+        <SolidColorBrush x:Key="FieldBorder" Color="#20FFFFFF"/>
+
         <!-- Schmale, dunkle Bildlaufleiste -->
         <Style TargetType="ScrollBar">
             <Setter Property="Width" Value="8"/>
@@ -330,14 +345,14 @@
             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecHide" Checked="Nav_Checked">
                 <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7B3;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Ein- und Ausblenden"/></StackPanel>
             </RadioButton>
-            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecStartMenu" Checked="Nav_Checked">
-                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8A1;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Startmenü"/></StackPanel>
-            </RadioButton>
             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecScreens" Checked="Nav_Checked">
                 <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7F4;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Mehrere Bildschirme"/></StackPanel>
             </RadioButton>
             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecFlyouts" Checked="Nav_Checked">
                 <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8A7;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Aufklapp-Fenster"/></StackPanel>
+            </RadioButton>
+            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecInput" Checked="Nav_Checked">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE765;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Tastatur und Maus"/></StackPanel>
             </RadioButton>
             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecWallpaper" Checked="Nav_Checked">
                 <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE91B;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Hintergrund"/></StackPanel>
@@ -366,6 +381,21 @@
                 <TextBlock x:Name="SecLook" Text="Aussehen" Style="{StaticResource Section}"/>
                 <Border Style="{StaticResource CardBox}">
                     <StackPanel>
+                        <StackPanel Margin="0,12,0,6">
+                            <TextBlock Margin="0,0,0,10" TextWrapping="Wrap">
+                                Design von Dock, Aufklapp-Fenstern und Menüs
+                                <LineBreak/><Run Text="Hell: helles Glas mit dunkler Schrift, die Glasfarbe wird dafür aufgehellt. Über dunklem Hintergrund die Deckkraft erhöhen, damit die Schrift lesbar bleibt. Das Einstellungsfenster bleibt dunkel." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="Theme" Content="Dunkel"
+                                             IsChecked="{Binding Theme, Converter={StaticResource Eq}, ConverterParameter=Dark}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="Theme" Content="Hell"
+                                             IsChecked="{Binding Theme, Converter={StaticResource Eq}, ConverterParameter=Light}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="Theme" Content="Wie Windows"
+                                             IsChecked="{Binding Theme, Converter={StaticResource Eq}, ConverterParameter=Auto}"/>
+                            </WrapPanel>
+                        </StackPanel>
+                        <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                 <RadioButton Style="{StaticResource Swatch}" Background="#181818" ToolTip="Dunkelgrau" GroupName="Tint"
@@ -761,36 +791,6 @@
                     </StackPanel>
                 </Border>
 
-                <!-- ============ Startmenü ============ -->
-                <TextBlock x:Name="SecStartMenu" Text="Startmenü" Style="{StaticResource Section}"/>
-                <Border Style="{StaticResource CardBox}">
-                    <StackPanel>
-                        <DockPanel Style="{StaticResource Row}">
-                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding StartMenuGlass}"/>
-                            <TextBlock Style="{StaticResource Label}">
-                                Glas-Effekt auf das Startmenü und die Suche anwenden
-                                <LineBreak/><Run Text="Macht das Startmenü durchsichtig wie das Dock (gleiche Glasfarbe, eigene Deckkraft)." Foreground="{StaticResource Sub}" FontSize="12"/>
-                            </TextBlock>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding StartMenuGlass}">
-                            <TextBlock DockPanel.Dock="Right" Width="60" TextAlignment="Right" VerticalAlignment="Center"
-                                       Text="{Binding StartMenuGlassOpacity, StringFormat={}{0:0} %}" Foreground="{StaticResource Sub}"/>
-                            <Slider DockPanel.Dock="Right" Style="{StaticResource Slide}" Minimum="0" Maximum="100"
-                                    TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding StartMenuGlassOpacity}"/>
-                            <TextBlock Text="Deckkraft des Startmenü-Glases" Style="{StaticResource Label}"/>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}">
-                            <TextBlock DockPanel.Dock="Right" Width="60" TextAlignment="Right" VerticalAlignment="Center"
-                                       Text="{Binding ShellFlyoutGap, StringFormat={}{0:0} px}" Foreground="{StaticResource Sub}"/>
-                            <Slider DockPanel.Dock="Right" Style="{StaticResource Slide}" Minimum="0" Maximum="60"
-                                    TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding ShellFlyoutGap}"/>
-                            <TextBlock Text="Abstand von Startmenü und Suche zum Dock" Style="{StaticResource Label}"/>
-                        </DockPanel>
-                    </StackPanel>
-                </Border>
-
                 <!-- ============ Mehrere Bildschirme ============ -->
                 <TextBlock x:Name="SecScreens" Text="Mehrere Bildschirme" Style="{StaticResource Section}"/>
                 <Border Style="{StaticResource CardBox}">
@@ -866,6 +866,28 @@
                             <Slider DockPanel.Dock="Right" Style="{StaticResource Slide}" Minimum="0" Maximum="60"
                                     TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding FlyoutGap}"/>
                             <TextBlock Text="Abstand von Desktop-Fenster, Vorschau und ausgeblendeten Symbolen zum Dock" Style="{StaticResource Label}"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ Tastatur und Maus ============ -->
+                <TextBlock x:Name="SecInput" Text="Tastatur und Maus" Style="{StaticResource Section}"/>
+                <Border Style="{StaticResource CardBox}">
+                    <StackPanel>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding WinNumberKeys}"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                Win+1 … 9 öffnet das Programm an dieser Stelle im Dock
+                                <LineBreak/><Run Text="Wie ein Klick aufs Symbol. Mit Umschalt öffnet sich ein neues Fenster." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding WheelActions}"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                Mausrad im Dock
+                                <LineBreak/><Run Text="Über Musik und Schnelleinstellungen: Lautstärke. Über einem Programm mit mehreren Fenstern: zwischen ihnen wechseln." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
                         </DockPanel>
                     </StackPanel>
                 </Border>
@@ -965,6 +987,14 @@
                             <TextBlock Style="{StaticResource Label}">
                                 <Run Text="Updates"/>
                                 <LineBreak/><Run x:Name="UpdateStatus" Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding AutoCheckUpdates}"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                Automatisch nach Updates suchen
+                                <LineBreak/><Run Text="Einmal am Tag. Ein neues Update erscheint im Rechtsklick-Menü des Docks." Foreground="{StaticResource Sub}" FontSize="12"/>
                             </TextBlock>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>

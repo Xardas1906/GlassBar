@@ -33,9 +33,10 @@ public class ModernMenu : Window
     private static Action? _onAllClosed;
 
     private static readonly FontFamily IconFont = new("Segoe Fluent Icons, Segoe MDL2 Assets");
-    private static readonly Brush Hover = new SolidColorBrush(Color.FromArgb(0x1E, 0xFF, 0xFF, 0xFF));
-    private static readonly Brush Dim = new SolidColorBrush(Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF));
-    private static readonly Brush Line = new SolidColorBrush(Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF));
+    // Farben aus dem Design (hell oder dunkel, siehe Theme)
+    private static Brush Hover => Theme.Get("SlotHover");
+    private static Brush Dim => Theme.Get("FgDim");
+    private static Brush Line => Theme.Get("MenuLine");
 
     private readonly int _level;
     private Point _anchor;          // Bildschirmposition in DIPs
@@ -74,7 +75,7 @@ public class ModernMenu : Window
         ShowActivated = false;
         SizeToContent = SizeToContent.WidthAndHeight;
         Background = Brushes.Transparent;
-        Foreground = Brushes.White;
+        SetResourceReference(ForegroundProperty, "Fg");
         FontSize = 13;
         UseLayoutRounding = true;
         Left = Top = -30000;
@@ -89,7 +90,7 @@ public class ModernMenu : Window
             var h = new WindowInteropHelper(this).Handle;
             if (HwndSource.FromHwnd(h) is { CompositionTarget: { } ct }) ct.BackgroundColor = Colors.Transparent;
             Native.AddExStyle(h, Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE);
-            Native.ApplyGlass(h, App.Config.Tint(App.Config.MenuOpacity));
+            Theme.ApplyGlass(this, h, App.Config.MenuOpacity);
         };
         SizeChanged += (_, _) => Place();
         _subTimer.Tick += (_, _) => _subTimer.Stop();

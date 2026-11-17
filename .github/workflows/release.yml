@@ -1,0 +1,59 @@
+# Release bauen, sobald ein Versions-Tag (z. B. v1.3.0) gepusht wird:
+# testet, baut Zip und Installer mit installer\build.ps1 und legt einen Release-ENTWURF an.
+# Veröffentlicht wird erst, wenn du den Entwurf auf GitHub prüfst und auf „Publish release“ klickst.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Version prüfen (Tag = <Version> in GlassBar.csproj)
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$proj = Get-Content GlassBar/GlassBar.csproj
+          $version = ($proj.Project.PropertyGroup | Where-Object { $_.Version } | Select-Object -First 1).Version
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Tag $env:GITHUB_REF_NAME passt nicht zur Version $version in GlassBar.csproj"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Testen
+        run: dotnet test GlassBar.Tests/GlassBar.Tests.csproj -c Release
+
+      - name: Inno Setup bereitstellen
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+
+      - name: Zip und Installer bauen
+        shell: pwsh
+        run: ./installer/build.ps1
+
+      - name: Release-Entwurf anlegen
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Schon von Hand veröffentlicht (Release samt Tag auf GitHub angelegt)? Dann nichts überschreiben.
+          gh release view "v$env:VERSION" *> $null
+          if ($LASTEXITCODE -eq 0) { Write-Host "Release v$env:VERSION gibt es schon – nichts zu tun."; exit 0 }
+          gh release create "v$env:VERSION" `
+            "publish/GlassBar-v$env:VERSION-win-x64.zip" `
+            "publish/GlassBar-Setup-$env:VERSION.exe" `
+            --draft --title "GlassBar $env:VERSION" --generate-notes

@@ -88,13 +88,19 @@ function SetEvent(H: THandle): Boolean;
 function CloseHandle(H: THandle): Boolean;
   external 'CloseHandle@kernel32.dll stdcall';
 
-function GlassBarRunning(): Boolean;
+function MutexExists(Name: String): Boolean;
 var
   H: THandle;
 begin
-  H := OpenMutex(SYNCHRONIZE, False, 'GlassBar_SingleInstance');
+  H := OpenMutex(SYNCHRONIZE, False, Name);
   Result := H <> 0;
   if Result then CloseHandle(H);
+end;
+
+{ GlassBar selbst oder sein Wächter-Prozess (beide belegen GlassBar.exe) }
+function GlassBarRunning(): Boolean;
+begin
+  Result := MutexExists('GlassBar_SingleInstance') or MutexExists('GlassBar_Watchdog');
 end;
 
 { Laufendes GlassBar sauber beenden (gibt dabei die Windows-Taskleiste zurück). }

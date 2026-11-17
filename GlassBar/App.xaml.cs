@@ -10,6 +10,8 @@ public partial class App : Application
     private ShellManager? _shell;
     private TaskbarWindow? _bar;
     private bool _cleanedUp;
+    private bool _afterCrash;
+    private readonly Queue<DateTime> _recentErrors = new();
 
     public static Config Config { get; private set; } = new();
     public static App Instance => (App)Current;
@@ -23,6 +25,25 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // Wächter-Prozess: wartet nur, bis GlassBar endet, und räumt nach einem Absturz auf (siehe Watchdog)
+        if (e.Args.Contains("--watchdog", StringComparer.OrdinalIgnoreCase))
+        {
+            Config = Config.Load();
+            L.Init(Config.Language);
+            new Thread(() =>
+            {
+                string? message = null;
+                try { Watchdog.Run(e.Args, m => message = m); } catch (Exception ex) { Log.Error("Wächter", ex); }
+                Dispatcher.BeginInvoke(() =>
+                {
+                    if (message != null) MessageBox.Show(message, "GlassBar", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    Shutdown();
+                });
+            }) { IsBackground = true, Name = "GlassBar Wächter" }.Start();
+            return;
+        }
+        _afterCrash = e.Args.Contains("--after-crash", StringComparer.OrdinalIgnoreCase);
+
         // Neustart (z. B. nach Sprachwechsel): erst warten, bis die alte Instanz beendet ist
         int wi = Array.FindIndex(e.Args, a => a.Equals("--wait-for", StringComparison.OrdinalIgnoreCase));
         if (wi >= 0 && wi + 1 < e.Args.Length && int.TryParse(e.Args[wi + 1], out int oldPid))
@@ -34,7 +55,8 @@ public partial class App : Application
         {
             quit.Set();
             // warten, bis die laufende Instanz weg ist (sie gibt dabei die Taskleiste zurück)
-            for (int i = 0; i < 100 && Mutex.TryOpenExisting("GlassBar_SingleInstance", out var m); i++) { m.Dispose(); Thread.Sleep(100); }
+            for (int i = 0; i < 100 && (Mutex.TryOpenExisting("GlassBar_SingleInstance", out var m) || Mutex.TryOpenExisting("GlassBar_Watchdog", out m)); i++)
+            { m.Dispose(); Thread.Sleep(100); }
             quit.Reset();
             Shutdown();
             return;
@@ -58,13 +80,24 @@ public partial class App : Application
             (_, _) => Dispatcher.BeginInvoke(Quit), null, Timeout.Infinite, true);
 
         DispatcherUnhandledException += OnCrash;
-        AppDomain.CurrentDomain.UnhandledException += (_, _) => Cleanup();
+        AppDomain.CurrentDomain.UnhandledException += (_, ex) =>
+        {
+            // Fehler in einem Hintergrund-Thread: das Programm endet in jedem Fall. Taskleiste zurückgeben;
+            // der Wächter startet GlassBar danach neu.
+            if (ex.ExceptionObject is Exception x) Log.Error("Unbehandelter Fehler (Hintergrund)", x);
+            Cleanup();
+        };
+        TaskScheduler.UnobservedTaskException += (_, ex) =>
+        {
+            Log.Error("Unbeachteter Fehler in einer Aufgabe", ex.Exception);
+            ex.SetObserved();
+        };
 
         // Höhere Priorität: Dock und Hintergrund sollen gleich nach der Anmeldung stehen und nie stocken
         try { System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.AboveNormal; } catch { }
         Config = Config.Load();
         L.Init(Config.Language);
-        Native.EnableDarkMenus();
+        Theme.Apply(); // helles oder dunkles Design (auch für die Win32-Menüs)
 
         var cfg = ShellManager.DefaultShellConfig;
         cfg.EnableTasksService = true;
@@ -75,6 +108,9 @@ public partial class App : Application
         if (Config.PinnedTrayIcons is { Length: > 0 })
             cfg.PinnedNotifyIcons = Config.PinnedTrayIcons;
 
+        // vor dem Ausblenden der Taskleiste, damit der Wächter ihren ursprünglichen Zustand kennt
+        Watchdog.Start(_afterCrash);
+
         _shell = new ShellManager(cfg);
 
         UpdateDocks();
@@ -82,6 +118,8 @@ public partial class App : Application
 
         // Windows-Taskleiste ausblenden (wird beim Beenden wiederhergestellt)
         _shell.ExplorerHelper.HideExplorerTaskbar = true;
+
+        Updater.StartBackgroundCheck();
     }
 
     /// <summary>
@@ -117,6 +155,7 @@ public partial class App : Application
     /// <summary>Einstellungen auf alle Docks anwenden.</summary>
     public void ApplySettingsToDocks()
     {
+        Theme.Apply();
         UpdateDocks();
         foreach (var d in _docks) d.ApplySettings();
     }
@@ -145,22 +184,29 @@ public partial class App : Application
 
     public void Quit()
     {
+        Watchdog.SignalCleanExit();
         Cleanup();
         Shutdown();
     }
 
+    /// <summary>
+    /// Fehler im UI-Thread: protokollieren und weiterlaufen – ein einzelner Fehler (z. B. ein Symbol, das sich nicht
+    /// laden lässt) soll nicht das ganze Dock beenden. Kommen viele Fehler kurz hintereinander, ist GlassBar nicht mehr
+    /// in Ordnung: dann Taskleiste zurückgeben und beenden; der Wächter startet GlassBar neu.
+    /// </summary>
     private void OnCrash(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        try
-        {
-            File.AppendAllText(Path.Combine(Config.Folder, "error.log"),
-                $"[{DateTime.Now}] {e.Exception}\n\n");
-        }
-        catch { }
+        Log.Error("Unbehandelter Fehler", e.Exception);
         e.Handled = true;
-        MessageBox.Show(L.T("GlassBar ist auf einen Fehler gestoßen und wird beendet.") + "\n\n" + e.Exception.Message,
-            "GlassBar", MessageBoxButton.OK, MessageBoxImage.Error);
-        Quit();
+
+        var now = DateTime.Now;
+        _recentErrors.Enqueue(now);
+        while (_recentErrors.Count > 0 && now - _recentErrors.Peek() > TimeSpan.FromSeconds(10)) _recentErrors.Dequeue();
+        if (_recentErrors.Count < 5 || _cleanedUp) return;
+
+        Log.Info("Zu viele Fehler hintereinander – GlassBar wird neu gestartet.");
+        Cleanup();
+        Environment.Exit(Watchdog.RestartExitCode);
     }
 
     private void Cleanup()
@@ -173,7 +219,7 @@ public partial class App : Application
             foreach (var d in _docks.ToList()) d.Close();
             _docks.Clear();
         }
-        catch { }
+        catch (Exception ex) { Log.Error("Beenden: Docks schließen", ex); }
         try
         {
             if (_shell != null)
@@ -182,11 +228,12 @@ public partial class App : Application
                 _shell.Dispose();
             }
         }
-        catch { }
+        catch (Exception ex) { Log.Error("Beenden: Taskleiste zurückgeben", ex); }
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        Watchdog.SignalCleanExit();
         Cleanup();
         base.OnExit(e);
     }

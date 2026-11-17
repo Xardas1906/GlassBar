@@ -18,6 +18,12 @@ internal static class WinKeyHook
     /// <summary>Soll ein einzelner Druck gerade abgefangen werden? (= Dock ist ausgeblendet)</summary>
     public static Func<bool>? ShouldIntercept;
 
+    /// <summary>Win+1…9 selbst übernehmen? (Einstellung; läuft im Thread des Hooks, nur einfache Felder lesen)</summary>
+    public static Func<bool>? HandleNumbers;
+
+    /// <summary>Win+1…9 wurde gedrückt: Index 0–8, true = mit Umschalt (neue Instanz). Kommt aus dem Hook-Thread.</summary>
+    public static event Action<int, bool>? NumberPressed;
+
     /// <summary>Markierung für Tastendrücke, die GlassBar selbst sendet.</summary>
     public static readonly UIntPtr Marker = new(0x47425221);
 
@@ -42,6 +48,11 @@ internal static class WinKeyHook
     private static bool _winDown;        // Windows-Taste ist gerade gedrückt
     private static bool _held;           // ... und wurde von uns zurückgehalten
     private static uint _heldVk;
+    private static bool _swallowWinUp;   // Windows hat die Windows-Taste nie gesehen -> auch das Loslassen verschlucken
+    private static uint _digitDown;      // gerade gehaltene Ziffer (Tastenwiederholung nicht erneut auslösen)
+
+    [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int vk);
+    private static bool IsDown(int vk) => (GetAsyncKeyState(vk) & 0x8000) != 0;
 
     [StructLayout(LayoutKind.Sequential)] private struct MSG { public IntPtr Hwnd; public uint Message; public IntPtr W, L; public uint Time; public int X, Y; }
     [DllImport("user32.dll")] private static extern int GetMessage(out MSG m, IntPtr h, uint min, uint max);
@@ -111,6 +122,12 @@ internal static class WinKeyHook
             if (up)
             {
                 _winDown = false;
+                _digitDown = 0;
+                if (_swallowWinUp)
+                {
+                    _swallowWinUp = false;
+                    return (IntPtr)1;
+                }
                 if (_held)
                 {
                     // Nur die Windows-Taste allein gedrückt -> nur das Dock zeigen, kein Startmenü
@@ -120,6 +137,36 @@ internal static class WinKeyHook
                 }
             }
             return CallNextHookEx(_hook, nCode, wParam, lParam);
+        }
+
+        // Win+1…9: Programm an dieser Stelle im Dock öffnen (wie bei der Windows-Taskleiste – deren Reihenfolge
+        // stimmt nicht mit dem Dock überein, darum übernimmt GlassBar das selbst). Strg/Alt+Win+Ziffer bleibt bei Windows.
+        if (_winDown && k.vkCode is >= 0x31 and <= 0x39 && !IsDown(0x11 /* Strg */) && !IsDown(0x12 /* Alt */)
+            && HandleNumbers?.Invoke() == true)
+        {
+            if (up)
+            {
+                if (_digitDown == k.vkCode) _digitDown = 0;
+                return (IntPtr)1;
+            }
+            if (!down) return CallNextHookEx(_hook, nCode, wParam, lParam);
+            if (_digitDown == k.vkCode) return (IntPtr)1; // Tastenwiederholung
+            _digitDown = k.vkCode;
+            if (_held)
+            {
+                // Windows-Taste wurde zurückgehalten und kommt nie bei Windows an
+                _held = false;
+                _swallowWinUp = true;
+            }
+            else
+            {
+                // Windows hat die Windows-Taste gesehen: eine unbelegte Taste nachschieben, damit das Loslassen
+                // nicht das Startmenü öffnet (Windows hält es sonst für einen einzelnen Druck)
+                Send(0xE8, up: false);
+                Send(0xE8, up: true);
+            }
+            NumberPressed?.Invoke((int)(k.vkCode - 0x31), IsDown(0x10 /* Umschalt */));
+            return (IntPtr)1;
         }
 
         // Eine andere Taste, während die Windows-Taste zurückgehalten wird -> es ist ein Kürzel (Win+E …):

@@ -1242,7 +1242,7 @@ public sealed class StillTextLayer : IDisposable
                     File.Move(part, file, true);
                     Interlocked.Increment(ref _version);
                 }
-                catch { }
+                catch (Exception ex) { Log.Error("Schrift laden", ex); }
             });
         }
 

@@ -4,8 +4,16 @@
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <SolidColorBrush x:Key="Accent" Color="#4CC2FF"/>
+        <!-- Design-Farben: Startwerte = dunkles Design; Theme.Apply tauscht sie für das helle Design aus
+             (dort stehen auch die übrigen Schlüssel). Deshalb überall {DynamicResource …} verwenden. -->
+        <SolidColorBrush x:Key="Fg" Color="White"/>
+        <SolidColorBrush x:Key="FgDisabled" Color="#60FFFFFF"/>
         <SolidColorBrush x:Key="Hover" Color="#22FFFFFF"/>
         <SolidColorBrush x:Key="Pressed" Color="#33FFFFFF"/>
+        <SolidColorBrush x:Key="MenuBg" Color="#F82B2B2B"/>
+        <SolidColorBrush x:Key="MenuBorder" Color="#30FFFFFF"/>
+        <SolidColorBrush x:Key="MenuHover" Color="#18FFFFFF"/>
+        <SolidColorBrush x:Key="MenuLine" Color="#28FFFFFF"/>
         <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
         <!-- Knopf in Leiste und Aufklapp-Fenstern -->
@@ -15,29 +23,29 @@
             <Setter Property="Margin" Value="2,0"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{StaticResource Hover}"/>
+                    <Setter Property="Background" Value="{DynamicResource Hover}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style x:Key="Glyph" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
-        <!-- Dunkle Kontextmenüs wie in Windows 11 -->
+        <!-- Kontextmenüs wie in Windows 11 (dunkel oder hell, siehe Theme) -->
         <Style TargetType="ContextMenu">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ContextMenu">
-                        <Border Background="#F82B2B2B" BorderBrush="#30FFFFFF" BorderThickness="1"
+                        <Border Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource MenuBorder}" BorderThickness="1"
                                 CornerRadius="8" Padding="4">
                             <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
                         </Border>
@@ -48,7 +56,7 @@
 
         <Style TargetType="MenuItem">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="MenuItem">
@@ -76,7 +84,7 @@
                             <Popup IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
                                    Placement="Right" HorizontalOffset="6" VerticalOffset="-5"
                                    AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
-                                <Border Background="#F82B2B2B" BorderBrush="#30FFFFFF" BorderThickness="1"
+                                <Border Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource MenuBorder}" BorderThickness="1"
                                         CornerRadius="8" Padding="4">
                                     <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
                                 </Border>
@@ -87,14 +95,14 @@
                                 <Setter TargetName="Arrow" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#18FFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource MenuHover}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
                                 <Setter TargetName="Ico" Property="Visibility" Value="Collapsed"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground" Value="#60FFFFFF"/>
+                                <Setter Property="Foreground" Value="{DynamicResource FgDisabled}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -106,7 +114,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Separator">
-                        <Border Height="1" Margin="4,4" Background="#28FFFFFF"/>
+                        <Border Height="1" Margin="4,4" Background="{DynamicResource MenuLine}"/>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -117,9 +125,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToolTip">
-                        <Border Background="#F82B2B2B" BorderBrush="#30FFFFFF" BorderThickness="1"
+                        <Border Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource MenuBorder}" BorderThickness="1"
                                 CornerRadius="6" Padding="9,6">
-                            <ContentPresenter TextElement.Foreground="White" TextElement.FontSize="12"/>
+                            <ContentPresenter TextElement.Foreground="{DynamicResource Fg}" TextElement.FontSize="12"/>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>

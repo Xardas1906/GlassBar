@@ -8,3 +8,6 @@ using System.Windows;
                                                 //(used if a resource is not found in the page,
                                                 // app, or any theme specific resource dictionaries)
 )]
+
+// Tests (GlassBar.Tests) dürfen interne Teile wie SafeFile, Log und Updater.ParseRelease prüfen
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("GlassBar.Tests")]

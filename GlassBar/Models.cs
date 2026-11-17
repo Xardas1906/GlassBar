@@ -57,6 +57,25 @@ public class AppButton : INotifyPropertyChanged
     public bool IsFlashing => Windows.Any(w => w.State == ApplicationWindow.WindowState.Flashing);
     public int WindowCount => Windows.Count;
 
+    // ---------- Fortschritt und Badge (ITaskbarList3, z. B. Downloads im Browser, ungelesene Nachrichten) ----------
+    // Werte von ManagedShell: ProgressState wie TBPFLAG (0 keiner, 1 unbestimmt, 2 normal, 4 Fehler, 8 Pause),
+    // ProgressValue 0–65535 wie bei der Windows-Taskleiste.
+    private ApplicationWindow? ProgressWindow => Windows.FirstOrDefault(w => (int)w.ProgressState != 0);
+    private int ProgressFlag => ProgressWindow is { } w ? (int)w.ProgressState : 0;
+
+    public bool HasProgress => ProgressFlag != 0;
+    public bool IsIndeterminate => ProgressFlag == 1;
+    public bool IsProgressError => ProgressFlag == 4;
+    public bool IsProgressPaused => ProgressFlag == 8;
+
+    /// <summary>Fortschritt 0–1 (unbestimmt: ganz gefüllt, die Vorlage lässt ihn dann pulsieren).</summary>
+    public double ProgressFraction =>
+        IsIndeterminate ? 1 : Math.Clamp((ProgressWindow?.ProgressValue ?? 0) / 65535.0, 0, 1);
+
+    /// <summary>Kleines Symbol unten rechts (z. B. Anzahl ungelesener Nachrichten), wie es das Programm setzt.</summary>
+    public ImageSource? OverlayIcon => Windows.Select(w => w.OverlayIcon).FirstOrDefault(i => i != null);
+    public bool HasOverlay => OverlayIcon != null;
+
     // 48-px-Icons (statt 32 px), damit sie im Dock und beim Vergrößern scharf bleiben
     private ShellItem? _exeItem;
     private ShellItem? ExeItem

@@ -129,7 +129,7 @@ public static class NativeStillStore
 
             SafeFile.WriteAllText(FilePath, obj.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch { }
+        catch (Exception ex) { Log.Error("Still-Einstellungen speichern", ex); }
     }
 
     private static bool SameValue(object a, object b) => (a, b) switch

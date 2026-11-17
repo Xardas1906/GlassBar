@@ -26,6 +26,9 @@
 - Fährt nach unten weg, wenn ein Fenster darüberliegt; Windows-Taste: erst Dock, dann Startmenü
 - Im Spiel: Der erste Druck auf die Windows-Taste holt das Dock und gibt die Maus frei
 - Auf Wunsch ein Dock pro Bildschirm
+- Fortschrittsbalken (z. B. Downloads) und Badges (z. B. ungelesene Nachrichten) auf den Programmsymbolen
+- Win+1 … 9 öffnet das Programm an dieser Stelle im Dock; Mausrad über Musik/Schnelleinstellungen ändert die Lautstärke
+- Design: dunkel, hell oder wie Windows
 - Start-Symbol personalisierbar: Kachel, Glas, nur Logo oder eigenes Bild, mit eigener Farbe und Logo-Stil
 
 **Hintergrund „Still“ (nativ, ohne Browser)**
@@ -40,7 +43,8 @@
 
 - Alles wirkt sofort, mit Suche; Werte neben Reglern lassen sich direkt eintippen
 - Startet mit Windows über die Aufgabenplanung
-- Updates mit einem Klick: Einstellungen › System › Updates
+- Updates mit einem Klick: Einstellungen › System › Updates (geprüft per SHA-256; GlassBar sucht einmal am Tag selbst)
+- Stürzt GlassBar ab, holt ein kleiner Wächter-Prozess die Windows-Taskleiste zurück und startet GlassBar neu
 - Sprache: automatisch (wie Windows), Deutsch oder Englisch
 
 ## Installation
@@ -59,7 +63,8 @@ Wenn Wallpaper Engine läuft, dort den Hintergrund beenden, bevor du „Still“
 ## Beenden und Deinstallieren
 
 - **Beenden:** Rechtsklick aufs Dock › *GlassBar beenden* – die normale Windows-Taskleiste kommt zurück.
-  Fehlt sie nach einem Absturz, GlassBar einmal starten und so beenden oder im Task-Manager den Windows-Explorer neu starten.
+  Nach einem Absturz holt der Wächter sie automatisch zurück. Fehlt sie trotzdem, GlassBar einmal starten und so beenden
+  oder im Task-Manager den Windows-Explorer neu starten.
 - **Deinstallieren:** Windows-Einstellungen › Apps › GlassBar › Deinstallieren. GlassBar wird dabei beendet,
   der Autostart entfernt, und du kannst wählen, ob auch die Einstellungen gelöscht werden.
   (Zip-Version: „Mit Windows starten“ ausschalten, beenden, Ordner und `%AppData%\GlassBar` löschen.)
@@ -75,6 +80,15 @@ Voraussetzungen: Windows 11, .NET 10 SDK.
 ```
 dotnet build GlassBar/GlassBar.csproj -c Release
 ```
+
+Tests (benutzen einen eigenen Temp-Ordner, nie deine echten Einstellungen):
+
+```
+dotnet test GlassBar.Tests/GlassBar.Tests.csproj
+```
+
+GitHub Actions baut und testet jeden Push. Ein Versions-Tag (z. B. `v1.3.0`, passend zu `<Version>` in `GlassBar.csproj`)
+legt automatisch einen Release-Entwurf mit Zip und Installer an.
 
 Release mit Zip und Installer (braucht [Inno Setup 6](https://jrsoftware.org/isinfo.php), z. B. `winget install JRSoftware.InnoSetup`):
 

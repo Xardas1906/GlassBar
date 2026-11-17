@@ -65,7 +65,7 @@ internal static class SafeFile
                 {
                     if (!string.IsNullOrWhiteSpace(text) && parse(text) is { } result)
                     {
-                        if (file != path) Log($"{Path.GetFileName(path)} war beschädigt, die Sicherung wurde geladen.");
+                        if (file != path) GlassBar.Log.Info($"{Path.GetFileName(path)} war beschädigt, die Sicherung wurde geladen.");
                         return result;
                     }
                 }
@@ -84,17 +84,7 @@ internal static class SafeFile
         {
             string broken = $"{path}.broken-{DateTime.Now:yyyyMMdd-HHmmss}";
             File.Move(path, broken);
-            Log($"{Path.GetFileName(path)} war beschädigt und wurde als {Path.GetFileName(broken)} beiseitegelegt.");
-        }
-        catch { }
-    }
-
-    private static void Log(string message)
-    {
-        try
-        {
-            Directory.CreateDirectory(Config.Folder);
-            File.AppendAllText(Path.Combine(Config.Folder, "error.log"), $"[{DateTime.Now}] {message}\n\n");
+            GlassBar.Log.Info($"{Path.GetFileName(path)} war beschädigt und wurde als {Path.GetFileName(broken)} beiseitegelegt.");
         }
         catch { }
     }

@@ -87,7 +87,6 @@ public partial class TaskbarWindow : Window
                 if (GetWindowThreadProcessId(hwnd, out uint fgPid) != 0 && fgPid != OwnPid) Ui.CloseOpenMenu();
                 GetWindowRect(h, out var d);
                 LiftShellFlyout(hwnd, d);
-                StyleShellFlyout(hwnd);
             });
             _winEventHook = SetWinEventHook(0x0003 /* EVENT_SYSTEM_FOREGROUND */, 0x0003, IntPtr.Zero, _winEventProc, 0, 0, 0);
             Closed += (_, _) => UnhookWinEvent(_winEventHook);
@@ -95,6 +94,11 @@ public partial class TaskbarWindow : Window
             // läuft im Thread des Tastatur-Hooks -> nur einfache Felder lesen
             WinKeyHook.ShouldIntercept = () => App.Config.WinKeyShowsDockFirst &&
                 (App.Config.WinKeyAllDocks ? DockShown.Values.Any(v => !v) : !_shown);
+            // Win+1…9: Programm an dieser Stelle im Dock
+            WinKeyHook.HandleNumbers = () => App.Config.WinNumberKeys;
+            Action<int, bool> number = (i, shift) => Dispatcher.BeginInvoke(() => OpenByNumber(i, shift));
+            WinKeyHook.NumberPressed += number;
+            Closed += (_, _) => WinKeyHook.NumberPressed -= number;
             WinKeyHook.Install();
             Closed += (_, _) => WinKeyHook.Uninstall();
             FolderFlyout.PinRequested += p => Model!.AddPin(p);
@@ -157,7 +161,7 @@ public partial class TaskbarWindow : Window
         if (HwndSource.FromHwnd(hwnd) is { CompositionTarget: { } ct }) ct.BackgroundColor = System.Windows.Media.Colors.Transparent;
         // Die Leiste soll nie den Fokus klauen – sonst weiß sie nicht mehr, welche App aktiv war.
         Native.AddExStyle(hwnd, Native.WS_EX_NOACTIVATE | Native.WS_EX_TOOLWINDOW);
-        Native.ApplyGlass(hwnd, App.Config.Tint(App.Config.DockOpacity));
+        Theme.ApplyGlass(this, hwnd, App.Config.DockOpacity);
     }
 
     [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
@@ -266,60 +270,6 @@ public partial class TaskbarWindow : Window
                 .Select(p => (uint)p.Id).ToHashSet();
         }
         return _shellPids;
-    }
-
-    // ---------- Glas-Effekt auf das Startmenü ----------
-    private static readonly string[] GlassTargetHosts = { "startmenuexperiencehost", "searchhost" };
-    private HashSet<uint> _glassPids = new();
-    private DateTime _glassPidsAt;
-    private readonly HashSet<IntPtr> _glassApplied = new();
-
-    private HashSet<uint> GlassPids()
-    {
-        if ((DateTime.Now - _glassPidsAt).TotalSeconds > 5)
-        {
-            _glassPidsAt = DateTime.Now;
-            _glassPids = GlassTargetHosts
-                .SelectMany(n => System.Diagnostics.Process.GetProcessesByName(n))
-                .Select(p => (uint)p.Id).ToHashSet();
-        }
-        return _glassPids;
-    }
-
-    private void StyleShellFlyout(IntPtr fg)
-    {
-        if (!App.Config.StartMenuGlass) return;
-        try
-        {
-            GetWindowThreadProcessId(fg, out var fgPid);
-            var pids = GlassPids();
-            if (!pids.Contains(fgPid)) return;
-
-            uint tint = App.Config.Tint(App.Config.StartMenuGlassOpacity);
-            EnumWindows((h, _) =>
-            {
-                GetWindowThreadProcessId(h, out var pid);
-                if (!pids.Contains(pid) || !IsWindowVisible(h)) return true;
-                if (DwmGetWindowAttribute(h, 14, out var cloaked, 4) == 0 && cloaked != 0) return true;
-                Native.ApplyGlass(h, tint);
-                _glassApplied.Add(h);
-                return true;
-            }, IntPtr.Zero);
-        }
-        catch { }
-    }
-
-    /// <summary>Glas auf allen bekannten Startmenü-Fenstern neu anwenden (nach Einstellungsänderung).</summary>
-    internal void ReapplyStartMenuGlass()
-    {
-        if (!IsPrimary) return;
-        if (!App.Config.StartMenuGlass) { _glassApplied.Clear(); return; }
-        uint tint = App.Config.Tint(App.Config.StartMenuGlassOpacity);
-        foreach (var h in _glassApplied.ToList())
-        {
-            if (!IsWindowVisible(h)) { _glassApplied.Remove(h); continue; }
-            Native.ApplyGlass(h, tint);
-        }
     }
 
     private void LiftShellFlyout(IntPtr fg, Native.RECT dock)
@@ -604,7 +554,7 @@ public partial class TaskbarWindow : Window
         StartLogo.Visibility = img != null ? Visibility.Collapsed : Visibility.Visible;
         StartTile.Background = mode switch
         {
-            "Glass" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x3A, 0xFF, 0xFF, 0xFF)),
+            "Glass" => Theme.Get("Chip"),
             "Logo" or "Custom" => System.Windows.Media.Brushes.Transparent,
             _ => _startTileBrush,
         };
@@ -625,6 +575,9 @@ public partial class TaskbarWindow : Window
 
         // Logo: Stil und Farbe
         var logoColor = ParseColor(App.Config.StartLogoColor) ?? System.Windows.Media.Colors.White;
+        // Weißes Logo direkt auf hellem Glas wäre unsichtbar: im hellen Design dunkel zeichnen
+        if (Theme.IsLight && mode is "Glass" or "Logo" && App.Config.StartLogoColor == "White")
+            logoColor = System.Windows.Media.Color.FromRgb(0x1A, 0x1A, 0x1A);
         string[] colorful = { "#F25022", "#7FBA00", "#00A4EF", "#FFB900" };
         int i = 0;
         foreach (var r in StartLogo.Children.OfType<System.Windows.Shapes.Rectangle>())
@@ -659,7 +612,7 @@ public partial class TaskbarWindow : Window
             bmp.Freeze();
             img = bmp;
         }
-        catch { }
+        catch (Exception ex) { Log.Error("Eigenes Bild laden", ex); }
         return ImageCache[key] = img;
     }
 
@@ -709,10 +662,13 @@ public partial class TaskbarWindow : Window
         DesktopGlyph.FontSize = Math.Max(12, c.IconSize * (c.DesktopTileColor == "Transparent" ? 0.8 : 0.52));
         if (custom) { DesktopTile.Background = System.Windows.Media.Brushes.Transparent; return; }
 
+        // Ohne farbige Kachel liegt das Symbol direkt auf dem Glas: Schriftfarbe des Designs (sonst weiß auf der Kachel)
+        bool onGlass = c.DesktopTileColor is "Transparent" or "Glass";
+        DesktopGlyph.Foreground = onGlass ? Theme.Get("Fg") : System.Windows.Media.Brushes.White;
         if (c.DesktopTileColor == "Transparent")
             DesktopTile.Background = System.Windows.Media.Brushes.Transparent;
         else if (c.DesktopTileColor == "Glass")
-            DesktopTile.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x3A, 0xFF, 0xFF, 0xFF));
+            DesktopTile.Background = Theme.Get("Chip");
         else
         {
             var tc = ParseColor(c.DesktopTileColor) ?? System.Windows.Media.Color.FromRgb(0x3B, 0x82, 0xF6);
@@ -869,9 +825,8 @@ public partial class TaskbarWindow : Window
 
         // Glas
         var hwnd = new WindowInteropHelper(this).Handle;
-        if (hwnd != IntPtr.Zero) Native.ApplyGlass(hwnd, c.Tint(c.DockOpacity));
+        Theme.ApplyGlass(this, hwnd, c.DockOpacity);
         foreach (var f in _folderCache.Values) f.ApplyGlass();
-        ReapplyStartMenuGlass();
 
         PlaceDock();
     }
@@ -945,7 +900,7 @@ public partial class TaskbarWindow : Window
         MusicPlayGlyph.Text = _media.IsPlaying ? "" : ""; // Pause / Abspielen
         MusicCover.Background = _media.Cover != null
             ? new System.Windows.Media.ImageBrush(_media.Cover) { Stretch = System.Windows.Media.Stretch.UniformToFill }
-            : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF));
+            : Theme.Get("Cover");
         MusicNoCover.Visibility = _media.Cover == null ? Visibility.Visible : Visibility.Collapsed;
         MusicPill.ToolTip = string.IsNullOrEmpty(_media.Artist) ? _media.Title : $"{_media.Title} – {_media.Artist}";
     }
@@ -1395,6 +1350,45 @@ public partial class TaskbarWindow : Window
         else if (b.ExecutablePath is { } exe) Native.Launch(exe);
     }
 
+    /// <summary>
+    /// Win+1…9: das n-te Programm im Dock – im Dock des Bildschirms, auf dem das aktive Fenster liegt.
+    /// Wie ein Klick (öffnen, nach vorne holen, minimieren, reihum); mit Umschalt eine neue Instanz.
+    /// </summary>
+    private static void OpenByNumber(int index, bool newInstance)
+    {
+        string screen = ScreenOf.Name(GetForegroundWindow());
+        var dock = App.Instance.Docks.FirstOrDefault(d => d.ScreenName == screen) ?? App.Instance.Bar;
+        if (dock == null || index >= dock.Model.Buttons.Count) return;
+        var b = dock.Model.Buttons[index];
+        dock.CloseFlyout();
+        if (newInstance) NewInstance(b);
+        else if (b.IsFolder) Native.Launch(b.Pin!.Target);
+        else ActivateApp(b);
+    }
+
+    // ---------- Mausrad ----------
+
+    /// <summary>Mausrad über Musik oder Schnelleinstellungen: Lautstärke (Windows zeigt dazu seine Anzeige).</summary>
+    private void Volume_MouseWheel(object s, MouseWheelEventArgs e)
+    {
+        if (!App.Config.WheelActions) return;
+        e.Handled = true;
+        byte key = e.Delta > 0 ? (byte)0xAF /* VK_VOLUME_UP */ : (byte)0xAE /* VK_VOLUME_DOWN */;
+        WinKeyHook.Send(key, up: false);
+        WinKeyHook.Send(key, up: true);
+    }
+
+    /// <summary>Mausrad über einem Programm mit mehreren Fenstern: zwischen seinen Fenstern wechseln.</summary>
+    private void App_MouseWheel(object s, MouseWheelEventArgs e)
+    {
+        if (!App.Config.WheelActions || Ctx<AppButton>(s) is not { Windows.Count: > 1 } b) return;
+        e.Handled = true;
+        var wins = b.Windows;
+        int i = wins.ToList().FindIndex(w => w.State == ApplicationWindow.WindowState.Active);
+        int next = i < 0 ? 0 : (i + (e.Delta > 0 ? -1 : 1) + wins.Count) % wins.Count;
+        wins[next].BringToFront();
+    }
+
     /// <summary>Rechtsklick auf eine App: Sprungliste (zuletzt verwendet, Aufgaben) wie bei Windows, darunter die Dock-Befehle.</summary>
     private async Task AppMenuAsync(AppButton b)
     {
@@ -1643,7 +1637,7 @@ public partial class TaskbarWindow : Window
         e.Handled = true;
         CloseFlyout();
 
-        Menu(
+        MenuWithUpdate(
             ("Einstellungen …", "", SettingsWindow.ShowSingle, true),
             null,
             ((IsFixed ? "✓ " : "") + (Screens > 1 ? "Dock auf diesem Bildschirm fixieren" : "Dock fixieren"), "", ToggleFixed,
@@ -1701,6 +1695,18 @@ public partial class TaskbarWindow : Window
     }
 
     // ---------- Hilfsfunktionen ----------
+    /// <summary>Wie <see cref="Menu"/>, aber mit einem gefundenen Update (leise Suche, siehe Updater) ganz oben.</summary>
+    private static void MenuWithUpdate(params (string Header, string Icon, Action Action, bool Enabled)?[] entries)
+    {
+        if (Updater.Available is { } update && update.Version > Updater.Current)
+            entries = new (string, string, Action, bool)?[]
+            {
+                (L.F("Update auf Version {0} installieren …", update.Version.ToString(3)), "", () => SettingsWindow.ShowSingle("SecSystem"), true),
+                null,
+            }.Concat(entries).ToArray();
+        Menu(entries);
+    }
+
     private static void Menu(params (string Header, string Icon, Action Action, bool Enabled)?[] entries)
     {
         var menu = new ContextMenu();

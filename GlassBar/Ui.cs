@@ -66,21 +66,21 @@ public static class Ui
         _open = null;
     }
 
-    /// <summary>Einfacher dunkler Eingabedialog. Gibt null zurück, wenn abgebrochen.</summary>
+    /// <summary>Einfacher Eingabedialog (hell oder dunkel, siehe Theme). Gibt null zurück, wenn abgebrochen.</summary>
     public static string? Ask(Window? owner, string title, string initial = "")
     {
         var box = new TextBox
         {
-            Text = initial, FontSize = 13, Padding = new Thickness(8, 6, 8, 6), Foreground = Brushes.White,
-            CaretBrush = Brushes.White, Background = new SolidColorBrush(Color.FromArgb(0x20, 0xFF, 0xFF, 0xFF)),
+            Text = initial, FontSize = 13, Padding = new Thickness(8, 6, 8, 6), Foreground = Theme.Get("Fg"),
+            CaretBrush = Theme.Get("Fg"), Background = Theme.Get("Field"),
             BorderBrush = (Brush)Application.Current.Resources["Accent"], BorderThickness = new Thickness(0, 0, 0, 2),
         };
         Border Btn(string text, bool primary) => new()
         {
             CornerRadius = new CornerRadius(6), Padding = new Thickness(16, 6, 16, 6), Margin = new Thickness(8, 0, 0, 0),
-            Background = primary ? new SolidColorBrush(Color.FromArgb(0x66, 0x4C, 0xC2, 0xFF)) : new SolidColorBrush(Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF)),
+            Background = primary ? new SolidColorBrush(Color.FromArgb(0x66, 0x4C, 0xC2, 0xFF)) : Theme.Get("Hover"),
             Cursor = Cursors.Hand,
-            Child = new TextBlock { Text = text, Foreground = Brushes.White, FontSize = 13 },
+            Child = new TextBlock { Text = text, Foreground = Theme.Get("Fg"), FontSize = 13 },
         };
         var ok = Btn("OK", true);
         var cancel = Btn(L.T("Abbrechen"), false);
@@ -94,13 +94,13 @@ public static class Ui
             Content = new Border
             {
                 Width = 340, Padding = new Thickness(18), CornerRadius = new CornerRadius(10),
-                Background = new SolidColorBrush(Color.FromArgb(0xFA, 0x2B, 0x2B, 0x2B)),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(1),
+                Background = Theme.Get("MenuBg"),
+                BorderBrush = Theme.Get("MenuBorder"), BorderThickness = new Thickness(1),
                 Child = new StackPanel
                 {
                     Children =
                     {
-                        new TextBlock { Text = L.T(title), Foreground = Brushes.White, FontSize = 15, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 12) },
+                        new TextBlock { Text = L.T(title), Foreground = Theme.Get("Fg"), FontSize = 15, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 12) },
                         box,
                         new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 16, 0, 0), Children = { cancel, ok } },
                     },

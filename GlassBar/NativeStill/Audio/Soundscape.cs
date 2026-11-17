@@ -497,7 +497,7 @@ public static class Soundscape
             using var ac = dev.CreateAudioClient();
             rate = ac.MixFormat.SampleRate;
         }
-        catch { }
+        catch (Exception ex) { Log.Error("Klanglandschaft: Audiogerät", ex); }
         if (rate < 8000 || rate > 384000) rate = 48000;
 
         WasapiPlayer? device = null;

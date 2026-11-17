@@ -60,7 +60,7 @@ public static class StillState
             {
                 SafeFile.WriteAllText(FilePath, _data.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
             }
-            catch { }
+            catch (Exception ex) { Log.Error("Still-Zustand speichern", ex); }
         }
     }
 }

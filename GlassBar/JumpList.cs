@@ -49,7 +49,7 @@ public static class JumpList
             IReadOnlyList<JumpCategory> result = Array.Empty<JumpCategory>();
             var t = new Thread(() =>
             {
-                try { result = LoadCore(appUserModelId, exePath, shortcutPath, anyWindow); } catch { }
+                try { result = LoadCore(appUserModelId, exePath, shortcutPath, anyWindow); } catch (Exception ex) { Log.Error("Sprungliste laden", ex); }
             }) { IsBackground = true, Name = "GlassBar JumpList" };
             t.SetApartmentState(ApartmentState.STA);
             t.Start();

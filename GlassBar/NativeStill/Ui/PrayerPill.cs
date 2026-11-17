@@ -48,7 +48,7 @@ public static class StillPlace
         _ = Task.Run(async () =>
         {
             try { await Resolve().ConfigureAwait(false); }
-            catch { }
+            catch (Exception ex) { Log.Error("Gebetszeiten: Ort bestimmen", ex); }
             finally { Volatile.Write(ref _busy, 0); }
         });
     }
