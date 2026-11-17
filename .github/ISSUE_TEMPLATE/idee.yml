@@ -1,0 +1,18 @@
+name: Idee vorschlagen
+description: Eine neue Funktion oder Verbesserung
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idee
+    attributes:
+      label: Deine Idee
+      description: Was soll GlassBar können? Mehrere Ideen gerne als Liste.
+      placeholder: |
+        - [ ] …
+    validations:
+      required: true
+  - type: textarea
+    id: warum
+    attributes:
+      label: Wofür brauchst du das?
+      description: Optional – hilft, die beste Lösung zu finden.

@@ -1,0 +1,44 @@
+name: Fehler melden
+description: Etwas funktioniert nicht wie erwartet
+labels: ["bug"]
+body:
+  - type: textarea
+    id: was
+    attributes:
+      label: Was ist passiert?
+      description: Beschreibe den Fehler kurz. Screenshots helfen sehr.
+    validations:
+      required: true
+  - type: textarea
+    id: schritte
+    attributes:
+      label: Wie kann man ihn auslösen?
+      placeholder: |
+        1. Rechtsklick auf …
+        2. …
+  - type: textarea
+    id: erwartet
+    attributes:
+      label: Was hättest du erwartet?
+  - type: input
+    id: version
+    attributes:
+      label: GlassBar-Version
+      description: Steht in den Einstellungen unter System › Updates.
+      placeholder: z. B. 1.1.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows-Version
+      description: Win+R › winver
+      placeholder: z. B. Windows 11 24H2
+  - type: dropdown
+    id: bildschirme
+    attributes:
+      label: Wie viele Bildschirme?
+      options:
+        - "1"
+        - "2"
+        - "3 oder mehr"
