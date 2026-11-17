@@ -332,11 +332,20 @@
             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecLook" Checked="Nav_Checked" IsChecked="True">
                 <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE790;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Aussehen"/></StackPanel>
             </RadioButton>
+            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecStart" Checked="Nav_Checked">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE80F;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Start-Knopf"/></StackPanel>
+            </RadioButton>
+            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecItems" Checked="Nav_Checked">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8A9;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Dock-Inhalt"/></StackPanel>
+            </RadioButton>
+            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecInfo" Checked="Nav_Checked">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE823;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Uhr, Musik &amp; Wetter"/></StackPanel>
+            </RadioButton>
             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecHide" Checked="Nav_Checked">
                 <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7B3;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Ein- und Ausblenden"/></StackPanel>
             </RadioButton>
-            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecItems" Checked="Nav_Checked">
-                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8A9;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Elemente im Dock"/></StackPanel>
+            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecScreens" Checked="Nav_Checked">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7F4;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Mehrere Bildschirme"/></StackPanel>
             </RadioButton>
             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecFlyouts" Checked="Nav_Checked">
                 <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8A7;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Aufklapp-Fenster"/></StackPanel>
@@ -425,75 +434,23 @@
                                     TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding BottomMargin}"/>
                             <TextBlock Text="Abstand zum unteren Rand" Style="{StaticResource Label}"/>
                         </DockPanel>
-                    </StackPanel>
-                </Border>
-
-                <!-- ============ Ein- und Ausblenden ============ -->
-                <TextBlock x:Name="SecHide" Text="Ein- und Ausblenden" Style="{StaticResource Section}"/>
-                <Border Style="{StaticResource CardBox}">
-                    <StackPanel>
-                        <StackPanel Margin="0,12,0,12">
-                            <TextBlock Text="Dock ausblenden" Margin="0,0,0,10"/>
-                            <WrapPanel>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="Hide" Content="Wenn ein Fenster darüber liegt"
-                                             IsChecked="{Binding AutoHideMode, Converter={StaticResource Eq}, ConverterParameter=Covered}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="Hide" Content="Nur bei Vollbild"
-                                             IsChecked="{Binding AutoHideMode, Converter={StaticResource Eq}, ConverterParameter=FullScreen}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="Hide" Content="Nie"
-                                             IsChecked="{Binding AutoHideMode, Converter={StaticResource Eq}, ConverterParameter=Never}"/>
-                            </WrapPanel>
-                        </StackPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">
-                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding RevealAtEdge}"/>
-                            <TextBlock Text="Einblenden, wenn die Maus an den unteren Bildschirmrand fährt" Style="{StaticResource Label}"/>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}">
-                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding WinKeyShowsDockFirst}"/>
-                            <TextBlock Style="{StaticResource Label}">
-                                Windows-Taste: 1. Druck zeigt nur das Dock, 2. Druck das Startmenü
-                                <LineBreak/><Run Text="Nur wenn das Dock gerade ausgeblendet ist." Foreground="{StaticResource Sub}" FontSize="12"/>
-                            </TextBlock>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <StackPanel Margin="0,12,0,12" IsEnabled="{Binding WinKeyShowsDockFirst}">
-                            <TextBlock Text="Bei mehreren Bildschirmen: 1. Druck zeigt die Docks, wenn …" Margin="0,0,0,10"/>
-                            <WrapPanel>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="WinKeyDocks" Content="irgendein Dock ausgeblendet ist"
-                                             IsChecked="{Binding WinKeyAllDocks, Converter={StaticResource Eq}, ConverterParameter=True}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="WinKeyDocks" Content="das Dock auf dem Hauptbildschirm ausgeblendet ist"
-                                             IsChecked="{Binding WinKeyAllDocks, Converter={StaticResource Eq}, ConverterParameter=False}"/>
-                            </WrapPanel>
-                        </StackPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}">
-                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding LiftStartMenu}"/>
-                            <TextBlock Text="Startmenü, Suche und Infocenter über das Dock schieben" Style="{StaticResource Label}"/>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}">
-                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding SlideAnimation}"/>
-                            <TextBlock Style="{StaticResource Label}">
-                                Dock nach unten aus dem Bild fahren und wieder hereinfahren
-                                <LineBreak/><Run Text="Aus: Das Dock verschwindet und erscheint ohne Animation." Foreground="{StaticResource Sub}" FontSize="12"/>
-                            </TextBlock>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding SlideAnimation}">
-                            <TextBlock DockPanel.Dock="Right" Width="60" TextAlignment="Right" VerticalAlignment="Center"
-                                       Text="{Binding SlideDurationMs, StringFormat={}{0:0} ms}" Foreground="{StaticResource Sub}"/>
-                            <Slider DockPanel.Dock="Right" Style="{StaticResource Slide}" Minimum="100" Maximum="800"
-                                    TickFrequency="20" IsSnapToTickEnabled="True" Value="{Binding SlideDurationMs}"/>
-                            <TextBlock Text="Dauer der Animation" Style="{StaticResource Label}"/>
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowRunningDots}"/>
+                            <TextBlock Text="Punkt unter laufenden Programmen" Style="{StaticResource Label}"/>
                         </DockPanel>
                     </StackPanel>
                 </Border>
 
-                <!-- ============ Elemente ============ -->
-                <TextBlock x:Name="SecItems" Text="Elemente im Dock" Style="{StaticResource Section}"/>
+                <!-- ============ Start-Knopf ============ -->
+                <TextBlock x:Name="SecStart" Text="Start-Knopf" Style="{StaticResource Section}"/>
                 <Border Style="{StaticResource CardBox}">
                     <StackPanel>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowStartButton}"/>
+                            <TextBlock Text="Startknopf" Style="{StaticResource Label}"/>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
                         <StackPanel Margin="0,12,0,12">
                             <TextBlock Text="Start-Symbol" Margin="0,0,0,10"/>
                             <WrapPanel>
@@ -568,28 +525,13 @@
                                 <LineBreak/><Run Text="Nicht bei „Bunt“ und „Eigenes Bild“." Foreground="{StaticResource Sub}" FontSize="12"/>
                             </TextBlock>
                         </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}">
-                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding DockOnAllScreens}"/>
-                            <TextBlock Style="{StaticResource Label}">
-                                Dock auf allen Bildschirmen anzeigen
-                                <LineBreak/><Run Text="Jeder Bildschirm bekommt ein eigenes Dock. Der Hintergrund „Still“ bleibt auf dem Hauptbildschirm." Foreground="{StaticResource Sub}" FontSize="12"/>
-                            </TextBlock>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding DockOnAllScreens}">
-                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding AppsOnOwnScreen}"/>
-                            <TextBlock Style="{StaticResource Label}">
-                                Nebenbildschirme: nur Programme mit Fenstern auf diesem Bildschirm
-                                <LineBreak/><Run Text="Das Dock auf dem Hauptbildschirm zeigt immer alle. Angeheftete Programme stehen in jedem Dock." Foreground="{StaticResource Sub}" FontSize="12"/>
-                            </TextBlock>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}">
-                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowStartButton}"/>
-                            <TextBlock Text="Startknopf" Style="{StaticResource Label}"/>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ Dock-Inhalt ============ -->
+                <TextBlock x:Name="SecItems" Text="Dock-Inhalt" Style="{StaticResource Section}"/>
+                <Border Style="{StaticResource CardBox}">
+                    <StackPanel>
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowSearchButton}"/>
                             <TextBlock Text="Suche" Style="{StaticResource Label}"/>
@@ -677,12 +619,13 @@
                                 <LineBreak/><Run Text="Minimiert alle Fenster wie der schmale Knopf an der Windows-Taskleiste; nochmal klicken holt sie zurück." Foreground="{StaticResource Sub}" FontSize="12"/>
                             </TextBlock>
                         </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}">
-                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowRunningDots}"/>
-                            <TextBlock Text="Punkt unter laufenden Programmen" Style="{StaticResource Label}"/>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ Uhr, Musik &amp; Wetter ============ -->
+                <TextBlock x:Name="SecInfo" Text="Uhr, Musik &amp; Wetter" Style="{StaticResource Section}"/>
+                <Border Style="{StaticResource CardBox}">
+                    <StackPanel>
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowMusic}"/>
                             <TextBlock Style="{StaticResource Label}">
@@ -691,10 +634,40 @@
                             </TextBlock>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
+                        <StackPanel Margin="0,12,0,6" IsEnabled="{Binding ShowWallpaper}">
+                            <TextBlock Margin="0,0,0,10">
+                                Musik anzeigen
+                                <LineBreak/><Run Text="Im Hintergrund nur, wenn der Hintergrund „Still“ eingeschaltet ist." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceMusic" Content="Im Dock"
+                                             IsChecked="{Binding MusicPlacement, Converter={StaticResource Eq}, ConverterParameter=Dock}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceMusic" Content="Im Hintergrund"
+                                             IsChecked="{Binding MusicPlacement, Converter={StaticResource Eq}, ConverterParameter=Wallpaper}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceMusic" Content="Beides"
+                                             IsChecked="{Binding MusicPlacement, Converter={StaticResource Eq}, ConverterParameter=Both}"/>
+                            </WrapPanel>
+                        </StackPanel>
+                        <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowWeather}"/>
                             <TextBlock Text="Wetter neben der Uhr" Style="{StaticResource Label}"/>
                         </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <StackPanel Margin="0,12,0,6" IsEnabled="{Binding ShowWallpaper}">
+                            <TextBlock Margin="0,0,0,10">
+                                Wetter anzeigen
+                                <LineBreak/><Run Text="Im Hintergrund nur, wenn der Hintergrund „Still“ eingeschaltet ist." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceWeather" Content="Im Dock"
+                                             IsChecked="{Binding WeatherPlacement, Converter={StaticResource Eq}, ConverterParameter=Dock}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceWeather" Content="Im Hintergrund"
+                                             IsChecked="{Binding WeatherPlacement, Converter={StaticResource Eq}, ConverterParameter=Wallpaper}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceWeather" Content="Beides"
+                                             IsChecked="{Binding WeatherPlacement, Converter={StaticResource Eq}, ConverterParameter=Both}"/>
+                            </WrapPanel>
+                        </StackPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding ShowWeather}">
                             <Grid DockPanel.Dock="Right" Width="220" VerticalAlignment="Center">
@@ -739,6 +712,105 @@
                     </StackPanel>
                 </Border>
 
+                <!-- ============ Ein- und Ausblenden ============ -->
+                <TextBlock x:Name="SecHide" Text="Ein- und Ausblenden" Style="{StaticResource Section}"/>
+                <Border Style="{StaticResource CardBox}">
+                    <StackPanel>
+                        <StackPanel Margin="0,12,0,12">
+                            <TextBlock Text="Dock ausblenden" Margin="0,0,0,10"/>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="Hide" Content="Wenn ein Fenster darüber liegt"
+                                             IsChecked="{Binding AutoHideMode, Converter={StaticResource Eq}, ConverterParameter=Covered}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="Hide" Content="Nur bei Vollbild"
+                                             IsChecked="{Binding AutoHideMode, Converter={StaticResource Eq}, ConverterParameter=FullScreen}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="Hide" Content="Nie"
+                                             IsChecked="{Binding AutoHideMode, Converter={StaticResource Eq}, ConverterParameter=Never}"/>
+                            </WrapPanel>
+                        </StackPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding RevealAtEdge}"/>
+                            <TextBlock Text="Einblenden, wenn die Maus an den unteren Bildschirmrand fährt" Style="{StaticResource Label}"/>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding WinKeyShowsDockFirst}"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                Windows-Taste: 1. Druck zeigt nur das Dock, 2. Druck das Startmenü
+                                <LineBreak/><Run Text="Nur wenn das Dock gerade ausgeblendet ist." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding LiftStartMenu}"/>
+                            <TextBlock Text="Startmenü, Suche und Infocenter über das Dock schieben" Style="{StaticResource Label}"/>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding SlideAnimation}"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                Dock nach unten aus dem Bild fahren und wieder hereinfahren
+                                <LineBreak/><Run Text="Aus: Das Dock verschwindet und erscheint ohne Animation." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding SlideAnimation}">
+                            <TextBlock DockPanel.Dock="Right" Width="60" TextAlignment="Right" VerticalAlignment="Center"
+                                       Text="{Binding SlideDurationMs, StringFormat={}{0:0} ms}" Foreground="{StaticResource Sub}"/>
+                            <Slider DockPanel.Dock="Right" Style="{StaticResource Slide}" Minimum="100" Maximum="800"
+                                    TickFrequency="20" IsSnapToTickEnabled="True" Value="{Binding SlideDurationMs}"/>
+                            <TextBlock Text="Dauer der Animation" Style="{StaticResource Label}"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ Mehrere Bildschirme ============ -->
+                <TextBlock x:Name="SecScreens" Text="Mehrere Bildschirme" Style="{StaticResource Section}"/>
+                <Border Style="{StaticResource CardBox}">
+                    <StackPanel>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding DockOnAllScreens}"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                Dock auf allen Bildschirmen anzeigen
+                                <LineBreak/><Run Text="Jeder Bildschirm bekommt ein eigenes Dock. Der Hintergrund „Still“ bleibt auf dem Hauptbildschirm." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding DockOnAllScreens}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding AppsOnOwnScreen}"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                Nebenbildschirme: nur Programme mit Fenstern auf diesem Bildschirm
+                                <LineBreak/><Run Text="Das Dock auf dem Hauptbildschirm zeigt immer alle. Angeheftete Programme stehen in jedem Dock." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <StackPanel Margin="0,12,0,12" IsEnabled="{Binding WinKeyShowsDockFirst}">
+                            <TextBlock Text="Windows-Taste: 1. Druck zeigt die Docks, wenn …" Margin="0,0,0,10"/>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WinKeyDocks" Content="irgendein Dock ausgeblendet ist"
+                                             IsChecked="{Binding WinKeyAllDocks, Converter={StaticResource Eq}, ConverterParameter=True}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WinKeyDocks" Content="das Dock auf dem Hauptbildschirm ausgeblendet ist"
+                                             IsChecked="{Binding WinKeyAllDocks, Converter={StaticResource Eq}, ConverterParameter=False}"/>
+                            </WrapPanel>
+                        </StackPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <StackPanel Margin="0,12,0,12" IsEnabled="{Binding ShowWallpaper}">
+                            <TextBlock Margin="0,0,0,10">
+                                Hintergrund „Still“ auf Nebenbildschirmen
+                                <LineBreak/><Run Text="Pillen und Karten gibt es nur auf dem Hauptbildschirm; ein Dock dort ist nicht nötig." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondary" Content="Aus"
+                                             IsChecked="{Binding WallpaperSecondary, Converter={StaticResource Eq}, ConverterParameter=Off}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondary" Content="Nur Licht"
+                                             IsChecked="{Binding WallpaperSecondary, Converter={StaticResource Eq}, ConverterParameter=Light}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondary" Content="Licht mit Uhr und Datum"
+                                             IsChecked="{Binding WallpaperSecondary, Converter={StaticResource Eq}, ConverterParameter=Clock}"/>
+                            </WrapPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <!-- ============ Aufklapp-Fenster ============ -->
                 <TextBlock x:Name="SecFlyouts" Text="Aufklapp-Fenster" Style="{StaticResource Section}"/>
                 <Border Style="{StaticResource CardBox}">
@@ -771,7 +843,6 @@
                     </StackPanel>
                 </Border>
 
-                <!-- ============ System ============ -->
                 <!-- ============ Hintergrund ============ -->
                 <TextBlock x:Name="SecWallpaper" Text="Hintergrund" Style="{StaticResource Section}"/>
                 <Border Style="{StaticResource CardBox}">
@@ -786,42 +857,6 @@
                                     Foreground="{StaticResource Accent}" FontSize="12">„Still“ von MrShadow (Steam Workshop)</Hyperlink>
                             </TextBlock>
                         </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <StackPanel Margin="0,12,0,12" IsEnabled="{Binding ShowWallpaper}">
-                            <TextBlock Text="Musik anzeigen" Margin="0,0,0,10"/>
-                            <WrapPanel Margin="0,0,0,12">
-                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceMusic" Content="Im Dock"
-                                             IsChecked="{Binding MusicPlacement, Converter={StaticResource Eq}, ConverterParameter=Dock}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceMusic" Content="Im Hintergrund"
-                                             IsChecked="{Binding MusicPlacement, Converter={StaticResource Eq}, ConverterParameter=Wallpaper}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceMusic" Content="Beides"
-                                             IsChecked="{Binding MusicPlacement, Converter={StaticResource Eq}, ConverterParameter=Both}"/>
-                            </WrapPanel>
-                            <TextBlock Text="Wetter anzeigen" Margin="0,0,0,10"/>
-                            <WrapPanel Margin="0,0,0,0">
-                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceWeather" Content="Im Dock"
-                                             IsChecked="{Binding WeatherPlacement, Converter={StaticResource Eq}, ConverterParameter=Dock}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceWeather" Content="Im Hintergrund"
-                                             IsChecked="{Binding WeatherPlacement, Converter={StaticResource Eq}, ConverterParameter=Wallpaper}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceWeather" Content="Beides"
-                                             IsChecked="{Binding WeatherPlacement, Converter={StaticResource Eq}, ConverterParameter=Both}"/>
-                            </WrapPanel>
-                        </StackPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <StackPanel Margin="0,12,0,12" IsEnabled="{Binding ShowWallpaper}">
-                            <TextBlock Margin="0,0,0,10">
-                                Auf Nebenbildschirmen
-                                <LineBreak/><Run Text="Pillen und Karten gibt es nur auf dem Hauptbildschirm; ein Dock dort ist nicht nötig." Foreground="{StaticResource Sub}" FontSize="12"/>
-                            </TextBlock>
-                            <WrapPanel>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondary" Content="Aus"
-                                             IsChecked="{Binding WallpaperSecondary, Converter={StaticResource Eq}, ConverterParameter=Off}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondary" Content="Nur Licht"
-                                             IsChecked="{Binding WallpaperSecondary, Converter={StaticResource Eq}, ConverterParameter=Light}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondary" Content="Licht mit Uhr und Datum"
-                                             IsChecked="{Binding WallpaperSecondary, Converter={StaticResource Eq}, ConverterParameter=Clock}"/>
-                            </WrapPanel>
-                        </StackPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding ShowWallpaper}">
                             <Grid DockPanel.Dock="Right" Width="320" VerticalAlignment="Center">
@@ -849,6 +884,7 @@
                     </StackPanel>
                 </Border>
 
+                <!-- ============ System ============ -->
                 <TextBlock x:Name="SecSystem" Text="System" Style="{StaticResource Section}"/>
                 <Border Style="{StaticResource CardBox}">
                     <StackPanel>
