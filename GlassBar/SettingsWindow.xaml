@@ -605,6 +605,58 @@
                             <TextBlock Text="Desktop-Stapel" Style="{StaticResource Label}"/>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
+                        <StackPanel Margin="0,12,0,12" IsEnabled="{Binding ShowDesktopButton}">
+                            <TextBlock Text="Symbol des Desktop-Stapels" Margin="0,0,0,10"/>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="DesktopIcon" ToolTip="Windows-Ordner"
+                                             IsChecked="{Binding DesktopIcon, Converter={StaticResource Eq}, ConverterParameter=Folder}"><TextBlock Text="Windows" FontSize="12"/></RadioButton>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="DesktopIcon" ToolTip="Bildschirm"
+                                             IsChecked="{Binding DesktopIcon, Converter={StaticResource Eq}, ConverterParameter=Monitor}"><TextBlock Text="&#xE7F4;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"/></RadioButton>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="DesktopIcon" ToolTip="Ordner"
+                                             IsChecked="{Binding DesktopIcon, Converter={StaticResource Eq}, ConverterParameter=Folder2}"><TextBlock Text="&#xE8B7;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"/></RadioButton>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="DesktopIcon" ToolTip="Stapel"
+                                             IsChecked="{Binding DesktopIcon, Converter={StaticResource Eq}, ConverterParameter=Stack}"><TextBlock Text="&#xE8F1;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"/></RadioButton>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="DesktopIcon" ToolTip="Zuhause"
+                                             IsChecked="{Binding DesktopIcon, Converter={StaticResource Eq}, ConverterParameter=Home}"><TextBlock Text="&#xE80F;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"/></RadioButton>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="DesktopIcon" ToolTip="Stern"
+                                             IsChecked="{Binding DesktopIcon, Converter={StaticResource Eq}, ConverterParameter=Star}"><TextBlock Text="&#xE734;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"/></RadioButton>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="DesktopIcon" ToolTip="Herz"
+                                             IsChecked="{Binding DesktopIcon, Converter={StaticResource Eq}, ConverterParameter=Heart}"><TextBlock Text="&#xEB51;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"/></RadioButton>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="DesktopIcon" ToolTip="Raster"
+                                             IsChecked="{Binding DesktopIcon, Converter={StaticResource Eq}, ConverterParameter=Grid}"><TextBlock Text="&#xF0E2;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"/></RadioButton>
+                                <RadioButton x:Name="DesktopIconCustom" Style="{StaticResource Segment}" GroupName="DesktopIcon" Content="Eigenes Bild …"
+                                             IsChecked="{Binding DesktopIcon, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=Custom}"
+                                             Click="DesktopIconCustom_Click"/>
+                            </WrapPanel>
+                        </StackPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding ShowDesktopButton}">
+                            <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+                                <RadioButton Style="{StaticResource Swatch}" Background="#3B82F6" ToolTip="Blau" GroupName="DesktopTileColor"
+                                             IsChecked="{Binding DesktopTileColor, Converter={StaticResource Eq}, ConverterParameter=#3B82F6}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="{x:Static SystemParameters.WindowGlassBrush}" ToolTip="Windows-Akzentfarbe" GroupName="DesktopTileColor"
+                                             IsChecked="{Binding DesktopTileColor, Converter={StaticResource Eq}, ConverterParameter=Accent}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#40FFFFFF" ToolTip="Glas" GroupName="DesktopTileColor"
+                                             IsChecked="{Binding DesktopTileColor, Converter={StaticResource Eq}, ConverterParameter=Glass}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#7C3AED" ToolTip="Violett" GroupName="DesktopTileColor"
+                                             IsChecked="{Binding DesktopTileColor, Converter={StaticResource Eq}, ConverterParameter=#7C3AED}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#16A34A" ToolTip="Grün" GroupName="DesktopTileColor"
+                                             IsChecked="{Binding DesktopTileColor, Converter={StaticResource Eq}, ConverterParameter=#16A34A}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#DC2626" ToolTip="Rot" GroupName="DesktopTileColor"
+                                             IsChecked="{Binding DesktopTileColor, Converter={StaticResource Eq}, ConverterParameter=#DC2626}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#EA580C" ToolTip="Orange" GroupName="DesktopTileColor"
+                                             IsChecked="{Binding DesktopTileColor, Converter={StaticResource Eq}, ConverterParameter=#EA580C}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#DB2777" ToolTip="Pink" GroupName="DesktopTileColor"
+                                             IsChecked="{Binding DesktopTileColor, Converter={StaticResource Eq}, ConverterParameter=#DB2777}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#475569" ToolTip="Grau" GroupName="DesktopTileColor"
+                                             IsChecked="{Binding DesktopTileColor, Converter={StaticResource Eq}, ConverterParameter=#475569}"/>
+                            </WrapPanel>
+                            <TextBlock Style="{StaticResource Label}">
+                                Farbe hinter dem Symbol
+                                <LineBreak/><Run Text="Nicht bei „Windows“ und „Eigenes Bild“." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowPeekButton}"/>
                             <TextBlock Style="{StaticResource Label}">

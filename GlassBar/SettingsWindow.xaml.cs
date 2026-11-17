@@ -473,6 +473,30 @@ public partial class SettingsWindow : Window
         e.Handled = true;
     }
 
+    /// <summary>Eigenes Bild für den Desktop-Stapel wählen (wird nach %AppData%\GlassBar kopiert).</summary>
+    private void DesktopIconCustom_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Bild für den Desktop-Stapel",
+            Filter = "Bilder (*.png;*.jpg;*.jpeg;*.ico;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.ico;*.bmp;*.gif",
+        };
+        if (dlg.ShowDialog(this) == true)
+        {
+            try
+            {
+                var dest = Path.Combine(Config.Folder, "desktop-icon" + Path.GetExtension(dlg.FileName).ToLowerInvariant());
+                foreach (var old in Directory.GetFiles(Config.Folder, "desktop-icon.*")) File.Delete(old);
+                File.Copy(dlg.FileName, dest, true);
+                App.Config.DesktopIconPath = dest;
+                App.Config.DesktopIcon = "Custom";
+            }
+            catch (Exception ex) { MessageBox.Show(this, "Das Bild konnte nicht übernommen werden:\n" + ex.Message, "GlassBar"); }
+        }
+        DesktopIconCustom.IsChecked = App.Config.DesktopIcon == "Custom";
+        ScheduleApply();
+    }
+
     private void Autostart_Click(object sender, RoutedEventArgs e)
     {
         Native.Autostart = AutostartBox.IsChecked == true;

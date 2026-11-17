@@ -101,7 +101,8 @@ public static class Updater
             Wait-Process -Id {{pid}} -Timeout 30
             Start-Sleep -Milliseconds 500
             robocopy "{{source}}" "{{target}}" /E /R:10 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
-            Start-Process -FilePath "{{targetExe}}"
+            # über den Explorer starten: so läuft GlassBar wieder als normaler Nutzer, auch wenn dieses Skript Adminrechte hat
+            Start-Process -FilePath "explorer.exe" -ArgumentList '"{{targetExe}}"'
             """, new System.Text.UTF8Encoding(true));
 
         var psi = new ProcessStartInfo("powershell.exe",

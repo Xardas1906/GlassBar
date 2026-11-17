@@ -23,12 +23,34 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // Befehle für den Installer: laufendes GlassBar sauber beenden bzw. Autostart ein-/ausschalten
+        var quit = new EventWaitHandle(false, EventResetMode.ManualReset, "GlassBar_Quit");
+        if (e.Args.Contains("--quit", StringComparer.OrdinalIgnoreCase))
+        {
+            quit.Set();
+            // warten, bis die laufende Instanz weg ist (sie gibt dabei die Taskleiste zurück)
+            for (int i = 0; i < 100 && Mutex.TryOpenExisting("GlassBar_SingleInstance", out var m); i++) { m.Dispose(); Thread.Sleep(100); }
+            quit.Reset();
+            Shutdown();
+            return;
+        }
+        int ai = Array.FindIndex(e.Args, a => a.Equals("--autostart", StringComparison.OrdinalIgnoreCase));
+        if (ai >= 0)
+        {
+            try { Native.Autostart = ai + 1 < e.Args.Length && e.Args[ai + 1].Equals("on", StringComparison.OrdinalIgnoreCase); } catch { }
+            Shutdown();
+            return;
+        }
+
         // Läuft GlassBar schon? Dann dort die Einstellungen öffnen und selbst gleich wieder beenden.
         var openSettings = new EventWaitHandle(false, EventResetMode.AutoReset, "GlassBar_OpenSettings");
         _mutex = new Mutex(true, "GlassBar_SingleInstance", out bool isNew);
         if (!isNew) { openSettings.Set(); Shutdown(); return; }
+        quit.Reset();
         ThreadPool.RegisterWaitForSingleObject(openSettings,
             (_, _) => Dispatcher.BeginInvoke(SettingsWindow.ShowSingle), null, Timeout.Infinite, false);
+        ThreadPool.RegisterWaitForSingleObject(quit,
+            (_, _) => Dispatcher.BeginInvoke(Quit), null, Timeout.Infinite, true);
 
         DispatcherUnhandledException += OnCrash;
         AppDomain.CurrentDomain.UnhandledException += (_, _) => Cleanup();

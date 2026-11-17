@@ -47,11 +47,14 @@
 
 ## Installation
 
-1. Die [.NET 10 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/10.0) installieren, falls noch nicht vorhanden.
-2. `GlassBar-vX.Y.Z-win-x64.zip` aus den [Releases](https://github.com/Xardas1906/GlassBar/releases/latest) laden
-   und in einen festen Ordner entpacken, z. B. `C:\GlassBar`.
-3. `GlassBar.exe` starten. Die Windows-Taskleiste wird ausgeblendet, solange GlassBar läuft.
-4. Rechtsklick auf eine freie Stelle im Dock › **Einstellungen …** – dort auch „Mit Windows starten“.
+1. `GlassBar-Setup-X.Y.Z.exe` aus den [Releases](https://github.com/Xardas1906/GlassBar/releases/latest) laden und starten.
+   Der Installer richtet GlassBar unter `C:\Program Files\GlassBar` ein, auf Wunsch mit „Mit Windows starten“,
+   und lädt die [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) von Microsoft nach, falls sie fehlt.
+2. GlassBar startet danach automatisch. Die Windows-Taskleiste wird ausgeblendet, solange GlassBar läuft.
+3. Rechtsklick auf eine freie Stelle im Dock › **Einstellungen …**
+
+Ohne Installer: das Zip `GlassBar-vX.Y.Z-win-x64.zip` in einen festen Ordner entpacken und `GlassBar.exe` starten
+(dafür muss die .NET 10 Desktop Runtime installiert sein).
 
 Wenn Wallpaper Engine läuft, dort den Hintergrund beenden, bevor du „Still“ in GlassBar einschaltest.
 
@@ -59,8 +62,9 @@ Wenn Wallpaper Engine läuft, dort den Hintergrund beenden, bevor du „Still“
 
 - **Beenden:** Rechtsklick aufs Dock › *GlassBar beenden* – die normale Windows-Taskleiste kommt zurück.
   Fehlt sie nach einem Absturz, GlassBar einmal starten und so beenden oder im Task-Manager den Windows-Explorer neu starten.
-- **Deinstallieren:** In den Einstellungen „Mit Windows starten“ ausschalten, GlassBar beenden, den Programmordner löschen
-  und auf Wunsch die Einstellungen unter `%AppData%\GlassBar` entfernen.
+- **Deinstallieren:** Windows-Einstellungen › Apps › GlassBar › Deinstallieren. GlassBar wird dabei beendet,
+  der Autostart entfernt, und du kannst wählen, ob auch die Einstellungen gelöscht werden.
+  (Zip-Version: „Mit Windows starten“ ausschalten, beenden, Ordner und `%AppData%\GlassBar` löschen.)
 
 ## Fehler und Ideen
 
@@ -72,6 +76,12 @@ Voraussetzungen: Windows 11, .NET 10 SDK.
 
 ```
 dotnet build GlassBar/GlassBar.csproj -c Release
+```
+
+Release mit Zip und Installer (braucht [Inno Setup 6](https://jrsoftware.org/isinfo.php), z. B. `winget install JRSoftware.InnoSetup`):
+
+```
+powershell -File installer\build.ps1
 ```
 
 ## Original und Danksagung

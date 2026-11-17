@@ -133,6 +133,8 @@ public partial class SettingsWindow
         ("Windows-Taste", "win taste startmenü"),
         ("Zurücksetzen", "standard reset"),
         ("Stadt", "ort wetter"),
+        ("Symbol des Desktop-Stapels", "desktop ordner icon symbol bild personalisieren stapel"),
+        ("Farbe hinter dem Symbol", "desktop ordner icon farbe kachel"),
         ("Desktop anzeigen", "minimieren alle fenster win+d knopf rechts"),
         ("Musik anzeigen", "musik pille hintergrund dock platz"),
         ("Wetter anzeigen", "wetter hintergrund dock platz"),

@@ -29,8 +29,38 @@ public static class Ui
         var menu = new ContextMenu();
         foreach (var i in items) menu.Items.Add(i ?? new Separator());
         if (onClosed != null) menu.Closed += (_, _) => onClosed();
-        menu.IsOpen = true;
+        Open(menu);
         return menu;
+    }
+
+    private static ContextMenu? _open;
+
+    /// <summary>
+    /// Menü öffnen und merken. Das Dock wird nie aktiv, daher merkt WPF einen Klick in ein anderes Programm
+    /// nicht immer – <see cref="CloseOpenMenu"/> schließt es dann ausdrücklich.
+    /// </summary>
+    public static void Open(ContextMenu menu)
+    {
+        CloseOpenMenu();
+        _open = menu;
+        menu.Closed += (_, _) => { if (ReferenceEquals(_open, menu)) _open = null; };
+        // Wie bei Windows-Taskleistenmenüs (SetForegroundWindow vor TrackPopupMenu): erst das Fenster unter der Maus
+        // (Dock) nach vorne holen. Dann verliert das Menü die Maus, sobald man in ein anderes Programm klickt, und schließt sich.
+        var owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsMouseOver);
+        if (owner != null)
+        {
+            var h = new System.Windows.Interop.WindowInteropHelper(owner).Handle;
+            if (h != IntPtr.Zero) SetForegroundWindow(h);
+        }
+        menu.IsOpen = true;
+    }
+
+    [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hwnd);
+
+    public static void CloseOpenMenu()
+    {
+        if (_open is { IsOpen: true } m) m.IsOpen = false;
+        _open = null;
     }
 
     /// <summary>Einfacher dunkler Eingabedialog. Gibt null zurück, wenn abgebrochen.</summary>

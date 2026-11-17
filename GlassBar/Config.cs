@@ -62,6 +62,12 @@ public class Config
     public bool ShowDesktopButton { get; set; } = true;
     /// <summary>Schmaler Knopf ganz rechts: alle Fenster minimieren / Desktop anzeigen (Win+D).</summary>
     public bool ShowPeekButton { get; set; } = true;
+    /// <summary>Symbol des Desktop-Stapels: "Folder" (Windows-Ordner), ein Symbolname (Monitor, Folder2, Stack, Home, Star, Heart, Grid) oder "Custom".</summary>
+    public string DesktopIcon { get; set; } = "Folder";
+    /// <summary>Kachelfarbe für die Symbole des Desktop-Stapels (#RRGGBB, "Accent" oder "Glass").</summary>
+    public string DesktopTileColor { get; set; } = "#3B82F6";
+    /// <summary>Eigenes Bild für den Desktop-Stapel (Kopie in %AppData%\GlassBar).</summary>
+    public string DesktopIconPath { get; set; } = "";
     public bool ShowTray { get; set; } = true;
     public bool ShowQuickSettings { get; set; } = true;
     public bool ShowClock { get; set; } = true;

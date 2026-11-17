@@ -183,8 +183,18 @@
             <Border x:Name="DesktopButton" Style="{StaticResource DockSlot}" ToolTip="Desktop"
                     MouseEnter="Desktop_MouseEnter" MouseLeave="Desktop_MouseLeave"
                     MouseLeftButtonUp="Desktop_Click" MouseRightButtonUp="Desktop_RightClick">
-                <Image x:Name="DesktopIcon" Source="{Binding JumboIcon}" Style="{StaticResource DockIcon}"
-                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                <Grid>
+                    <Image x:Name="DesktopIcon" Source="{Binding JumboIcon}" Style="{StaticResource DockIcon}"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <!-- Eigene Symbole (Einstellung „Symbol des Desktop-Stapels“) -->
+                    <Border x:Name="DesktopTile" Style="{StaticResource DockIcon}" CornerRadius="8" Visibility="Collapsed" ClipToBounds="True">
+                        <Grid>
+                            <TextBlock x:Name="DesktopGlyph" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"
+                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Image x:Name="DesktopImage" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Grid>
+                    </Border>
+                </Grid>
             </Border>
 
             <Rectangle x:Name="Sep3" Style="{StaticResource DockSeparator}"/>

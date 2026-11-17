@@ -82,6 +82,8 @@ public partial class TaskbarWindow : Window
             {
                 var h = new WindowInteropHelper(this).Handle;
                 if (h == IntPtr.Zero) return;
+                // Ein anderes Programm ist nach vorne gekommen: offenes Dock-Menü (z. B. Sprungliste) schließen
+                if (GetWindowThreadProcessId(hwnd, out uint fgPid) != 0 && fgPid != OwnPid) Ui.CloseOpenMenu();
                 GetWindowRect(h, out var d);
                 LiftShellFlyout(hwnd, d);
             });
@@ -360,6 +362,7 @@ public partial class TaskbarWindow : Window
         if (show == _shown) return;
         _shown = show;
         DockShown[ScreenName] = show;
+        if (!show) Ui.CloseOpenMenu(); // Dock fährt weg: sein Menü mitnehmen
         if (show)
         {
             if (Visibility != Visibility.Visible)
@@ -589,6 +592,52 @@ public partial class TaskbarWindow : Window
         }
     }
 
+    /// <summary>Symbole für den Desktop-Stapel (Segoe Fluent Icons).</summary>
+    public static readonly Dictionary<string, string> DesktopGlyphs = new()
+    {
+        ["Monitor"] = "\uE7F4", ["Folder2"] = "\uE8B7", ["Stack"] = "\uE8F1", ["Home"] = "\uE80F",
+        ["Star"] = "\uE734", ["Heart"] = "\uEB51", ["Grid"] = "\uF0E2",
+    };
+
+    /// <summary>Desktop-Stapel: Windows-Ordner, ein Symbol auf farbiger Kachel oder ein eigenes Bild.</summary>
+    private void ApplyDesktopIcon()
+    {
+        var c = App.Config;
+        System.Windows.Media.Imaging.BitmapImage? img = null;
+        if (c.DesktopIcon == "Custom" && File.Exists(c.DesktopIconPath))
+        {
+            try
+            {
+                img = new System.Windows.Media.Imaging.BitmapImage();
+                img.BeginInit();
+                img.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                img.UriSource = new Uri(c.DesktopIconPath);
+                img.DecodePixelWidth = 128;
+                img.EndInit();
+                img.Freeze();
+            }
+            catch { img = null; }
+        }
+        bool glyph = DesktopGlyphs.TryGetValue(c.DesktopIcon, out var g);
+        bool custom = img != null;
+        DesktopIcon.Visibility = glyph || custom ? Visibility.Collapsed : Visibility.Visible;
+        DesktopTile.Visibility = glyph || custom ? Visibility.Visible : Visibility.Collapsed;
+        DesktopImage.Source = img;
+        DesktopImage.Visibility = custom ? Visibility.Visible : Visibility.Collapsed;
+        DesktopGlyph.Text = glyph ? g : "";
+        DesktopGlyph.FontSize = Math.Max(12, c.IconSize * 0.52);
+        if (custom) { DesktopTile.Background = System.Windows.Media.Brushes.Transparent; return; }
+
+        if (c.DesktopTileColor == "Glass")
+            DesktopTile.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x3A, 0xFF, 0xFF, 0xFF));
+        else
+        {
+            var tc = ParseColor(c.DesktopTileColor) ?? System.Windows.Media.Color.FromRgb(0x3B, 0x82, 0xF6);
+            var light = System.Windows.Media.Color.FromRgb((byte)(tc.R + (255 - tc.R) * 0.35), (byte)(tc.G + (255 - tc.G) * 0.35), (byte)(tc.B + (255 - tc.B) * 0.35));
+            DesktopTile.Background = new System.Windows.Media.LinearGradientBrush(light, tc, 45);
+        }
+    }
+
     /// <summary>"White", "Black", "Accent" (Windows-Akzentfarbe) oder #RRGGBB.</summary>
     private static System.Windows.Media.Color? ParseColor(string value)
     {
@@ -710,6 +759,7 @@ public partial class TaskbarWindow : Window
         TaskViewButton.Visibility = Vis(c.ShowTaskViewButton);
         DesktopButton.Visibility = Vis(c.ShowDesktopButton);
         PeekButton.Visibility = Vis(c.ShowPeekButton);
+        ApplyDesktopIcon();
         OverflowButton.Visibility = Vis(c.ShowTray);
         TrayList.Visibility = Vis(c.ShowTray);
         QuickSettingsButton.Visibility = Vis(c.ShowQuickSettings);
@@ -1314,7 +1364,7 @@ public partial class TaskbarWindow : Window
             mi.Click += (_, _) => x.Item3();
             menu.Items.Add(mi);
         }
-        menu.IsOpen = true;
+        Ui.Open(menu);
     }
 
     private List<(string, string, Action, bool)?> AppMenuEntries(AppButton b)
@@ -1560,6 +1610,6 @@ public partial class TaskbarWindow : Window
             mi.Click += (_, _) => x.Action();
             menu.Items.Add(mi);
         }
-        menu.IsOpen = true;
+        Ui.Open(menu);
     }
 }
