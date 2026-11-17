@@ -57,6 +57,9 @@ public static class Ui
 
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hwnd);
 
+    /// <summary>Ist gerade ein Dock-Menü offen? Dann bleibt das Dock eingeblendet.</summary>
+    public static bool MenuOpen => _open is { IsOpen: true };
+
     public static void CloseOpenMenu()
     {
         if (_open is { IsOpen: true } m) m.IsOpen = false;

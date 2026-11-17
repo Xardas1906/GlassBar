@@ -332,7 +332,7 @@ public partial class TaskbarWindow : Window
         var screen = ScreenPx;
         bool atEdge = App.Config.RevealAtEdge && p.Y >= screen.Bottom - 2 && p.Y < screen.Bottom && p.X >= screen.Left && p.X < screen.Right;
         bool overDock = _shown && p.X >= dock.Left && p.X <= dock.Right && p.Y >= dock.Top - 4 && p.Y <= dock.Bottom + 8;
-        bool inUse = overDock || _flyout != null || ModernMenu.AnyOpen;
+        bool inUse = overDock || _flyout != null || ModernMenu.AnyOpen || Ui.MenuOpen;
         if (atEdge || inUse) _peekUntil = DateTime.Now.AddMilliseconds(700);
 
         bool show = !_covered || DateTime.Now < _peekUntil || IsFixed;
@@ -1364,7 +1364,9 @@ public partial class TaskbarWindow : Window
                 var mi = new MenuItem
                 {
                     Header = new TextBlock { Text = it.Title, MaxWidth = 320, TextTrimming = TextTrimming.CharacterEllipsis },
-                    ToolTip = string.IsNullOrEmpty(it.Description) ? it.Title : it.Description,
+                    // Manche Apps (z. B. Spotify) liefern als Beschreibung nur einen internen Pfad – dann den Titel zeigen
+                    ToolTip = string.IsNullOrEmpty(it.Description) || it.Description.Contains(":\\") || it.Description.Contains('!')
+                        ? it.Title : it.Description,
                 };
                 if (it.Icon != null)
                     mi.Icon = new System.Windows.Controls.Image { Source = it.Icon, Width = 16, Height = 16 };
