@@ -38,6 +38,8 @@ public class Config
     public bool RevealAtEdge { get; set; } = true;
     /// <summary>Bildschirme (Gerätename), auf denen das Dock fixiert ist und sich nicht ausblendet.</summary>
     public List<string> FixedScreens { get; set; } = new();
+    /// <summary>Glaseffekt (Unschärfe) im Einstellungsfenster; aus = schlichter, leichter für schwache Grafikkarten.</summary>
+    public bool SettingsGlass { get; set; } = true;
     /// <summary>Dock ausgeblendet: 1. Druck auf die Windows-Taste zeigt nur das Dock, 2. Druck das Startmenü.</summary>
     public bool WinKeyShowsDockFirst { get; set; } = true;
     /// <summary>Windows-Taste: zuerst Docks zeigen, wenn irgendein Dock ausgeblendet ist (sonst nur, wenn das Hauptdock ausgeblendet ist).</summary>

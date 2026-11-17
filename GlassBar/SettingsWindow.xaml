@@ -201,7 +201,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Bd" CornerRadius="6" Padding="12,7" Margin="0,0,6,0" Background="#14FFFFFF"
+                        <Border x:Name="Bd" CornerRadius="6" Padding="12,7" Margin="0,0,6,6" Background="#14FFFFFF"
                                 BorderBrush="#20FFFFFF" BorderThickness="1">
                             <ContentPresenter HorizontalAlignment="Center"/>
                         </Border>
@@ -855,6 +855,14 @@
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox x:Name="AutostartBox" Style="{StaticResource Toggle}" Click="Autostart_Click"/>
                             <TextBlock Text="Mit Windows starten" Style="{StaticResource Label}"/>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding SettingsGlass}"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                Glaseffekt im Einstellungsfenster
+                                <LineBreak/><Run Text="Ausschalten, wenn es bei offenen Einstellungen ruckelt (schwächere Grafikkarten)." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">

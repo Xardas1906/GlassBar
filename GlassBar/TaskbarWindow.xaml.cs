@@ -534,21 +534,9 @@ public partial class TaskbarWindow : Window
     {
         _startTileBrush ??= StartTile.Background;
         var mode = App.Config.StartIcon;
-        System.Windows.Media.Imaging.BitmapImage? img = null;
+        System.Windows.Media.ImageSource? img = null;
         if (mode == "Custom" && File.Exists(App.Config.StartIconPath))
-        {
-            try
-            {
-                img = new System.Windows.Media.Imaging.BitmapImage();
-                img.BeginInit();
-                img.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                img.UriSource = new Uri(App.Config.StartIconPath);
-                img.DecodePixelWidth = 128;
-                img.EndInit();
-                img.Freeze();
-            }
-            catch { img = null; }
-        }
+            img = CachedImage(App.Config.StartIconPath);
         if (mode == "Custom" && img == null) mode = "Tile";
 
         StartImage.Source = img;
@@ -592,6 +580,36 @@ public partial class TaskbarWindow : Window
         }
     }
 
+    // Bilder für Start-Knopf und Desktop-Stapel nur einmal laden (ApplySettings läuft bei jeder Änderung in allen Docks)
+    private static readonly Dictionary<string, System.Windows.Media.ImageSource?> ImageCache = new();
+
+    private static System.Windows.Media.ImageSource? CachedImage(string path)
+    {
+        string key = path + "|" + File.GetLastWriteTimeUtc(path).Ticks;
+        if (ImageCache.TryGetValue(key, out var cached)) return cached;
+        System.Windows.Media.ImageSource? img = null;
+        try
+        {
+            var bmp = new System.Windows.Media.Imaging.BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+            bmp.UriSource = new Uri(path);
+            bmp.DecodePixelWidth = 128;
+            bmp.EndInit();
+            bmp.Freeze();
+            img = bmp;
+        }
+        catch { }
+        return ImageCache[key] = img;
+    }
+
+    private static System.Windows.Media.ImageSource? CachedShellIcon(string spec)
+    {
+        string key = "shell:" + spec;
+        if (!ImageCache.TryGetValue(key, out var icon)) ImageCache[key] = icon = ShellIcons.Load(spec);
+        return icon;
+    }
+
     /// <summary>Symbole für den Desktop-Stapel (Segoe Fluent Icons).</summary>
     public static readonly Dictionary<string, string> DesktopGlyphs = new()
     {
@@ -603,23 +621,11 @@ public partial class TaskbarWindow : Window
     private void ApplyDesktopIcon()
     {
         var c = App.Config;
-        System.Windows.Media.Imaging.BitmapImage? img = null;
+        System.Windows.Media.ImageSource? img = null;
         if (c.DesktopIcon == "Custom" && File.Exists(c.DesktopIconPath))
-        {
-            try
-            {
-                img = new System.Windows.Media.Imaging.BitmapImage();
-                img.BeginInit();
-                img.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                img.UriSource = new Uri(c.DesktopIconPath);
-                img.DecodePixelWidth = 128;
-                img.EndInit();
-                img.Freeze();
-            }
-            catch { img = null; }
-        }
+            img = CachedImage(c.DesktopIconPath);
         // Windows-Symbol (z. B. aus imageres.dll): ohne Kachel, das Symbol hat seine eigene Form
-        System.Windows.Media.ImageSource? sys = c.DesktopIcon == "Sys" && c.DesktopIconSource.Length > 0 ? ShellIcons.Load(c.DesktopIconSource) : null;
+        System.Windows.Media.ImageSource? sys = c.DesktopIcon == "Sys" && c.DesktopIconSource.Length > 0 ? CachedShellIcon(c.DesktopIconSource) : null;
         if (sys != null)
         {
             DesktopIcon.Visibility = Visibility.Collapsed;

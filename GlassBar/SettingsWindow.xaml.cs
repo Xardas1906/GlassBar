@@ -13,7 +13,6 @@ namespace GlassBar;
 public partial class SettingsWindow : Window
 {
     private static SettingsWindow? _open;
-    private bool _applyPending;
 
     /// <summary>Öffnet das Fenster (oder holt ein schon offenes nach vorne).</summary>
     public static void ShowSingle()
@@ -42,10 +41,19 @@ public partial class SettingsWindow : Window
             ApplyGlass();
         };
 
-        // Jede Änderung (Schalter, Regler, Auswahl) -> speichern und sofort anwenden
-        AddHandler(ToggleButton.CheckedEvent, new RoutedEventHandler((_, _) => ScheduleApply()));
-        AddHandler(ToggleButton.UncheckedEvent, new RoutedEventHandler((_, _) => ScheduleApply()));
-        AddHandler(RangeBase.ValueChangedEvent, new RoutedPropertyChangedEventHandler<double>((_, _) => ScheduleApply()));
+        // Jede Änderung (Schalter, Regler, Auswahl) -> speichern und anwenden.
+        // Die Still-Seite schreibt ihre Werte selbst (der Hintergrund liest sie live) – dafür die Docks nicht neu aufbauen.
+        bool InStill(object src) => src is Visual v && StillPage.IsAncestorOf(v);
+        AddHandler(ToggleButton.CheckedEvent, new RoutedEventHandler((_, e) => { if (!InStill(e.OriginalSource)) ScheduleApply(); }));
+        AddHandler(ToggleButton.UncheckedEvent, new RoutedEventHandler((_, e) => { if (!InStill(e.OriginalSource)) ScheduleApply(); }));
+        AddHandler(RangeBase.ValueChangedEvent, new RoutedPropertyChangedEventHandler<double>((_, e) => { if (!InStill(e.OriginalSource)) ScheduleApply(); }));
+        _applyTimer.Tick += (_, _) =>
+        {
+            _applyTimer.Stop();
+            App.Config.Save();
+            App.Instance.ApplySettingsToDocks();
+            ApplyGlass();
+        };
 
         CloseButton.MouseEnter += (_, _) => CloseButton.Background = new SolidColorBrush(Color.FromRgb(0xC4, 0x2B, 0x1C));
         CloseButton.MouseLeave += (_, _) => CloseButton.Background = Brushes.Transparent;
@@ -61,10 +69,19 @@ public partial class SettingsWindow : Window
     /// Gleiches Glas wie das Dock (Farbe aus den Einstellungen). Damit Text gut lesbar bleibt,
     /// ist das Fenster mindestens zu 55 % getönt.
     /// </summary>
+    private (uint Tint, bool Blur)? _glass;
+
     private void ApplyGlass()
     {
         var h = new WindowInteropHelper(this).Handle;
-        if (h != IntPtr.Zero) Native.ApplyGlass(h, App.Config.Tint(Math.Max(App.Config.DockOpacity, 55)));
+        if (h == IntPtr.Zero) return;
+        // Ohne Glaseffekt: fast deckend und ohne Unschärfe – spart auf schwächeren Grafikkarten viel Arbeit,
+        // weil Windows den animierten Hintergrund dann nicht bei jedem Bild neu weichzeichnen muss.
+        bool blur = App.Config.SettingsGlass;
+        uint tint = App.Config.Tint(blur ? Math.Max(App.Config.DockOpacity, 55) : 96);
+        if (_glass == (tint, blur)) return;
+        _glass = (tint, blur);
+        Native.ApplyGlass(h, tint, blur);
     }
 
     // ---------- Navigation links ----------
@@ -329,18 +346,16 @@ public partial class SettingsWindow : Window
     /// <summary>Zahlen als double vergleichen (5 und 5.0 sind gleich).</summary>
     private static object Normalize(object o) => o switch { int i => (double)i, float f => (double)f, _ => o };
 
+    /// <summary>
+    /// Änderungen gesammelt anwenden: Beim Ziehen eines Reglers kommen Dutzende Werte pro Sekunde –
+    /// gespeichert und auf alle Docks angewendet wird höchstens alle 150 ms.
+    /// </summary>
+    private readonly System.Windows.Threading.DispatcherTimer _applyTimer = new() { Interval = TimeSpan.FromMilliseconds(150) };
+
     private void ScheduleApply()
     {
-        if (_applyPending || !IsLoaded) return;
-        _applyPending = true;
-        // erst nachdem die Bindung den neuen Wert geschrieben hat
-        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () =>
-        {
-            _applyPending = false;
-            App.Config.Save();
-            App.Instance.ApplySettingsToDocks();
-            ApplyGlass();
-        });
+        if (!IsLoaded) return;
+        if (!_applyTimer.IsEnabled) _applyTimer.Start();
     }
 
     private void Close_Click(object sender, MouseButtonEventArgs e) => Close();
