@@ -118,6 +118,12 @@ public class Config
     /// <summary>Was hinter Uhr und Pillen liegt: "Light" (Lichtfeld), "Image" (Windows-Hintergrundbild) oder "Solid" (einfarbig).</summary>
     public string WallpaperField { get; set; } = "Light";
 
+    // ---------- Startmenü-Glas ----------
+    /// <summary>Glas-Effekt auf das Windows-Startmenü und die Suche anwenden.</summary>
+    public bool StartMenuGlass { get; set; }
+    /// <summary>Deckkraft des Startmenü-Glases, 0–100 %.</summary>
+    public double StartMenuGlassOpacity { get; set; } = 19;
+
     // ---------- Aufklapp-Fenster ----------
     public bool HoverOpensFolders { get; set; } = true;
     public bool WindowPreviews { get; set; } = true;
@@ -151,28 +157,15 @@ public class Config
 
     public static Config Load()
     {
-        try
-        {
-            if (File.Exists(FilePath))
-            {
-                var c = JsonSerializer.Deserialize<Config>(File.ReadAllText(FilePath)) ?? new Config();
-                c.Normalize();
-                return c;
-            }
-        }
-        catch { }
-        var fresh = new Config();
-        fresh.Normalize();
-        return fresh;
+        // kaputte Datei -> Sicherung (.bak); fehlt beides -> Standardwerte
+        var c = SafeFile.Read(FilePath, json => JsonSerializer.Deserialize<Config>(json)) ?? new Config();
+        c.Normalize();
+        return c;
     }
 
     public void Save()
     {
-        try
-        {
-            Directory.CreateDirectory(Folder);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
-        }
+        try { SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true })); }
         catch { }
     }
 }

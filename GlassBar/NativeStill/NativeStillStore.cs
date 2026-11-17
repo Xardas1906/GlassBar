@@ -36,13 +36,10 @@ public static class NativeStillStore
         {
             if (_loaded) return;
             _loaded = true;
-            try
-            {
-                if (!File.Exists(FilePath)) return;
-                foreach (var kv in Parse(File.ReadAllText(FilePath)))
+            // kaputte Datei -> Sicherung (.bak); fehlt beides -> Standardwerte
+            if (SafeFile.Read(FilePath, ParseStrict) is { } values)
+                foreach (var kv in values)
                     Values.Set(kv.Key, kv.Value);
-            }
-            catch { } // kaputte Datei -> Standardwerte
         }
     }
 
@@ -130,10 +127,7 @@ public static class NativeStillStore
                 if (node != null) obj[kv.Key] = node;
             }
 
-            Directory.CreateDirectory(Config.Folder);
-            var tmp = FilePath + ".tmp";
-            File.WriteAllText(tmp, obj.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
-            File.Move(tmp, FilePath, overwrite: true);
+            SafeFile.WriteAllText(FilePath, obj.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
         }
         catch { }
     }
@@ -143,6 +137,14 @@ public static class NativeStillStore
         (double x, double y) => Math.Abs(x - y) < 1e-9,
         _ => Equals(a, b),
     };
+
+    /// <summary>Wie <see cref="Parse"/>, aber null, wenn die Datei kein JSON-Objekt enthält (gilt dann als kaputt).</summary>
+    private static Dictionary<string, object>? ParseStrict(string json)
+    {
+        using (var doc = JsonDocument.Parse(json))
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return null;
+        return Parse(json);
+    }
 
     /// <summary>JSON-Objekt in Schlüssel → bool/double/string umwandeln; andere Werte werden übersprungen.</summary>
     private static Dictionary<string, object> Parse(string json)

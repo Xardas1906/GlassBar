@@ -87,6 +87,7 @@ public partial class TaskbarWindow : Window
                 if (GetWindowThreadProcessId(hwnd, out uint fgPid) != 0 && fgPid != OwnPid) Ui.CloseOpenMenu();
                 GetWindowRect(h, out var d);
                 LiftShellFlyout(hwnd, d);
+                StyleShellFlyout(hwnd);
             });
             _winEventHook = SetWinEventHook(0x0003 /* EVENT_SYSTEM_FOREGROUND */, 0x0003, IntPtr.Zero, _winEventProc, 0, 0, 0);
             Closed += (_, _) => UnhookWinEvent(_winEventHook);
@@ -265,6 +266,60 @@ public partial class TaskbarWindow : Window
                 .Select(p => (uint)p.Id).ToHashSet();
         }
         return _shellPids;
+    }
+
+    // ---------- Glas-Effekt auf das Startmenü ----------
+    private static readonly string[] GlassTargetHosts = { "startmenuexperiencehost", "searchhost" };
+    private HashSet<uint> _glassPids = new();
+    private DateTime _glassPidsAt;
+    private readonly HashSet<IntPtr> _glassApplied = new();
+
+    private HashSet<uint> GlassPids()
+    {
+        if ((DateTime.Now - _glassPidsAt).TotalSeconds > 5)
+        {
+            _glassPidsAt = DateTime.Now;
+            _glassPids = GlassTargetHosts
+                .SelectMany(n => System.Diagnostics.Process.GetProcessesByName(n))
+                .Select(p => (uint)p.Id).ToHashSet();
+        }
+        return _glassPids;
+    }
+
+    private void StyleShellFlyout(IntPtr fg)
+    {
+        if (!App.Config.StartMenuGlass) return;
+        try
+        {
+            GetWindowThreadProcessId(fg, out var fgPid);
+            var pids = GlassPids();
+            if (!pids.Contains(fgPid)) return;
+
+            uint tint = App.Config.Tint(App.Config.StartMenuGlassOpacity);
+            EnumWindows((h, _) =>
+            {
+                GetWindowThreadProcessId(h, out var pid);
+                if (!pids.Contains(pid) || !IsWindowVisible(h)) return true;
+                if (DwmGetWindowAttribute(h, 14, out var cloaked, 4) == 0 && cloaked != 0) return true;
+                Native.ApplyGlass(h, tint);
+                _glassApplied.Add(h);
+                return true;
+            }, IntPtr.Zero);
+        }
+        catch { }
+    }
+
+    /// <summary>Glas auf allen bekannten Startmenü-Fenstern neu anwenden (nach Einstellungsänderung).</summary>
+    internal void ReapplyStartMenuGlass()
+    {
+        if (!IsPrimary) return;
+        if (!App.Config.StartMenuGlass) { _glassApplied.Clear(); return; }
+        uint tint = App.Config.Tint(App.Config.StartMenuGlassOpacity);
+        foreach (var h in _glassApplied.ToList())
+        {
+            if (!IsWindowVisible(h)) { _glassApplied.Remove(h); continue; }
+            Native.ApplyGlass(h, tint);
+        }
     }
 
     private void LiftShellFlyout(IntPtr fg, Native.RECT dock)
@@ -816,6 +871,7 @@ public partial class TaskbarWindow : Window
         var hwnd = new WindowInteropHelper(this).Handle;
         if (hwnd != IntPtr.Zero) Native.ApplyGlass(hwnd, c.Tint(c.DockOpacity));
         foreach (var f in _folderCache.Values) f.ApplyGlass();
+        ReapplyStartMenuGlass();
 
         PlaceDock();
     }

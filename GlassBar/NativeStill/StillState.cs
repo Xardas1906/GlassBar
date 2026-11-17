@@ -23,7 +23,8 @@ public static class StillState
         get
         {
             if (_data != null) return _data;
-            try { _data = File.Exists(FilePath) ? JsonNode.Parse(File.ReadAllText(FilePath)) as JsonObject : null; } catch { }
+            // kaputte Datei -> Sicherung (.bak); fehlt beides -> leer
+            _data = SafeFile.Read(FilePath, json => JsonNode.Parse(json) as JsonObject);
             return _data ??= new JsonObject();
         }
     }
@@ -57,9 +58,7 @@ public static class StillState
             if (_data == null) return;
             try
             {
-                Directory.CreateDirectory(Config.Folder);
-                File.WriteAllText(FilePath + ".tmp", _data.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
-                File.Move(FilePath + ".tmp", FilePath, true);
+                SafeFile.WriteAllText(FilePath, _data.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
             }
             catch { }
         }

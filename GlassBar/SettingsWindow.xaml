@@ -330,6 +330,9 @@
             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecHide" Checked="Nav_Checked">
                 <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7B3;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Ein- und Ausblenden"/></StackPanel>
             </RadioButton>
+            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecStartMenu" Checked="Nav_Checked">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8A1;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Startmenü"/></StackPanel>
+            </RadioButton>
             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecScreens" Checked="Nav_Checked">
                 <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7F4;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Mehrere Bildschirme"/></StackPanel>
             </RadioButton>
@@ -754,6 +757,36 @@
                             <Slider DockPanel.Dock="Right" Style="{StaticResource Slide}" Minimum="100" Maximum="800"
                                     TickFrequency="20" IsSnapToTickEnabled="True" Value="{Binding SlideDurationMs}"/>
                             <TextBlock Text="Dauer der Animation" Style="{StaticResource Label}"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ Startmenü ============ -->
+                <TextBlock x:Name="SecStartMenu" Text="Startmenü" Style="{StaticResource Section}"/>
+                <Border Style="{StaticResource CardBox}">
+                    <StackPanel>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding StartMenuGlass}"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                Glas-Effekt auf das Startmenü und die Suche anwenden
+                                <LineBreak/><Run Text="Macht das Startmenü durchsichtig wie das Dock (gleiche Glasfarbe, eigene Deckkraft)." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding StartMenuGlass}">
+                            <TextBlock DockPanel.Dock="Right" Width="60" TextAlignment="Right" VerticalAlignment="Center"
+                                       Text="{Binding StartMenuGlassOpacity, StringFormat={}{0:0} %}" Foreground="{StaticResource Sub}"/>
+                            <Slider DockPanel.Dock="Right" Style="{StaticResource Slide}" Minimum="0" Maximum="100"
+                                    TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding StartMenuGlassOpacity}"/>
+                            <TextBlock Text="Deckkraft des Startmenü-Glases" Style="{StaticResource Label}"/>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}">
+                            <TextBlock DockPanel.Dock="Right" Width="60" TextAlignment="Right" VerticalAlignment="Center"
+                                       Text="{Binding ShellFlyoutGap, StringFormat={}{0:0} px}" Foreground="{StaticResource Sub}"/>
+                            <Slider DockPanel.Dock="Right" Style="{StaticResource Slide}" Minimum="0" Maximum="60"
+                                    TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding ShellFlyoutGap}"/>
+                            <TextBlock Text="Abstand von Startmenü und Suche zum Dock" Style="{StaticResource Label}"/>
                         </DockPanel>
                     </StackPanel>
                 </Border>

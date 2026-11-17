@@ -189,6 +189,7 @@ public static partial class Strings
         ["Dock-Inhalt"] = "Dock content",
         ["Uhr, Musik & Wetter"] = "Clock, music & weather",
         ["Ein- und Ausblenden"] = "Show and hide",
+        ["Startmenü"] = "Start menu",
         ["Mehrere Bildschirme"] = "Multiple monitors",
         ["Aufklapp-Fenster"] = "Pop-up windows",
         ["Hintergrund"] = "Wallpaper",
@@ -266,6 +267,12 @@ public static partial class Strings
         ["Dock nach unten aus dem Bild fahren und wieder hereinfahren"] = "Slide the dock down out of view and back in",
         ["Aus: Das Dock verschwindet und erscheint ohne Animation."] = "Off: the dock disappears and appears without animation.",
         ["Dauer der Animation"] = "Animation duration",
+
+        // ---------- Startmenü ----------
+        ["Glas-Effekt auf das Startmenü und die Suche anwenden"] = "Apply glass effect to Start menu and Search",
+        ["Macht das Startmenü durchsichtig wie das Dock (gleiche Glasfarbe, eigene Deckkraft)."] = "Makes the Start menu translucent like the dock (same glass color, separate opacity).",
+        ["Deckkraft des Startmenü-Glases"] = "Start menu glass opacity",
+        ["Abstand von Startmenü und Suche zum Dock"] = "Gap between Start menu, Search and the dock",
 
         // ---------- Mehrere Bildschirme ----------
         ["Dock auf allen Bildschirmen anzeigen"] = "Show the dock on all monitors",
