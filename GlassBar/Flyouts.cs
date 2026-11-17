@@ -235,7 +235,9 @@ public class PreviewFlyout : FlyoutBase
             };
 
             IntPtr thumb = IntPtr.Zero;
-            if (!w.IsMinimized && Native.DwmRegisterThumbnail(Handle, w.Handle, out var t) == 0)
+            // Auch minimierte Fenster: Windows hält das letzte Bild vor dem Minimieren bereit (wie die Taskleiste).
+            // Liefert es nichts, bleibt das Programmsymbol darunter sichtbar.
+            if (Native.DwmRegisterThumbnail(Handle, w.Handle, out var t) == 0)
                 thumb = t;
 
             _cards.Add((w, host, fallback, thumb));
@@ -251,7 +253,7 @@ public class PreviewFlyout : FlyoutBase
         if (_cards.Count == 0 || PresentationSource.FromVisual(this) is not { CompositionTarget: { } ct }) return;
         var toDevice = ct.TransformToDevice;
 
-        foreach (var (_, host, fallback, thumb) in _cards)
+        foreach (var (win, host, fallback, thumb) in _cards)
         {
             if (thumb == IntPtr.Zero || !host.IsLoaded) continue;
             Rect r;
@@ -278,7 +280,9 @@ public class PreviewFlyout : FlyoutBase
                 rcDestination = dest, fVisible = true, fSourceClientAreaOnly = false, opacity = 255,
             };
             Native.DwmUpdateThumbnailProperties(thumb, ref props);
-            fallback.Visibility = Visibility.Hidden;
+            // Die Vorschau liegt über dem Symbol. Bei minimierten Fenstern bleibt das Symbol darunter stehen,
+            // falls Windows kein letztes Bild mehr hat.
+            if (!win.IsMinimized) fallback.Visibility = Visibility.Hidden;
         }
     }
 }
