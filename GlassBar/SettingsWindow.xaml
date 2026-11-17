@@ -719,6 +719,14 @@
                             <TextBlock Text="Einblenden, wenn die Maus an den unteren Bildschirmrand fährt" Style="{StaticResource Label}"/>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding RevealAtEdge}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding RevealOverFullScreen}"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                … auch über Vollbild-Programmen
+                                <LineBreak/><Run Text="Aus: In Spielen (auch Fenster-Vollbild) und Videos kommt das Dock nur über die Windows-Taste." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding WinKeyShowsDockFirst}"/>
                             <TextBlock Style="{StaticResource Label}">

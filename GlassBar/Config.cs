@@ -36,6 +36,8 @@ public class Config
     /// <summary>"Covered" = wenn ein Fenster darüber liegt, "FullScreen" = nur bei Vollbild, "Never" = nie.</summary>
     public string AutoHideMode { get; set; } = "Covered";
     public bool RevealAtEdge { get; set; } = true;
+    /// <summary>Auch über Vollbild-Programmen (Spiele, Videos) am unteren Rand einblenden.</summary>
+    public bool RevealOverFullScreen { get; set; }
     /// <summary>Bildschirme (Gerätename), auf denen das Dock fixiert ist und sich nicht ausblendet.</summary>
     public List<string> FixedScreens { get; set; } = new();
     /// <summary>Glaseffekt (Unschärfe) im Einstellungsfenster; aus = schlichter, leichter für schwache Grafikkarten.</summary>

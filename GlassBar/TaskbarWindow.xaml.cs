@@ -330,7 +330,11 @@ public partial class TaskbarWindow : Window
         // 2) Maus am unteren Bildschirmrand oder auf dem Dock / einem offenen Fenster davon -> zeigen
         var p = System.Windows.Forms.Cursor.Position;
         var screen = ScreenPx;
-        bool atEdge = App.Config.RevealAtEdge && p.Y >= screen.Bottom - 2 && p.Y < screen.Bottom && p.X >= screen.Left && p.X < screen.Right;
+        // Über Vollbild-Programmen (Spiele im Fenster-Vollbild, Videos) nicht am Rand einblenden – sonst springt
+        // das Dock im Spiel hoch, sobald die Maus nach unten fährt. Die Windows-Taste holt es trotzdem.
+        bool fullScreenTop = top != IntPtr.Zero && IsFullScreen(top, screen);
+        bool atEdge = App.Config.RevealAtEdge && (!fullScreenTop || App.Config.RevealOverFullScreen)
+            && p.Y >= screen.Bottom - 2 && p.Y < screen.Bottom && p.X >= screen.Left && p.X < screen.Right;
         bool overDock = _shown && p.X >= dock.Left && p.X <= dock.Right && p.Y >= dock.Top - 4 && p.Y <= dock.Bottom + 8;
         bool inUse = overDock || _flyout != null || ModernMenu.AnyOpen || Ui.MenuOpen;
         if (atEdge || inUse) _peekUntil = DateTime.Now.AddMilliseconds(700);
