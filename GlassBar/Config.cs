@@ -60,6 +60,8 @@ public class Config
     public bool ShowSearchButton { get; set; } = true;
     public bool ShowTaskViewButton { get; set; } = true;
     public bool ShowDesktopButton { get; set; } = true;
+    /// <summary>Schmaler Knopf ganz rechts: alle Fenster minimieren / Desktop anzeigen (Win+D).</summary>
+    public bool ShowPeekButton { get; set; } = true;
     public bool ShowTray { get; set; } = true;
     public bool ShowQuickSettings { get; set; } = true;
     public bool ShowClock { get; set; } = true;
@@ -77,14 +79,14 @@ public class Config
     public bool ShowWallpaper { get; set; }
     /// <summary>Heutige Aufgaben im Hintergrund (mehrere mit ; trennen).</summary>
     public string WallpaperTasks { get; set; } = "";
-    /// <summary>Wo Musik und Wetter erscheinen: "Dock", "Wallpaper" oder "Both".</summary>
+    /// <summary>Wo die Musik erscheint: "Dock", "Wallpaper" oder "Both" (leer = wie früher InfoPlacement).</summary>
+    public string MusicPlacement { get; set; } = "";
+    /// <summary>Wo das Wetter erscheint: "Dock", "Wallpaper" oder "Both" (leer = wie früher InfoPlacement).</summary>
+    public string WeatherPlacement { get; set; } = "";
+    /// <summary>Alte gemeinsame Einstellung für Musik und Wetter; nur noch zum Übernehmen gelesen.</summary>
     public string InfoPlacement { get; set; } = "Dock";
     /// <summary>Bilder pro Sekunde des Hintergrunds (weniger = weniger Last).</summary>
     public double WallpaperFps { get; set; } = 30;
-    /// <summary>
-    /// Wie „Still“ dargestellt wird: "Browser" = das Original im eingebetteten Browser,
-    /// "Native" = eigene Darstellung ohne Browser (viel leichter, noch nicht alle Funktionen).
-    /// </summary>
     /// <summary>Start-Knopf: "Tile" (blaue Kachel), "Glass" (Glas-Kachel), "Logo" (nur das Logo) oder "Custom" (eigenes Bild).</summary>
     public string StartIcon { get; set; } = "Tile";
     /// <summary>Eigenes Bild für den Start-Knopf (Kopie in %AppData%\GlassBar).</summary>
@@ -113,6 +115,14 @@ public class Config
         foreach (var p in typeof(Config).GetProperties())
             if (p.CanWrite && p.Name is not (nameof(Pinned) or nameof(PinnedTrayIcons) or nameof(FolderGroups) or nameof(CollapsedRest) or nameof(WallpaperTasks) or nameof(WeatherCity)))
                 p.SetValue(this, p.GetValue(d));
+        Normalize();
+    }
+
+    /// <summary>Fehlende neue Werte aus alten Einstellungen übernehmen.</summary>
+    private void Normalize()
+    {
+        if (string.IsNullOrEmpty(MusicPlacement)) MusicPlacement = string.IsNullOrEmpty(InfoPlacement) ? "Dock" : InfoPlacement;
+        if (string.IsNullOrEmpty(WeatherPlacement)) WeatherPlacement = string.IsNullOrEmpty(InfoPlacement) ? "Dock" : InfoPlacement;
     }
 
     public static Config Load()
@@ -120,10 +130,16 @@ public class Config
         try
         {
             if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize<Config>(File.ReadAllText(FilePath)) ?? new Config();
+            {
+                var c = JsonSerializer.Deserialize<Config>(File.ReadAllText(FilePath)) ?? new Config();
+                c.Normalize();
+                return c;
+            }
         }
         catch { }
-        return new Config();
+        var fresh = new Config();
+        fresh.Normalize();
+        return fresh;
     }
 
     public void Save()

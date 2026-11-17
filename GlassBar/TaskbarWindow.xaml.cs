@@ -664,6 +664,7 @@ public partial class TaskbarWindow : Window
         SearchButton.Visibility = Vis(c.ShowSearchButton);
         TaskViewButton.Visibility = Vis(c.ShowTaskViewButton);
         DesktopButton.Visibility = Vis(c.ShowDesktopButton);
+        PeekButton.Visibility = Vis(c.ShowPeekButton);
         OverflowButton.Visibility = Vis(c.ShowTray);
         TrayList.Visibility = Vis(c.ShowTray);
         QuickSettingsButton.Visibility = Vis(c.ShowQuickSettings);
@@ -756,7 +757,7 @@ public partial class TaskbarWindow : Window
 
     private void UpdateMusicUi()
     {
-        bool show = App.Config.ShowMusic && InfoInDock && _media is { HasMedia: true };
+        bool show = App.Config.ShowMusic && MusicInDock && _media is { HasMedia: true };
         MusicPill.Visibility = SepMusic.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         if (!show || _media == null) return;
 
@@ -775,8 +776,9 @@ public partial class TaskbarWindow : Window
     private NativeStill.NativeStillWindow? _native;
     private AudioSpectrum? _nativeAudio;
 
-    /// <summary>Musik und Wetter im Dock? (Nein, wenn der Hintergrund läuft und sie dort sein sollen.)</summary>
-    private static bool InfoInDock => !App.Config.ShowWallpaper || App.Config.InfoPlacement != "Wallpaper";
+    /// <summary>Musik bzw. Wetter im Dock? (Nein, wenn der Hintergrund läuft und sie nur dort sein sollen.)</summary>
+    private static bool MusicInDock => !App.Config.ShowWallpaper || App.Config.MusicPlacement != "Wallpaper";
+    private static bool WeatherInDock => !App.Config.ShowWallpaper || App.Config.WeatherPlacement != "Wallpaper";
 
     private void UpdateWallpaper()
     {
@@ -866,14 +868,16 @@ public partial class TaskbarWindow : Window
             }
             _coverVersion++;
         }
+        // Musik nur im Dock: Der Hintergrund bekommt keinen Titel und blendet seine Pille aus
+        bool onWall = App.Config.ShowMusic && App.Config.MusicPlacement != "Dock";
         var state = new NativeStill.Ui.MediaState
         {
-            Title = m.HasMedia ? m.Title : "", Artist = m.Artist, Album = m.Album, App = m.App,
+            Title = m.HasMedia && onWall ? m.Title : "", Artist = m.Artist, Album = m.Album, App = m.App,
             CoverBgra = _coverBgra, CoverWidth = _coverW, CoverHeight = _coverH, CoverVersion = _coverVersion,
             Playing = m.IsPlaying, Paused = m.IsPaused, Position = m.Position, Duration = m.Duration, Stamp = DateTime.Now,
         };
         var v = NativeStill.NativeStillStore.Values;
-        bool visible = v.Bool("showPill") && m.HasMedia && (m.IsPlaying || m.IsPaused);
+        bool visible = onWall && v.Bool("showPill") && m.HasMedia && (m.IsPlaying || m.IsPaused);
         foreach (var r in all)
         {
             r.SetMedia(state);
@@ -893,7 +897,7 @@ public partial class TaskbarWindow : Window
     private void PushWeatherToNative()
     {
         if (!IsPrimary) return;
-        bool show = App.Config.ShowWeather && App.Config.InfoPlacement != "Dock" && _weather.HasData;
+        bool show = App.Config.ShowWeather && App.Config.WeatherPlacement != "Dock" && _weather.HasData;
         if (_weather.HasData) NativeStill.StillModules.SetWeatherCode(_weather.Code);
         var mood = show && NativeStill.NativeStillStore.Values.Bool("weatherMood")
             ? NativeStill.StillPalette.MoodForWeather(_weather.Code, _weather.IsDay) : null;
@@ -926,7 +930,7 @@ public partial class TaskbarWindow : Window
     private void UpdateWeatherUi()
     {
         PushWeatherToNative();
-        bool show = App.Config.ShowWeather && InfoInDock && (_weather.HasData || _weather.Error != null);
+        bool show = App.Config.ShowWeather && WeatherInDock && (_weather.HasData || _weather.Error != null);
         WeatherButton.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         if (!show) return;
 

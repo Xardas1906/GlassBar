@@ -12,7 +12,9 @@ Hintergrund „Still“, nativ gezeichnet ohne Browser.
 - Im Spiel: Erster Druck auf die Windows-Taste holt das Dock und gibt die Maus frei
 - Start-Symbol wählbar (blaue Kachel, Glas, nur Logo oder eigenes Bild)
 - Startet mit Windows über die Aufgabenplanung, mit erhöhter Priorität
-- Einstellungsfenster mit Suche
+- Knopf „Desktop anzeigen“ ganz rechts (wie bei Windows)
+- Musik und Wetter getrennt: im Dock, im Hintergrund oder beides
+- Einstellungsfenster mit Suche; Werte neben Reglern lassen sich direkt eintippen
 
 ## Hintergrund „Still“ (nativ)
 - Lichtfeld (Direct3D), Uhr mit rollenden Ziffern, Datum und Wetter (Direct2D)

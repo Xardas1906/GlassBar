@@ -31,6 +31,7 @@ public partial class SettingsWindow : Window
         BuildStillNav();
         DataContext = App.Config;
         AutostartBox.IsChecked = Native.Autostart;
+        SliderEdit.AttachAll(Content_);
 
         SourceInitialized += (_, _) =>
         {
@@ -242,6 +243,7 @@ public partial class SettingsWindow : Window
                 };
                 row.Children.Add(text);
                 row.Children.Add(sl);
+                SliderEdit.Attach(sl, text, s.Fmt is "pct" or "pos" ? 100 : 1);
                 break;
             }
             case "choice" when s.Key == "font":
