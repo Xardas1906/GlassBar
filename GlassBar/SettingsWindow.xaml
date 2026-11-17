@@ -716,6 +716,9 @@
                             <TextBlock Style="{StaticResource Label}">
                                 Hintergrund „Still“ von GlassBar anzeigen
                                 <LineBreak/><Run Text="Ersetzt Wallpaper Engine: Beende Wallpaper Engine, wenn du das einschaltest. Läuft ohne Browser direkt in GlassBar." Foreground="{StaticResource Sub}" FontSize="12"/>
+                                <LineBreak/><Run Text="Nachbau des Originals " Foreground="{StaticResource Sub}" FontSize="12"/><Hyperlink
+                                    NavigateUri="https://steamcommunity.com/sharedfiles/filedetails/?id=3829782620" RequestNavigate="Link_Navigate"
+                                    Foreground="{StaticResource Accent}" FontSize="12">„Still“ von MrShadow (Steam Workshop)</Hyperlink>
                             </TextBlock>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
@@ -787,6 +790,15 @@
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox x:Name="AutostartBox" Style="{StaticResource Toggle}" Click="Autostart_Click"/>
                             <TextBlock Text="Mit Windows starten" Style="{StaticResource Label}"/>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}">
+                            <Button x:Name="UpdateButton" DockPanel.Dock="Right" Style="{StaticResource Button}" Margin="0"
+                                    Content="Nach Updates suchen" Click="Update_Click" VerticalAlignment="Center"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                <Run Text="Updates"/>
+                                <LineBreak/><Run x:Name="UpdateStatus" Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <WrapPanel Margin="0,12,0,12">

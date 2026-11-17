@@ -32,6 +32,7 @@ public partial class SettingsWindow : Window
         DataContext = App.Config;
         AutostartBox.IsChecked = Native.Autostart;
         SliderEdit.AttachAll(Content_);
+        CheckUpdateQuietly();
 
         SourceInitialized += (_, _) =>
         {
@@ -392,6 +393,84 @@ public partial class SettingsWindow : Window
         // Abgebrochen: Auswahl wieder auf den gespeicherten Stand
         StartIconCustom.IsChecked = App.Config.StartIcon == "Custom";
         ScheduleApply();
+    }
+
+    // ---------- Updates über GitHub ----------
+    private Updater.Release? _update;
+    private bool _updateBusy;
+
+    private void ShowVersion(string? extra = null) =>
+        UpdateStatus.Text = $"Installiert: Version {Updater.Current.ToString(3)}" + (extra != null ? " · " + extra : "");
+
+    /// <summary>Beim Öffnen leise nachsehen, ob es etwas Neues gibt.</summary>
+    private async void CheckUpdateQuietly()
+    {
+        ShowVersion();
+        try
+        {
+            var r = await Updater.GetLatestAsync();
+            if (r != null && r.Version > Updater.Current) OfferUpdate(r);
+        }
+        catch { /* offline o. Ä.: nur der Knopf bleibt */ }
+    }
+
+    private void OfferUpdate(Updater.Release r)
+    {
+        _update = r;
+        ShowVersion($"Neu: Version {r.Version.ToString(3)}");
+        UpdateButton.Content = $"Auf {r.Version.ToString(3)} aktualisieren";
+        UpdateButton.ToolTip = string.IsNullOrWhiteSpace(r.Notes) ? r.Name : r.Notes;
+    }
+
+    private async void Update_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updateBusy) return;
+        _updateBusy = true;
+        UpdateButton.IsEnabled = false;
+        try
+        {
+            if (_update == null)
+            {
+                UpdateButton.Content = "Suche …";
+                var r = await Updater.GetLatestAsync();
+                if (r == null || r.Version <= Updater.Current)
+                {
+                    ShowVersion("Du hast die neueste Version.");
+                    UpdateButton.Content = "Nach Updates suchen";
+                    return;
+                }
+                OfferUpdate(r);
+                return; // erst anzeigen, beim nächsten Klick installieren
+            }
+
+            var release = _update;
+            var progress = new Progress<double>(p => UpdateButton.Content = $"Lade … {p * 100:0} %");
+            await Updater.PrepareAsync(release, progress);
+            UpdateButton.Content = "Starte neu …";
+            App.Instance.Quit(); // das Update-Skript ersetzt die Dateien und startet GlassBar wieder
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            ShowVersion("Update abgebrochen (keine Administratorrechte).");
+            UpdateButton.Content = _update != null ? $"Auf {_update.Version.ToString(3)} aktualisieren" : "Nach Updates suchen";
+        }
+        catch (Exception ex)
+        {
+            ShowVersion("Update fehlgeschlagen: " + ex.Message);
+            UpdateButton.Content = _update != null ? $"Auf {_update.Version.ToString(3)} aktualisieren" : "Nach Updates suchen";
+        }
+        finally
+        {
+            _updateBusy = false;
+            UpdateButton.IsEnabled = true;
+        }
+    }
+
+    private void Link_Navigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }
+        catch { }
+        e.Handled = true;
     }
 
     private void Autostart_Click(object sender, RoutedEventArgs e)

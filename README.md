@@ -23,8 +23,15 @@ Hintergrund „Still“, nativ gezeichnet ohne Browser.
 - Regen auf der Scheibe, Strömung und Leuchten unter der Maus – auf allen Bildschirmen
 - Schläft, sobald er verdeckt ist
 
-„Still“ ist ein Hintergrund aus dem Steam Workshop von einem anderen Autor. Der native Teil ist ein Nachbau für den
-privaten Gebrauch, `Still-Deutsch` enthält die deutsche Übersetzung des Originals.
+## Original und Danksagung
+Der Hintergrund in GlassBar ist ein inoffizieller Nachbau von
+**[„Still – Minimal Wallpaper for Your Focus“](https://steamcommunity.com/sharedfiles/filedetails/?id=3829782620)**
+von **[MrShadow](https://steamcommunity.com/id/gj_emon)** aus dem Steam Workshop für Wallpaper Engine.
+Idee, Gestaltung und Funktionen stammen vom Original – alle Rechte daran liegen bei seinem Autor.
+GlassBar steht in keiner Verbindung zu MrShadow oder Wallpaper Engine. Wenn dir der Hintergrund gefällt,
+unterstütze bitte das Original im Workshop.
+
+Sollte der Autor mit dem Nachbau nicht einverstanden sein, wird er auf Wunsch entfernt.
 
 ## Bauen
 Voraussetzungen: Windows 11, .NET 10 SDK.

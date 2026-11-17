@@ -8,3 +8,6 @@ obj/
 # Veröffentlichte Releases (werden als Release-Datei hochgeladen, nicht eingecheckt)
 publish/
 *.zip
+
+# Übersetzung des Original-Hintergrunds (nur lokal)
+Still-Deutsch/
