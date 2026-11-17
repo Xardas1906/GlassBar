@@ -36,6 +36,17 @@ public static class L
     public static string T(string? de)
     {
         if (!En || string.IsNullOrWhiteSpace(de)) return de ?? "";
+        // Der Hintergrund fragt dieselben Texte bei jedem Bild ab (eigener Thread) -> Ergebnis merken
+        if (Cache.TryGetValue(de, out var hit)) return hit;
+        var result = Translate(de);
+        if (Cache.Count < 20000) Cache[de] = result;
+        return result;
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> Cache = new();
+
+    private static string Translate(string de)
+    {
         string core = de.Trim();
         string lead = de[..de.IndexOf(core[0])], trail = de[(de.LastIndexOf(core[^1]) + 1)..];
         string check = "";
@@ -92,7 +103,8 @@ public static class L
     private static void NoteMissing(string de)
     {
         // nur echte Wörter, keine Zahlen/Symbole/Programmnamen aus Windows
-        if (!de.Any(char.IsLetter) || !Missing.Add(de)) return;
+        if (!de.Any(char.IsLetter)) return;
+        lock (Missing) { if (!Missing.Add(de)) return; }
         try { File.AppendAllText(Path.Combine(Config.Folder, "missing-en.txt"), de + Environment.NewLine); } catch { }
     }
 }

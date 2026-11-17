@@ -98,6 +98,11 @@ public static class WorkoutPlan
 {
     private static Rung L(string name, string cue, bool sides = false) => new(name, cue, sides);
 
+    // Übersetzung (die Methode L oben verdeckt die Klasse GlassBar.L). Namen und Hinweise der Stufen, Pläne und
+    // Muskelgruppen bleiben hier deutsch (sie sind zugleich Schlüssel) und werden erst beim Anzeigen übersetzt.
+    private static string T(string de) => global::GlassBar.L.T(de);
+    private static string F(string de, params object?[] args) => global::GlassBar.L.F(de, args);
+
     /* ---------- Leitern ----------
        Jede Bewegung ist eine Leiter aus Varianten, die leichteste zuerst. Fortschritt heißt klettern:
        mit dem eigenen Gewicht baut mehr Wiederholung allein vor allem Ausdauer auf. */
@@ -382,7 +387,7 @@ public static class WorkoutPlan
         int top = m.Rungs.Length - 1;
         List<Step> Left() => steps.Skip(at).Where(s => s.K == "work" && s.M == id).ToList();
         void Apply(int rg, int n) { foreach (var s in Left()) { s.Rung = rg; s.N = n; s.Sec = WorkSeconds(id, rg, n); } }
-        string unit = m.Kind == "reps" ? "Wdh." : "s";
+        string amountFmt = m.Kind == "reps" ? "{0} Wdh." : "{0} s";
         int step = m.Kind == "reps" ? (focus == "strength" ? 1 : 2) : 5;
         bool circuit = m.Kind == "cardio";
 
@@ -414,19 +419,19 @@ public static class WorkoutPlan
         changed = true;
         if (dir > 0)
         {
-            if (rungFirst && rung < top) { Apply(rung + 1, r.Start); return $"Schwerer: {m.Rungs[rung + 1].Name}"; }
-            if (here.N < r.Max) { int n = Math.Min(r.Max, here.N + step); Apply(rung, n); return $"Schwerer: {n} {unit}"; }
-            if (AddSet()) return "Schwerer: ein Satz mehr";
-            if (rung < top) { Apply(rung + 1, r.Min); return $"Schwerer: {m.Rungs[rung + 1].Name}"; }
+            if (rungFirst && rung < top) { Apply(rung + 1, r.Start); return F("Schwerer: {0}", T(m.Rungs[rung + 1].Name)); }
+            if (here.N < r.Max) { int n = Math.Min(r.Max, here.N + step); Apply(rung, n); return F("Schwerer: {0}", F(amountFmt, n)); }
+            if (AddSet()) return T("Schwerer: ein Satz mehr");
+            if (rung < top) { Apply(rung + 1, r.Min); return F("Schwerer: {0}", T(m.Rungs[rung + 1].Name)); }
             changed = false;
-            return "Das ist die oberste Stufe";
+            return T("Das ist die oberste Stufe");
         }
-        if (rungFirst && rung > 0) { Apply(rung - 1, r.Start); return $"Leichter: {m.Rungs[rung - 1].Name}"; }
-        if (here.N > r.Min) { int n = Math.Max(r.Min, here.N - step); Apply(rung, n); return $"Leichter: {n} {unit}"; }
-        if (DropSet()) return "Leichter: ein Satz weniger";
-        if (rung > 0) { Apply(rung - 1, r.Down); return $"Leichter: {m.Rungs[rung - 1].Name}"; }
+        if (rungFirst && rung > 0) { Apply(rung - 1, r.Start); return F("Leichter: {0}", T(m.Rungs[rung - 1].Name)); }
+        if (here.N > r.Min) { int n = Math.Max(r.Min, here.N - step); Apply(rung, n); return F("Leichter: {0}", F(amountFmt, n)); }
+        if (DropSet()) return T("Leichter: ein Satz weniger");
+        if (rung > 0) { Apply(rung - 1, r.Down); return F("Leichter: {0}", T(m.Rungs[rung - 1].Name)); }
         changed = false;
-        return "Das ist die leichteste Version";
+        return T("Das ist die leichteste Version");
     }
 
     /* ---------- Tage ---------- */
@@ -494,13 +499,13 @@ public static class WorkoutPlan
 
     private static string AgoText(double hours)
     {
-        if (hours < 1) return "vor weniger als einer Stunde";
+        if (hours < 1) return T("vor weniger als einer Stunde");
         if (hours < 48)
         {
             int h = Round(hours);
-            return $"vor {h} Stunde{(h == 1 ? "" : "n")}";
+            return h == 1 ? T("vor 1 Stunde") : F("vor {0} Stunden", h);
         }
-        return $"vor {(int)Math.Floor(hours / 24)} Tagen";
+        return F("vor {0} Tagen", (int)Math.Floor(hours / 24));
     }
 
     /* Trainingstage in Folge bis jetzt: Einheiten unter 16 Stunden Abstand sind dasselbe Training, egal wie
@@ -543,26 +548,31 @@ public static class WorkoutPlan
         string alt = ready.Count > 0 ? ready[0] : "cardio";
         Recommendation Rest(string reason) => new("rest", null, alt, reason);
 
-        if (lastH is not double last) return new("train", "full", "full", "Eine ausgewogene erste Einheit, von allem etwas.");
-        if (last < JustTrained) return Rest($"Du hast {AgoText(last)} trainiert. Muskeln wachsen, während du dich erholst.");
+        if (lastH is not double last) return new("train", "full", "full", T("Eine ausgewogene erste Einheit, von allem etwas."));
+        if (last < JustTrained) return Rest(F("Du hast {0} trainiert. Muskeln wachsen, während du dich erholst.", AgoText(last)));
         if (last >= Fortnight)
-            return new("train", "full", "full", $"{(int)Math.Floor(last / 24)} Tage seit dem letzten Mal. Eine leichtere Einheit zum Wiedereinstieg.", true);
-        if (run >= 3) return Rest($"{run} Tage in Folge. Ein Ruhetag hilft der nächsten Einheit.");
-        if (last7 >= goal) return Rest($"{last7} Trainings diese Woche, dein Ziel ist {goal}. Die Pause hast du dir verdient.");
+            return new("train", "full", "full", F("{0} Tage seit dem letzten Mal. Eine leichtere Einheit zum Wiedereinstieg.", (int)Math.Floor(last / 24)), true);
+        if (run >= 3) return Rest(F("{0} Tage in Folge. Ein Ruhetag hilft der nächsten Einheit.", run));
+        if (last7 >= goal)
+            return Rest(last7 == 1
+                ? F("1 Training diese Woche, dein Ziel ist {0}. Die Pause hast du dir verdient.", goal)
+                : F("{0} Trainings diese Woche, dein Ziel ist {1}. Die Pause hast du dir verdient.", last7, goal));
         var fullBody = past.FirstOrDefault(x => x.E.Plan == "full");
-        if (fullBody.E != null && fullBody.H < Rested) return Rest($"Ganzkörper {AgoText(fullBody.H)}. Mehr Erholung macht das nächste Mal besser.");
+        if (fullBody.E != null && fullBody.H < Rested) return Rest(F("Ganzkörper {0}. Mehr Erholung macht das nächste Mal besser.", AgoText(fullBody.H)));
         bool hardLately = past.Any(x => x.H < InARow && x.E.Done.Any(d => d.Feel == "hard"));
-        if (hardLately) return Rest("Deine letzte Einheit war anstrengend. Gönn dir etwas mehr Zeit.");
-        if (ready.Count == 0) return Rest("Alles wurde kürzlich trainiert. Gönn ihm Erholung.");
+        if (hardLately) return Rest(T("Deine letzte Einheit war anstrengend. Gönn dir etwas mehr Zeit."));
+        if (ready.Count == 0) return Rest(T("Alles wurde kürzlich trainiert. Gönn ihm Erholung."));
 
         string plan = ready[0];
         if (plan == "full")
         {
-            string why = last >= 7 * 24 ? $"{(int)Math.Floor(last / 24)} Tage seit dem letzten Mal. Alles ist erholt." : "Alles ist erholt, heute kann alles trainiert werden.";
+            string why = last >= 7 * 24 ? F("{0} Tage seit dem letzten Mal. Alles ist erholt.", (int)Math.Floor(last / 24)) : T("Alles ist erholt, heute kann alles trainiert werden.");
             return new("train", plan, plan, why);
         }
         string g0 = Plans[plan].Primary[0];
-        string reason = r.Since.TryGetValue(g0, out var since) ? $"{GroupName[g0]}: zuletzt trainiert {AgoText(since)}." : $"{Plans[plan].Label} hatte noch keine Einheit.";
+        string reason = r.Since.TryGetValue(g0, out var since)
+            ? F("{0}: zuletzt trainiert {1}.", T(GroupName[g0]), AgoText(since))
+            : F("{0} hatte noch keine Einheit.", T(Plans[plan].Label));
         return new("train", plan, plan, reason);
     }
 
@@ -572,8 +582,8 @@ public static class WorkoutPlan
         var r = RecoveryOf(history, now);
         var tired = Plans[planId].Primary.Where(g => !IsRested(g, r)).ToList();
         if (tired.Count == 0) return "";
-        string names = string.Join(" und ", tired.Select(x => GroupName[x]));
-        return $"{names}: zuletzt trainiert {AgoText(r.Since[tired[0]])}. Du entscheidest.";
+        string names = string.Join(T(" und "), tired.Select(x => T(GroupName[x])));
+        return F("{0}: zuletzt trainiert {1}. Du entscheidest.", names, AgoText(r.Since[tired[0]]));
     }
 
     /* ---------- Body-Mass-Index ----------
@@ -582,7 +592,7 @@ public static class WorkoutPlan
     {
         if (b == null || b.Cm <= 0 || b.Kg <= 0) return null;
         double v = b.Kg / Math.Pow(b.Cm / 100, 2);
-        if (b.Age < 19) return (v, "Erwachsenenwerte gelten ab 19");
-        return (v, v < 18.5 ? "Unter dem üblichen Bereich" : v < 25 ? "Im üblichen Bereich" : "Über dem üblichen Bereich");
+        if (b.Age < 19) return (v, T("Erwachsenenwerte gelten ab 19"));
+        return (v, T(v < 18.5 ? "Unter dem üblichen Bereich" : v < 25 ? "Im üblichen Bereich" : "Über dem üblichen Bereich"));
     }
 }

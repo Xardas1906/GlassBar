@@ -207,7 +207,7 @@ public partial class SettingsWindow : Window
             {
                 Style = (Style)FindResource("NavItem"), GroupName = "Nav", Tag = "Still:" + tab, Height = 32,
                 Visibility = Visibility.Collapsed,
-                Content = new TextBlock { Text = tab, FontSize = 12.5, Margin = new Thickness(34, 0, 0, 0), Opacity = 0.9 },
+                Content = new TextBlock { Text = StillSettings.TabName(tab), FontSize = 12.5, Margin = new Thickness(34, 0, 0, 0), Opacity = 0.9 },
             };
             rb.Checked += Nav_Checked;
             Nav.Children.Insert(++index, rb);
@@ -218,7 +218,7 @@ public partial class SettingsWindow : Window
     private void RenderStillTab()
     {
         if (_still == null) return;
-        StillTitle.Text = $"Still · {_stillTab}";
+        StillTitle.Text = $"Still · {StillSettings.TabName(_stillTab)}";
         StillContent.Children.Clear();
         StillScroll.ScrollToTop();
         var card = new StackPanel();
@@ -228,7 +228,7 @@ public partial class SettingsWindow : Window
         foreach (var s in StillSettings.All.Where(x => x.Tab == _stillTab))
         {
             if (s.Section != null)
-                card.Children.Add(new TextBlock { Text = s.Section, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 14, 0, 2) });
+                card.Children.Add(new TextBlock { Text = L.T(s.Section), FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 14, 0, 2) });
             else if (!first)
                 card.Children.Add(new Border { Style = (Style)FindResource("RowLine") });
             first = false;
@@ -239,11 +239,11 @@ public partial class SettingsWindow : Window
     private FrameworkElement BuildStillRow(StillSetting s)
     {
         var label = new TextBlock { Style = (Style)FindResource("Label") };
-        label.Inlines.Add(new System.Windows.Documents.Run(s.Label));
+        label.Inlines.Add(new System.Windows.Documents.Run(L.T(s.Label)));
         if (s.Note != null)
         {
             label.Inlines.Add(new System.Windows.Documents.LineBreak());
-            label.Inlines.Add(new System.Windows.Documents.Run(s.Note) { Foreground = (Brush)FindResource("Sub"), FontSize = 12 });
+            label.Inlines.Add(new System.Windows.Documents.Run(L.T(s.Note)) { Foreground = (Brush)FindResource("Sub"), FontSize = 12 });
         }
         var row = new DockPanel { Style = (Style)FindResource("Row") };
         object value = _still![s.Key];
@@ -286,7 +286,7 @@ public partial class SettingsWindow : Window
                 foreach (var (optValue, optLabel) in s.Options!)
                 {
                     var v = Normalize(optValue);
-                    var rb = new RadioButton { Content = optLabel, GroupName = "still_" + s.Key, Style = (Style)FindResource("Segment"),
+                    var rb = new RadioButton { Content = L.T(optLabel), GroupName = "still_" + s.Key, Style = (Style)FindResource("Segment"),
                                                Margin = new Thickness(0, 0, 0, 6), IsChecked = Equals(v, Normalize(value)) };
                     rb.Checked += (_, _) => StillChanged(s.Key, v);
                     wrap.Children.Add(rb);
@@ -302,7 +302,7 @@ public partial class SettingsWindow : Window
                 DockPanel.SetDock(panel, Dock.Right);
                 foreach (var (key, name, color) in StillSettings.Palettes)
                 {
-                    var rb = new RadioButton { Style = (Style)FindResource("Swatch"), GroupName = "still_theme", ToolTip = name,
+                    var rb = new RadioButton { Style = (Style)FindResource("Swatch"), GroupName = "still_theme", ToolTip = L.T(name),
                                                Background = (Brush)new BrushConverter().ConvertFromString(color)!, IsChecked = (value as string) == key };
                     var k = key;
                     rb.Checked += (_, _) => StillChanged("theme", k);
@@ -334,7 +334,7 @@ public partial class SettingsWindow : Window
                 Text = DateTime.Now.ToString(L.En ? "ddd, MMMM d" : "ddd, d. MMMM", L.Culture), FontSize = 13.5,
                 HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 4),
             };
-            var name = new TextBlock { Text = optLabel, FontSize = 11, Opacity = 0.6, HorizontalAlignment = HorizontalAlignment.Center };
+            var name = new TextBlock { Text = L.T(optLabel), FontSize = 11, Opacity = 0.6, HorizontalAlignment = HorizontalAlignment.Center };
             var rb = new RadioButton
             {
                 GroupName = "still_font", Style = (Style)FindResource("Segment"), Width = 168, Height = 106,

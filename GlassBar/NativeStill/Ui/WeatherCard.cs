@@ -186,7 +186,7 @@ public sealed class WeatherCard : IOverlay, IDisposable
     private static string Ago(double at)
     {
         long m = (long)Math.Round((NowMs() - at) / MinMs);
-        return m < 1 ? "gerade eben" : m < 60 ? $"vor {m} Min." : $"vor {Math.Round(m / 60.0)} Std.";
+        return m < 1 ? L.T("gerade eben") : m < 60 ? L.F("vor {0} Min.", m) : L.F("vor {0} Std.", Math.Round(m / 60.0));
     }
 
     // ---------- Zustand der Karte ----------
@@ -271,14 +271,14 @@ public sealed class WeatherCard : IOverlay, IDisposable
         _kind = kind;
         _night = IsNight(wx, t);
         _temp = Deg(cur.T);
-        _label = label;
-        _feels = $"Gefühlt {Deg(cur.Feels)}";
+        _label = L.T(label);
+        _feels = L.F("Gefühlt {0}", Deg(cur.Feels));
         var today = DayOf(wx, t);
-        _hilo = $"H {Deg(today.Hi)} · T {Deg(today.Lo)}";
-        string sunNext = t < today.Rise ? $"Sonnenaufgang {FmtTime(today.Rise, c24)}" : t < today.Set ? $"Sonnenuntergang {FmtTime(today.Set, c24)}" : "";
+        _hilo = L.F("H {0} · T {1}", Deg(today.Hi), Deg(today.Lo));
+        string sunNext = t < today.Rise ? L.F("Sonnenaufgang {0}", FmtTime(today.Rise, c24)) : t < today.Set ? L.F("Sonnenuntergang {0}", FmtTime(today.Set, c24)) : "";
         // Dunstig, aber kein Nebel: sagen, wie weit man sieht, statt es Nebel zu nennen.
-        string haze = kind != "fog" && cur.Vis is { } v && v < 1000 ? $"Sicht {(v / 1000).ToString("0.0", CultureInfo.GetCultureInfo("de-DE"))} km" : "";
-        _line = string.Join(" · ", new[] { today.Rain == null ? "" : $"{today.Rain:0} % Regenwahrscheinlichkeit", sunNext, haze }.Where(x => x.Length > 0));
+        string haze = kind != "fog" && cur.Vis is { } v && v < 1000 ? L.F("Sicht {0:0.0} km", v / 1000) : "";
+        _line = string.Join(" · ", new[] { today.Rain is { } rain ? L.F("{0:0} % Regenwahrscheinlichkeit", rain) : "", sunNext, haze }.Where(x => x.Length > 0));
 
         // „Jetzt“ ist der aktuelle Messwert, damit es immer zum Kopf der Karte passt.
         _hCount = 0;
@@ -286,16 +286,16 @@ public sealed class WeatherCard : IOverlay, IDisposable
         {
             if (x.At <= t - HourMs) continue;
             int i = _hCount++;
-            _hTime[i] = i == 0 ? "Jetzt" : FmtHour(x.At, c24);
+            _hTime[i] = i == 0 ? L.T("Jetzt") : FmtHour(x.At, c24);
             _hTemp[i] = Deg(i == 0 ? cur.T : x.T);
             _hKind[i] = i == 0 ? kind : Condition(x.Code, x.Cloud, x.Vis, x.Wet).Kind;
             _hNight[i] = i == 0 ? _night : IsNight(wx, x.At + HourMs / 2);
             if (_hCount == 6) break;
         }
 
-        string where = StillPlace.Place is { Name.Length: > 0 } pl ? pl.Name : "Dein Standort";
+        string where = StillPlace.Place is { Name.Length: > 0 } pl ? pl.Name : L.T("Dein Standort");
         bool stale = t - wx.At > 3 * HourMs;
-        _foot = stale || _failed ? $"{where} · aktualisiert {Ago(wx.At)}" : $"{where} · Open-Meteo · {Ago(wx.At)}";
+        _foot = stale || _failed ? L.F("{0} · aktualisiert {1}", where, Ago(wx.At)) : $"{where} · Open-Meteo · {Ago(wx.At)}";
     }
 
     // Wo die Wetteranzeige steht: neben dem Datum (rechts in der Datumszeile) oder als eigene Zeile darüber.

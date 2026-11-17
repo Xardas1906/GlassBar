@@ -81,7 +81,6 @@ public sealed class StillTextLayer : IDisposable
     private const float ColonAir = 0.055f;      // .colon --colon-air
     private const float ClockLine = 1.04f;      // .clock line-height
     private const int ScratchCount = 16;        // gleichzeitig unscharfe Ziffern (4 + 2 Stellen, je alt und neu, mit Reserve)
-    private static readonly CultureInfo German = CultureInfo.GetCultureInfo("de-DE");
     private static readonly Color4 Transparent = new(0, 0, 0, 0);
 
     // ---------- Fabriken und Schriften ----------
@@ -691,7 +690,7 @@ public sealed class StillTextLayer : IDisposable
         if (f.Now.Date != _dateDay)
         {
             _dateDay = f.Now.Date;
-            _dateStr = f.Now.ToString("dddd, d. MMMM", German);   // toLocaleDateString('de-DE', weekday long, day, month long)
+            _dateStr = f.Now.ToString(L.En ? "dddd, MMMM d" : "dddd, d. MMMM", L.Culture);   // toLocaleDateString(weekday long, day, month long)
             _dateLine.Invalidate();
         }
 

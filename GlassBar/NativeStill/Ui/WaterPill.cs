@@ -225,8 +225,8 @@ public sealed class WaterPill : Pill
     }
 
     private string FmtPair(double ml, double goal) =>
-        OzUnit ? $"{WaterTimerKit.JsRound(ml / Oz)} von {WaterTimerKit.JsRound(goal / Oz)} oz"
-               : $"{WaterTimerKit.Fixed2(ml / 1000)} von {WaterTimerKit.Fixed2(goal / 1000)} L";
+        OzUnit ? L.F("{0} von {1} oz", WaterTimerKit.JsRound(ml / Oz), WaterTimerKit.JsRound(goal / Oz))
+               : L.F("{0} von {1} L", WaterTimerKit.Fixed2(ml / 1000), WaterTimerKit.Fixed2(goal / 1000));
 
     private static string UntilText(double ms)
     {
@@ -247,11 +247,11 @@ public sealed class WaterPill : Pill
         SetIfChanged(ref _metaText, FmtPair(_ws.Ml, goal));
         SetIfChanged(ref _drinkText, "+ " + FmtVol(CupMl));
         string sub;
-        if (_ws.Ml >= goal) sub = "Ziel erreicht. Schön gemacht.";
-        else if (_alerting) sub = "Zeit für ein Glas Wasser.";
-        else if (!c.Settings.Bool("waterRemind")) sub = $"Heute noch {FmtVol(goal - _ws.Ml)}.";
-        else if (!InActiveHours(now)) sub = $"Erinnerungen gehen um {(int)c.Settings.Num("activeFrom"):00}:00 weiter.";
-        else sub = $"Nächste Erinnerung in {UntilText(DueAt(now) - WaterTimerKit.NowMs(now))}.";
+        if (_ws.Ml >= goal) sub = L.T("Ziel erreicht. Schön gemacht.");
+        else if (_alerting) sub = L.T("Zeit für ein Glas Wasser.");
+        else if (!c.Settings.Bool("waterRemind")) sub = L.F("Heute noch {0}.", FmtVol(goal - _ws.Ml));
+        else if (!InActiveHours(now)) sub = L.F("Erinnerungen gehen um {0:00}:00 weiter.", (int)c.Settings.Num("activeFrom"));
+        else sub = L.F("Nächste Erinnerung in {0}.", UntilText(DueAt(now) - WaterTimerKit.NowMs(now)));
         SetIfChanged(ref _subText, sub);
     }
 
@@ -492,7 +492,7 @@ public sealed class WaterPill : Pill
         var fg = c.Fg;
 
         // Kopf: „Wasser“ links, Stand rechts (auf gemeinsamer Grundlinie, Stand wird bei Platzmangel gekürzt)
-        _title.Set(c.DWrite, _kit.Fmt(c, 14.5f, 600), "Wasser", null);
+        _title.Set(c.DWrite, _kit.Fmt(c, 14.5f, 600), L.T("Wasser"), null);
         _meta.Set(c.DWrite, _kit.Fmt(c, 12, 550), _metaText, _kit.Tnum(c), trim: true);
         float headL = x + 58 * k, headR = x + W - 18 * k, headTop = y + 18 * k;
         float baseline = headTop + Math.Max(_title.Baseline, _meta.Baseline);
@@ -522,7 +522,7 @@ public sealed class WaterPill : Pill
         // Knöpfe: „+ 250 ml“ (füllt), „Später“ (nur fällig), Rückgängig (rund)
         float rowL = x + 16 * k, rowR = x + W - 16 * k, top = y + 98 * k, h = 36 * k, gap = 8 * k;
         _drink.Set(c.DWrite, _kit.Fmt(c, 13, 600), _drinkText, _kit.Tnum(c));
-        _later.Set(c.DWrite, _kit.Fmt(c, 13, 600), "Später", null);
+        _later.Set(c.DWrite, _kit.Fmt(c, 13, 600), L.T("Später"), null);
         float undoX = rowR - h;
         float laterW = _later.Width + 32 * k;
         bool later = _alerting;

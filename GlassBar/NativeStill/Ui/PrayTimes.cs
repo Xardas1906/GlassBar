@@ -209,7 +209,7 @@ public static class PrayTimes
         {
             var d = local.AddDays(adjustDays);
             int day = UmAlQura.GetDayOfMonth(d), month = UmAlQura.GetMonth(d), year = UmAlQura.GetYear(d);
-            return $"{day}. {HijriMonths[month - 1]} {year} AH";
+            return L.F("{0}. {1} {2} AH", day, L.T(HijriMonths[month - 1]), year);
         }
         catch { return ""; }
     }

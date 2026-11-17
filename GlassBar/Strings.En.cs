@@ -3,6 +3,13 @@ namespace GlassBar;
 /// <summary>Englische Texte. Schlüssel = deutscher Originaltext (ohne Leerraum am Rand).</summary>
 public static partial class Strings
 {
+    /// <summary>Texte des Hintergrunds „Still“ liegen in eigenen Dateien (Strings.En.*.cs) und kommen hier dazu.</summary>
+    static Strings()
+    {
+        foreach (var part in new[] { EnWorkout, EnPrayerWeather, EnPills, EnStillCore, EnStillSettings })
+            foreach (var kv in part) En.TryAdd(kv.Key, kv.Value);
+    }
+
     public static readonly Dictionary<string, string> En = new()
     {
         // ---------- Allgemein ----------

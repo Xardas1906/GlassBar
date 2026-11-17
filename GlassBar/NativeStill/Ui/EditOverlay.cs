@@ -50,12 +50,12 @@ public sealed class EditOverlay : IOverlay, IDisposable
     public int Z => 60;
 
     private static readonly string[] Ids = { "music", "water", "timer", "prayer", "sound", "workout", "weather" };
-    private static string Label(string id) => id switch
+    private static string Label(string id) => L.T(id switch
     {
         "music" => "Läuft gerade", "water" => "Wasser", "timer" => "Pomodoro", "prayer" => "Gebetszeiten",
         "sound" => "Klangwelten", "workout" => "Training", "weather" => "Wetter", _ => id,
-    };
-    private static string Short(string id) => id switch { "music" => "Musik", "sound" => "Klänge", _ => Label(id) };
+    });
+    private static string Short(string id) => id switch { "music" => L.T("Musik"), "sound" => L.T("Klänge"), _ => Label(id) };
 
     private const string IntroText = "Ziehen zum Verschieben. − blendet aus, + holt zurück.";
     private const string IconsTip = "Für den aufgeräumtesten Look blende deine Desktopsymbole aus: Rechtsklick auf den Desktop → Ansicht → Desktopsymbole anzeigen.";
@@ -123,7 +123,7 @@ public sealed class EditOverlay : IOverlay, IDisposable
     {
         float pk = c.PK;
         _add = new Rect(24 * pk, 24 * pk, 40 * pk, 40 * pk);
-        var doneL = _text.Get(c, "Fertig", 14 * pk, 650);
+        var doneL = _text.Get(c, L.T("Fertig"), 14 * pk, 650);
         float dw = doneL.Metrics.WidthIncludingTrailingWhitespace + 40 * pk;
         _done = new Rect(c.Width - 24 * pk - dw, 24 * pk, dw, 40 * pk);
 
@@ -134,7 +134,7 @@ public sealed class EditOverlay : IOverlay, IDisposable
 
         float x0 = 24 * pk, y0 = 74 * pk, w = 290 * pk, pad = 10 * pk;
         float y = y0 + pad;
-        y += 4 * pk + _text.Get(c, "AUSGEBLENDET", 11 * pk, 700).Metrics.Height + 6 * pk;
+        y += 4 * pk + _text.Get(c, L.T("AUSGEBLENDET"), 11 * pk, 700).Metrics.Height + 6 * pk;
         _rows.Clear();
         foreach (var id in _hidden)
         {
@@ -142,16 +142,16 @@ public sealed class EditOverlay : IOverlay, IDisposable
             y += 44 * pk;
         }
         _emptyY = y;
-        if (_hidden.Count == 0) y += 4 * pk + _text.Get(c, "Alles ist auf dem Bildschirm.", 13 * pk, 500).Metrics.Height + 8 * pk;
+        if (_hidden.Count == 0) y += 4 * pk + _text.Get(c, L.T("Alles ist auf dem Bildschirm."), 13 * pk, 500).Metrics.Height + 8 * pk;
         y += 6 * pk;
         _footY = y;
         y += 1 + 6 * pk;
-        var resetL = _text.Get(c, "Layout zurücksetzen", 12.5f * pk, 600);
+        var resetL = _text.Get(c, L.T("Layout zurücksetzen"), 12.5f * pk, 600);
         float rw = resetL.Metrics.WidthIncludingTrailingWhitespace + 24 * pk;
         _reset = new Rect(x0 + w - pad - rw, y, rw, 30 * pk);
         y += 30 * pk + 6 * pk;
         _tipY = y;
-        y += _text.Get(c, IconsTip, 12 * pk, 500, w - 2 * pad - 16 * pk, 1.45f).Metrics.Height + 2 * pk + pad;
+        y += _text.Get(c, L.T(IconsTip), 12 * pk, 500, w - 2 * pad - 16 * pk, 1.45f).Metrics.Height + 2 * pk + pad;
         _sheet = new Rect(x0, y0, w, y - y0);
     }
 
@@ -508,7 +508,7 @@ public sealed class EditOverlay : IOverlay, IDisposable
         ctx.FillRoundedRectangle(ref sh, b);
         b.Color = Col(fg, (hover == "done" ? 1 : 0.92f) * a);
         ctx.FillRoundedRectangle(ref dr, b);
-        var doneL = _text.Get(c, "Fertig", 14 * pk, 650);
+        var doneL = _text.Get(c, L.T("Fertig"), 14 * pk, 650);
         b.Color = c.LightTheme ? new Color4(1, 1, 1, a) : new Color4(0x12 / 255f, 0x13 / 255f, 0x1a / 255f, a);
         ctx.DrawTextLayout(new Vector2(_done.X + 20 * pk, _done.Y + (_done.Height - doneL.Metrics.Height) / 2), doneL, b, DrawTextOptions.None);
         ctx.Transform = prev;
@@ -525,7 +525,7 @@ public sealed class EditOverlay : IOverlay, IDisposable
         c.Glass.Sheet(ctx, c, _sheet, 22 * pk, a);
 
         float x = _sheet.X + 10 * pk;
-        var title = _text.Get(c, "AUSGEBLENDET", 11 * pk, 700, 0, 0, 0.14f);
+        var title = _text.Get(c, L.T("AUSGEBLENDET"), 11 * pk, 700, 0, 0, 0.14f);
         b.Color = Col(fg, 0.38f * a);
         ctx.DrawTextLayout(new Vector2(x + 8 * pk, _sheet.Y + 14 * pk), title, b, DrawTextOptions.None);
 
@@ -553,7 +553,7 @@ public sealed class EditOverlay : IOverlay, IDisposable
         }
         if (_hidden.Count == 0)
         {
-            var empty = _text.Get(c, "Alles ist auf dem Bildschirm.", 13 * pk, 500);
+            var empty = _text.Get(c, L.T("Alles ist auf dem Bildschirm."), 13 * pk, 500);
             b.Color = Col(fg, 0.6f * a);
             ctx.DrawTextLayout(new Vector2(x + 8 * pk, _emptyY + 4 * pk), empty, b, DrawTextOptions.None);
         }
@@ -566,11 +566,11 @@ public sealed class EditOverlay : IOverlay, IDisposable
             b.Color = Col(fg, 0.07f * a);
             ctx.FillRoundedRectangle(ref rr, b);
         }
-        var resetL = _text.Get(c, "Layout zurücksetzen", 12.5f * pk, 600);
+        var resetL = _text.Get(c, L.T("Layout zurücksetzen"), 12.5f * pk, 600);
         b.Color = Col(fg, (hover == "reset" ? 1 : 0.6f) * a);
         ctx.DrawTextLayout(new Vector2(_reset.X + 12 * pk, _reset.Y + (_reset.Height - resetL.Metrics.Height) / 2), resetL, b, DrawTextOptions.None);
 
-        var tip = _text.Get(c, IconsTip, 12 * pk, 500, _sheet.Width - 20 * pk - 16 * pk, 1.45f);
+        var tip = _text.Get(c, L.T(IconsTip), 12 * pk, 500, _sheet.Width - 20 * pk - 16 * pk, 1.45f);
         b.Color = Col(fg, 0.5f * a);
         ctx.DrawTextLayout(new Vector2(x + 8 * pk, _tipY), tip, b, DrawTextOptions.None);
         ctx.Transform = prev;
@@ -585,8 +585,8 @@ public sealed class EditOverlay : IOverlay, IDisposable
         double since = 9 - left;
         float a = (float)Math.Clamp(Math.Min(since / 0.5, left / 0.5), 0, 1) * _t;
         float maxW = 470 * pk, inner = maxW - 40 * pk;
-        var main = _text.Get(c, IntroText, 14 * pk, 550, inner, 1.45f, 0, true);
-        var small = _text.Get(c, IconsTip, 12 * pk, 500, inner, 1.45f, 0, true);
+        var main = _text.Get(c, L.T(IntroText), 14 * pk, 550, inner, 1.45f, 0, true);
+        var small = _text.Get(c, L.T(IconsTip), 12 * pk, 500, inner, 1.45f, 0, true);
         float h = 11 * pk + main.Metrics.Height + 3 * pk + small.Metrics.Height + 12 * pk;
         float w = Math.Max(main.Metrics.Width, small.Metrics.Width) + 40 * pk;
         float dy = -8 * pk * (1 - EaseOut(Math.Min(1, (float)since / 0.7f)));

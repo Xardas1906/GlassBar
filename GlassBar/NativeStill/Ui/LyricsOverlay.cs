@@ -485,8 +485,8 @@ public sealed class LyricsOverlay : IOverlay, IDisposable
     }
 
     private static string FmtShift(double v) => v == 0
-        ? "Pünktlich"
-        : $"{Math.Abs(v).ToString("0.##", CultureInfo.InvariantCulture)} s {(v < 0 ? "früher" : "später")}";
+        ? L.T("Pünktlich")
+        : L.F(v < 0 ? "{0} s früher" : "{0} s später", Math.Abs(v).ToString("0.##", CultureInfo.InvariantCulture));
 
     public sealed class ShiftEntry
     {

@@ -60,7 +60,7 @@ public sealed class SoundPill : Pill
     private int _seenVersion = -1;
     private string _value = "";
     private float _valueW;
-    private string _meta = "Aus";
+    private string _meta = L.T("Aus");
     private bool _playing, _solo;
     private float _oc = 1, _ok;
 
@@ -160,17 +160,17 @@ public sealed class SoundPill : Pill
             int n = 0, first = -1, second = -1;
             for (int i = 0; i < 6; i++)
                 if (Soundscape.IsOn(Soundscape.Ids[i])) { if (first < 0) first = i; else if (second < 0) second = i; n++; }
-            value = n == 0 ? "" : n == 1 ? Soundscape.Names[first]
-                : n == 2 ? Soundscape.Names[first] + " + " + Soundscape.Names[second]
-                : Soundscape.Names[first] + " + " + (n - 1).ToString(CultureInfo.InvariantCulture);
+            value = n == 0 ? "" : n == 1 ? Soundscape.Name(first)
+                : n == 2 ? Soundscape.Name(first) + " + " + Soundscape.Name(second)
+                : Soundscape.Name(first) + " + " + (n - 1).ToString(CultureInfo.InvariantCulture);
         }
         if (value != _value) { _value = value; _valueDirty = true; }
-        _meta = _solo ? (Soundscape.DuckNow < 1 ? "Allein · leiser" : "Läuft allein")
+        _meta = L.T(_solo ? (Soundscape.DuckNow < 1 ? "Allein · leiser" : "Läuft allein")
             : !_playing ? "Aus"
             : duck == 0 ? "Pausiert wegen Musik"
             : duck < 1 ? "Leiser bei Musik"
             : Soundscape.ByFocus ? "Mit Fokus"
-            : Soundscape.Matched.Length > 0 ? "Für das Wetter" : "Läuft";
+            : Soundscape.Matched.Length > 0 ? "Für das Wetter" : "Läuft");
     }
 
     private void MeasureValue(UiContext c)
@@ -374,10 +374,10 @@ public sealed class SoundPill : Pill
     private string Format(RowDef r, double v)
     {
         if (r.Format == Fmt.Pct) return Pct[Math.Clamp((int)Math.Round(v * 100), 0, 100)];
-        if (r.Format == Fmt.NearOr && v >= 7990) return "Nah";
+        if (r.Format == Fmt.NearOr && v >= 7990) return L.T("Nah");
         int key = (int)Math.Round(v / 10);
         if (!_khz.TryGetValue(key, out var s))
-            _khz[key] = s = "unter " + (key / 100.0).ToString("0.0", CultureInfo.InvariantCulture) + " kHz";
+            _khz[key] = s = L.F("unter {0} kHz", (key / 100.0).ToString("0.0", CultureInfo.InvariantCulture));
         return s;
     }
 
@@ -450,7 +450,7 @@ public sealed class SoundPill : Pill
         {
             _alpha = _ok * (1 - tv);
             Col(_fg, 0.96f);
-            ctx.DrawText("Klangwelten", _fTitle!, new Rect(ox + 58 * K - 8 * K * tv, oy + 18 * K, 200 * K, 20 * K), _brush!);
+            ctx.DrawText(L.T("Klangwelten"), _fTitle!, new Rect(ox + 58 * K - 8 * K * tv, oy + 18 * K, 200 * K, 20 * K), _brush!);
         }
         if (_tuning >= 0 && tv > 0.01f)
         {
@@ -460,7 +460,7 @@ public sealed class SoundPill : Pill
             float sh = (1 - tv) * 8 * K;
             DrawIcon(ctx, _back!, ox + 52 * K + sh - (hov ? 2 * K : 0), oy + 19.5f * K, 17 * K, 2f);
             Col(_fg, 0.96f);
-            ctx.DrawText(Soundscape.Names[_tuning], _fTitle!, new Rect(ox + 71 * K + sh, oy + 18 * K, 220 * K, 20 * K), _brush!);
+            ctx.DrawText(Soundscape.Name(_tuning), _fTitle!, new Rect(ox + 71 * K + sh, oy + 18 * K, 220 * K, 20 * K), _brush!);
         }
         _alpha = _ok;
         if (_solo) Col(_tp, 1f); else Col(_fg, 0.55f);
@@ -518,7 +518,7 @@ public sealed class SoundPill : Pill
             Col(_fg, ca);
             var icon = i == 0 ? _cloud! : i == 1 ? _ring! : _spark!;
             DrawIcon(ctx, icon, x + 10 * K, y + 7 * K, 14 * K, 1.7f);
-            ctx.DrawText(ChipLabels[i], _fChip!, new Rect(x + 30 * K, y, _chipW[i] + 4 * K, 28 * K), _brush!);
+            ctx.DrawText(L.T(ChipLabels[i]), _fChip!, new Rect(x + 30 * K, y, _chipW[i] + 4 * K, 28 * K), _brush!);
             x += w + 8 * K;
         }
     }
@@ -559,7 +559,7 @@ public sealed class SoundPill : Pill
         if (live) Col(_tp, 1f); else Col(_fg, ta);
         DrawIcon(ctx, _soundIcons![i], x + 11 * K, y + 8 * K, 19 * K, 1.6f);
         Col(_fg, ta);
-        ctx.DrawText(Soundscape.Names[i], _fName!, new Rect(x + 11 * K, y + h - 8 * K - 16 * K, w - 50 * K, 16 * K), _brush!);
+        ctx.DrawText(Soundscape.Name(i), _fName!, new Rect(x + 11 * K, y + h - 8 * K - 16 * K, w - 50 * K, 16 * K), _brush!);
 
         // Die eigenen Einstellungen, rechts.
         var tc = new Vector2(x + w - 22 * K, y + h / 2);
@@ -579,7 +579,7 @@ public sealed class SoundPill : Pill
             if (row.Kind == RowKind.Switch)
             {
                 Col(_fg, 0.84f);
-                ctx.DrawText(row.Label, _fLabel!, new Rect(ox + 16 * K, y, 230 * K, 28 * K), _brush!);
+                ctx.DrawText(L.T(row.Label), _fLabel!, new Rect(ox + 16 * K, y, 230 * K, 28 * K), _brush!);
                 bool sw = v > 0.5;
                 float sx = ox + 264 * K, sy = y + 3 * K;
                 var tr = RR(sx, sy, 36 * K, 22 * K, 11 * K, 11 * K);
@@ -594,7 +594,7 @@ public sealed class SoundPill : Pill
                 continue;
             }
             Col(_fg, 0.84f);
-            ctx.DrawText(row.Label, _fLabel!, new Rect(ox + 16 * K, y, 160 * K, 24 * K), _brush!);
+            ctx.DrawText(L.T(row.Label), _fLabel!, new Rect(ox + 16 * K, y, 160 * K, 24 * K), _brush!);
             Col(_fg, 0.55f);
             ctx.DrawText(Format(row, v), _fNum!, new Rect(ox + 120 * K, y, (274 - 120) * K, 24 * K), _brush!);
             // Zurücksetzen: auf dem Standard gibt es nichts zurückzusetzen.
@@ -696,8 +696,8 @@ public sealed class SoundPill : Pill
         _fNum = Fmt0(c, 12 * K, 550, TextAlignment.Trailing);
         _fChip = Fmt0(c, 12 * K, 600, TextAlignment.Leading);
         _fLabel = Fmt0(c, 12.5f * K, 600, TextAlignment.Leading);
-        for (int i = 0; i < 3; i++) _chipW[i] = Measure(c, ChipLabels[i], _fChip) / K;
-        for (int i = 0; i < 6; i++) _nameW[i] = Measure(c, Soundscape.Names[i], _fTitle) / K;
+        for (int i = 0; i < 3; i++) _chipW[i] = Measure(c, L.T(ChipLabels[i]), _fChip) / K;
+        for (int i = 0; i < 6; i++) _nameW[i] = Measure(c, Soundscape.Name(i), _fTitle) / K;
         _valueDirty = true;
     }
 

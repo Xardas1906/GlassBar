@@ -283,11 +283,11 @@ public sealed class PomodoroPill : Pill
             _sText = sec;
             _valueText = m + ":" + sec;
         }
-        string title = _ts.Phase == "focus" ? "Fokus" : _ts.Phase == "short" ? "Kurze Pause" : "Lange Pause";
+        string title = L.T(_ts.Phase == "focus" ? "Fokus" : _ts.Phase == "short" ? "Kurze Pause" : "Lange Pause");
         if (title != _title) _title = title;
         _dots = LongEvery;
         _filled = _ts.Phase == "long" ? _dots : _ts.Cycle % _dots;
-        string meta = $"{_ts.Done} von {WaterTimerKit.Fixed2(_settings.Num("pomoGoal"))} heute";
+        string meta = L.F("{0} von {1} heute", _ts.Done, WaterTimerKit.Fixed2(_settings.Num("pomoGoal")));
         if (meta != _metaText) _metaText = meta;
     }
 

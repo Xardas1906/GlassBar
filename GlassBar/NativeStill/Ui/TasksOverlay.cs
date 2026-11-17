@@ -187,7 +187,7 @@ public sealed class TasksOverlay : IOverlay, IDisposable
         int i;
         do i = Random.Shared.Next(Cheers.Length); while (i == _lastCheer);
         _lastCheer = i;
-        return Cheers[i];
+        return L.T(Cheers[i]);
     }
 
     // Der Kreis springt; ein Ring und ein paar Funken verlassen ihn; das Licht selbst kräuselt sich.
@@ -227,13 +227,13 @@ public sealed class TasksOverlay : IOverlay, IDisposable
         if (next != null)
         {
             // Einen Moment genießen, dann die nächste hereinholen
-            Cheer(PickCheer(), many ? $"{DoneCount()} von {_list.Count} erledigt" : "", 0);
+            Cheer(PickCheer(), many ? L.F("{0} von {1} erledigt", DoneCount(), _list.Count) : "", 0);
             _swapAt = _time + 3.4;
             _swapNext = next;
         }
         else
         {
-            Cheer(many ? "Das ist alles. Wunderbar gemacht." : PickCheer(), "Weitere in GlassBar → Einstellungen → Heutige Aufgaben", 9);
+            Cheer(many ? L.T("Das ist alles. Wunderbar gemacht.") : PickCheer(), L.T("Weitere in GlassBar → Einstellungen → Heutige Aufgaben"), 9);
             _calmAt = _time + 0.8;
         }
     }

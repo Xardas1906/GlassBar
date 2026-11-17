@@ -200,12 +200,12 @@ public sealed class AlarmsOverlay : IOverlay, IDisposable
 
     private static string DaysText(int[] days)
     {
-        if (days.Length == 0) return "Einmalig";
-        if (days.Length == 7) return "Jeden Tag";
+        if (days.Length == 0) return L.T("Einmalig");
+        if (days.Length == 7) return L.T("Jeden Tag");
         int mask = Mask(days);
-        if (mask == 0b0111110) return "Wochentags";
-        if (mask == 0b1000001) return "Wochenende";
-        return string.Join(' ', DayOrder.Where(d => (mask & (1 << d)) != 0).Select(d => DayShort[d]));
+        if (mask == 0b0111110) return L.T("Wochentags");
+        if (mask == 0b1000001) return L.T("Wochenende");
+        return string.Join(' ', DayOrder.Where(d => (mask & (1 << d)) != 0).Select(d => L.T(DayShort[d])));
     }
 
     private static int Mask(int[] days) { int m = 0; foreach (var d in days) m |= 1 << d; return m; }
@@ -348,17 +348,17 @@ public sealed class AlarmsOverlay : IOverlay, IDisposable
         CloseDial();
         if (item.IsTimer)
         {
-            item.Title = item.Quiet ? "Timer lief ab, während du weg warst" : "Timer abgelaufen";
-            item.Sub = item.Quiet ? $"{FmtSpan(item.Total)} · beendet um {FmtTime(item.At, c24)}" : FmtSpan(item.Total);
+            item.Title = item.Quiet ? L.T("Timer lief ab, während du weg warst") : L.T("Timer abgelaufen");
+            item.Sub = item.Quiet ? L.F("{0} · beendet um {1}", FmtSpan(item.Total), FmtTime(item.At, c24)) : FmtSpan(item.Total);
         }
         else
         {
             var a = FindAlarm(item.Id);
-            item.Title = item.Quiet ? "Verpasster Wecker" : "Wecker";
+            item.Title = item.Quiet ? L.T("Verpasster Wecker") : L.T("Wecker");
             item.Sub = a != null ? $"{FmtHM(a.H, a.M, c24)} · {DaysText(a.Days)}" : FmtTime(item.At, c24);
         }
-        item.A = item.Quiet ? "OK" : "Stopp";
-        item.B = item.IsTimer ? "+1 min" : $"Schlummern {c.Settings.Num("snoozeMin").ToString("0.#", CultureInfo.InvariantCulture)} Min.";
+        item.A = item.Quiet ? "OK" : L.T("Stopp");
+        item.B = item.IsTimer ? "+1 min" : L.F("Schlummern {0} Min.", c.Settings.Num("snoozeMin").ToString("0.#", L.Culture));
         if (!item.Quiet)
         {
             // Der Klang wiederholt sich nahtlos und wächst langsam (das macht Tones.Loop)
@@ -599,17 +599,17 @@ public sealed class AlarmsOverlay : IOverlay, IDisposable
             long span = DialSpan();
             _goText = "Start";
             _goDisabled = span == 0;
-            _note = span > 0 ? $"Endet um {FmtTime(now + span, c24)}" : "Dreh an den Rädern oder wähle eine Zeit";
+            _note = span > 0 ? L.F("Endet um {0}", FmtTime(now + span, c24)) : L.T("Dreh an den Rädern oder wähle eine Zeit");
         }
         else
         {
             var (hh, mm) = DialHM();
             long next = NextAt(hh, mm, _days, now) ?? now;
-            _goText = _editId != 0 ? "Speichern" : "Stellen";
+            _goText = _editId != 0 ? L.T("Speichern") : L.T("Stellen");
             _goDisabled = full;
             // Innerhalb eines Tages: wie lange; weiter weg: an welchem Tag
-            string when = next - now < 20 * Hour ? $"klingelt in {FmtIn(next - now)}" : $"klingelt {DayShort[(int)Local(next).DayOfWeek]} {FmtTime(next, c24)}";
-            _note = full ? $"Schon {MaxAlarms} Wecker. Entferne einen in der Liste neben der Uhr." : $"{DaysText(FromMask(_days))} · {when}";
+            string when = next - now < 20 * Hour ? L.F("klingelt in {0}", FmtIn(next - now)) : L.F("klingelt {0} {1}", L.T(DayShort[(int)Local(next).DayOfWeek]), FmtTime(next, c24));
+            _note = full ? L.F("Schon {0} Wecker. Entferne einen in der Liste neben der Uhr.", MaxAlarms) : $"{DaysText(FromMask(_days))} · {when}";
         }
     }
 
@@ -764,8 +764,8 @@ public sealed class AlarmsOverlay : IOverlay, IDisposable
             if (tsig != _tTitleSig)
             {
                 _tTitleSig = tsig;
-                _tTitle = $"Timer · {FmtSpan(_timer.Total)}{(_timer.Status == "paused" ? " · pausiert" : "")}";
-                _tPause = _timer.Status == "running" ? "Pause" : "Fortsetzen";
+                _tTitle = $"Timer · {FmtSpan(_timer.Total)}{(_timer.Status == "paused" ? " · " + L.T("pausiert") : "")}";
+                _tPause = _timer.Status == "running" ? L.T("Pause") : L.T("Fortsetzen");
             }
         }
         if (na != null)
@@ -778,7 +778,7 @@ public sealed class AlarmsOverlay : IOverlay, IDisposable
                 var d = Local(next);
                 var today = Local(t).Date;
                 bool sameDay = d.Date == today, tomorrow = d.Date == today.AddDays(1);
-                _aText = sameDay || (tomorrow && next - t < 18 * Hour) ? FmtTime(next, c24) : $"{DayShort[(int)d.DayOfWeek]} {FmtTime(next, c24)}";
+                _aText = sameDay || (tomorrow && next - t < 18 * Hour) ? FmtTime(next, c24) : $"{L.T(DayShort[(int)d.DayOfWeek])} {FmtTime(next, c24)}";
             }
         }
         int n = (_tItemA > 0 ? 1 : 0) + (_aItemA > 0 ? 1 : 0);
@@ -796,7 +796,7 @@ public sealed class AlarmsOverlay : IOverlay, IDisposable
         if (_tItemA > 0)
         {
             var title = _p.Size(c, _tTitle, fCard);
-            float b1 = _p.Size(c, _tPause, fCard).X + 24 * K, b2 = _p.Size(c, "+1 min", fCard).X + 24 * K, b3 = _p.Size(c, "Abbrechen", fCard).X + 24 * K;
+            float b1 = _p.Size(c, _tPause, fCard).X + 24 * K, b2 = _p.Size(c, "+1 min", fCard).X + 24 * K, b3 = _p.Size(c, L.T("Abbrechen"), fCard).X + 24 * K;
             float actW = b1 + b2 + b3 + 12 * K;
             float w = Math.Max(230 * K, Math.Max(title.X, actW) + 28 * K);
             float h = 12 * K + title.Y + 10 * K + 28 * K + 12 * K;
@@ -822,7 +822,7 @@ public sealed class AlarmsOverlay : IOverlay, IDisposable
             }
             float rm = 18 * K;   // kleines × zum Entfernen
             float listH = _book.List.Count > 0 ? _book.List.Count * rowH + (_book.List.Count - 1) * 6 * K + 10 * K : 0;
-            float bNew = _p.Size(c, "Neuer Wecker", fCard).X + 24 * K;
+            float bNew = _p.Size(c, L.T("Neuer Wecker"), fCard).X + 24 * K;
             float w = Math.Max(230 * K, Math.Max(timeW + 10 * K + daysW + 10 * K + 30 * K + 8 * K + rm, bNew) + 28 * K);
             float h = 12 * K + listH + 28 * K + 12 * K;
             float top = _aItem.Bottom + 8 * K - (1 - _aCard) * 4 * K;
@@ -852,7 +852,7 @@ public sealed class AlarmsOverlay : IOverlay, IDisposable
 
         // Oben: Timer | Wecker
         var fTab = _p.Fmt(c, 13 * K, 600);
-        float wT = _p.Size(c, "Timer", fTab).X + 32 * K, wA = _p.Size(c, "Wecker", fTab).X + 32 * K;
+        float wT = _p.Size(c, "Timer", fTab).X + 32 * K, wA = _p.Size(c, L.T("Wecker"), fTab).X + 32 * K;
         float pillW = wT + wA + 2 * K + 6 * K, pillH = 36 * K;
 
         // Räder
@@ -1149,7 +1149,7 @@ public sealed class AlarmsOverlay : IOverlay, IDisposable
     private void DrawHint(ID2D1DeviceContext ctx, UiContext c)
     {
         float K = c.K;
-        const string text = "Klicken, um einen Timer oder Wecker zu stellen";
+        string text = L.T("Klicken, um einen Timer oder Wecker zu stellen");
         var f = _p.Fmt(c, 12.5f * K, 500);
         var s = _p.Size(c, text, f);
         _p.Text(ctx, c, text, f, _ccx - s.X / 2, _clock.Bottom + 2 * K, c.Fg, 0.5f * _hintA);
@@ -1225,7 +1225,7 @@ public sealed class AlarmsOverlay : IOverlay, IDisposable
             _p.Text(ctx, c, _tTitle, fCard, _tCardR.X + 14 * K, _tCardR.Y + 12 * K, c.Fg, 0.9f * a);
             CardButton(ctx, c, BPause, _tPause, fCard, a);
             CardButton(ctx, c, BAdd, "+1 min", fCard, a);
-            CardButton(ctx, c, BCancel, "Abbrechen", fCard, a);
+            CardButton(ctx, c, BCancel, L.T("Abbrechen"), fCard, a);
         }
         if (_aItemA > 0 && _aCard > 0)
         {
@@ -1266,7 +1266,7 @@ public sealed class AlarmsOverlay : IOverlay, IDisposable
                     ctx.DrawLine(m + new Vector2(q, -q), m + new Vector2(-q, q), xb, 1.4f * K, _p.Round);
                 }
             }
-            CardButton(ctx, c, BNew, "Neuer Wecker", fCard, a);
+            CardButton(ctx, c, BNew, L.T("Neuer Wecker"), fCard, a);
         }
     }
 
@@ -1357,7 +1357,7 @@ public sealed class AlarmsOverlay : IOverlay, IDisposable
                 Pill(ctx, r, c.Fg, 0.16f * a);
                 ctx.DrawLine(new Vector2(r.X + r.Height / 2, r.Y + 0.5f), new Vector2(r.Right - r.Height / 2, r.Y + 0.5f), _p.Brush(new Vector3(1, 1, 1), 0.14f * a), 1);
             }
-            CenterText(ctx, c, id == BTabTimer ? "Timer" : "Wecker", fTab, r, c.Fg, (on || _hover == id ? 1f : 0.6f) * a);
+            CenterText(ctx, c, id == BTabTimer ? "Timer" : L.T("Wecker"), fTab, r, c.Fg, (on || _hover == id ? 1f : 0.6f) * a);
         }
 
         // Räder
@@ -1418,7 +1418,9 @@ public sealed class AlarmsOverlay : IOverlay, IDisposable
         CenterText(ctx, c, _goText, fGo, _goRect, c.Fg, ga);
     }
 
-    private static readonly string[] DayLetter = ["S", "M", "D", "M", "D", "F", "S"];
+    private static readonly string[] DayLetterDe = ["S", "M", "D", "M", "D", "F", "S"];
+    private static readonly string[] DayLetterEn = ["S", "M", "T", "W", "T", "F", "S"];
+    private static string[] DayLetter => L.En ? DayLetterEn : DayLetterDe;
 
     private void DrawWheel(ID2D1DeviceContext ctx, UiContext c, Wheel w, IDWriteTextFormat f, float alpha, Matrix3x2 baseT)
     {

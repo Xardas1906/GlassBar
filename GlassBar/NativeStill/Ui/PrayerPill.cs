@@ -463,7 +463,7 @@ public sealed class PrayerPill : Pill
         return p;
     }
 
-    private static string NameOf(string id, PDay? p) => id == "dhuhr" && p is { Friday: true } ? "Dschumu’a" : Names[id];
+    private static string NameOf(string id, PDay? p) => id == "dhuhr" && p is { Friday: true } ? L.T("Dschumu’a") : L.T(Names[id]);
 
     // ---------- Verlauf ----------
 
@@ -605,7 +605,7 @@ public sealed class PrayerPill : Pill
     {
         int n = Streak();
         bool milestone = Milestones.Contains(n);
-        Flash(milestone ? $"{n} Tage in Folge. MashaAllah." : "Alle fünf gebetet. Alhamdulillah.", 9000);
+        Flash(milestone ? L.F("{0} Tage in Folge. MashaAllah.", n) : L.T("Alle fünf gebetet. Alhamdulillah."), 9000);
         AnnounceFor = 7;
         Sound("done");
         _celebrateAt = _time;
@@ -644,7 +644,7 @@ public sealed class PrayerPill : Pill
                 // Ein lange vergangener Beginn (Hintergrund pausiert oder aus) vergeht still.
                 if (_set.Bool("prayerStart") && t - cur.Start < 3 * MinMs)
                 {
-                    Flash($"{NameOf(cur.Id, p)} hat begonnen", 9000);
+                    Flash(L.F("{0} hat begonnen", NameOf(cur.Id, p)), 9000);
                     AnnounceFor = 7;
                     Sound("start");
                 }
@@ -705,10 +705,10 @@ public sealed class PrayerPill : Pill
         _ready = _mode == "ok";
         if (!_ready || p == null)
         {
-            _value = Compact.GetValueOrDefault(_mode, "");
-            _title = "Gebetszeiten";
+            _value = L.T(Compact.GetValueOrDefault(_mode, ""));
+            _title = L.T("Gebetszeiten");
             _meta = "";
-            _msg = Msg.GetValueOrDefault(_mode, "");
+            _msg = L.T(Msg.GetValueOrDefault(_mode, ""));
             _soon = false;
             _seg = null;
             _isNight = false;
@@ -725,15 +725,15 @@ public sealed class PrayerPill : Pill
         foreach (var w in p.Windows) if (w.Start > t) { nextW = w; break; }
         bool nextDay = nextW == null;
         double nextStart = nextW?.Start ?? p.N.Fajr;
-        string nextName = nextDay ? Names["fajr"] : NameOf(nextW!.Id, p);
+        string nextName = nextDay ? NameOf("fajr", null) : NameOf(nextW!.Id, p);
         bool open = cur != null && !r.S.ContainsKey(cur.Id) && !r.Excused;
         bool soon = open && before > 0 && t >= cur!.End - before;
         var seg = cur != null ? SegAt(cur, t) : null;
 
         // Kompakt: wessen Zeit es ist und was bleibt, sonst das nächste.
         _value = open
-            ? soon ? $"{NameOf(cur!.Id, p)} endet in {FmtLeft(cur.End - t)}" : $"{NameOf(cur!.Id, p)} · noch {FmtLeft(cur.End - t)}"
-            : $"{nextName} um {FmtTime(nextStart)}";
+            ? soon ? L.F("{0} endet in {1}", NameOf(cur!.Id, p), FmtLeft(cur.End - t)) : L.F("{0} · noch {1}", NameOf(cur!.Id, p), FmtLeft(cur.End - t))
+            : L.F("{0} um {1}", nextName, FmtTime(nextStart));
         _soon = soon;
         // Die Farbe sagt, welcher Teil der Zeit es ist: beste, gute oder endet bald.
         _seg = open && seg != null ? seg.Kind : null;
@@ -753,20 +753,20 @@ public sealed class PrayerPill : Pill
 
         // Kopf der Karte: das aktuelle Gebet und sein Fenster, sonst das nächste.
         _title = cur != null ? NameOf(cur.Id, p) : nextName;
-        _meta = cur != null ? $"bis {FmtTime(cur.End)}" : $"um {FmtTime(nextStart)}";
+        _meta = cur != null ? L.F("bis {0}", FmtTime(cur.End)) : L.F("um {0}", FmtTime(nextStart));
         string sub;
         if (Environment.TickCount64 < _flashUntil) sub = _flash;
-        else if (r.Excused) sub = "Heute entschuldigt. Erinnerungen sind pausiert.";
-        else if (open && soon) sub = $"Endet in {FmtLeft(cur!.End - t)}. Hake es ab, sobald du gebetet hast.";
+        else if (r.Excused) sub = L.T("Heute entschuldigt. Erinnerungen sind pausiert.");
+        else if (open && soon) sub = L.F("Endet in {0}. Hake es ab, sobald du gebetet hast.", FmtLeft(cur!.End - t));
         else if (open && seg != null)
         {
-            sub = seg.Kind == "best" ? $"Beste Zeit · noch {FmtLeft(seg.To - t)}"
-                : seg.Kind == "good" ? $"Gute Zeit · noch {FmtLeft(seg.To - t)}"
-                : $"Endet bald · noch {FmtLeft(cur!.End - t)}";
+            sub = seg.Kind == "best" ? L.F("Beste Zeit · noch {0}", FmtLeft(seg.To - t))
+                : seg.Kind == "good" ? L.F("Gute Zeit · noch {0}", FmtLeft(seg.To - t))
+                : L.F("Endet bald · noch {0}", FmtLeft(cur!.End - t));
         }
-        else if (open) sub = $"noch {FmtLeft(cur!.End - t)}";
-        else if (cur != null) sub = $"Gebetet. {nextName} um {FmtTime(nextStart)}.";
-        else sub = $"{nextName} in {FmtLeft(nextStart - t)}";
+        else if (open) sub = L.F("noch {0}", FmtLeft(cur!.End - t));
+        else if (cur != null) sub = L.F("Gebetet. {0} um {1}.", nextName, FmtTime(nextStart));
+        else sub = L.F("{0} in {1}", nextName, FmtLeft(nextStart - t));
         _sub = sub;
 
         for (int i = 0; i < 5; i++)
@@ -789,7 +789,7 @@ public sealed class PrayerPill : Pill
             string note = "";
             if (st == "open")
             {
-                note = isNow && before > 0 && t >= w.End - before ? $"endet in {FmtLeft(w.End - t)}"
+                note = isNow && before > 0 && t >= w.End - before ? L.F("endet in {0}", FmtLeft(w.End - t))
                     : nowSeg != null && nowSeg.Kind != "good" ? (nowSeg.Kind == "best" ? "beste zeit" : "endet bald") : "jetzt";
             }
             else if (q == "best") note = "beste Zeit";
@@ -797,14 +797,15 @@ public sealed class PrayerPill : Pill
             else if (st == "late") note = "nachgeholt";
             else if (st == "missed") note = "nachzuholen";
             else if (st == "unmarked") note = "nicht markiert";
-            row.Note = note;
+            row.Note = L.T(note);
         }
 
         int n = Streak();
         int best = Math.Max(_rec.Best, n);
-        _streak = n > 0 ? $"{n}-Tage-Serie{(best > n ? $" · Rekord {best}" : "")}" : best > 0 ? $"Längste Serie {best} Tage" : "Noch keine Serie";
+        _streak = n > 0 ? (best > n ? L.F("{0}-Tage-Serie · Rekord {1}", n, best) : L.F("{0}-Tage-Serie", n))
+            : best == 1 ? L.T("Längste Serie 1 Tag") : best > 0 ? L.F("Längste Serie {0} Tage", best) : L.T("Noch keine Serie");
         _qada = _rec.Qada;
-        _qadaText = _rec.Qada > 0 ? $"{_rec.Qada} nachzuholen" : "Alles erledigt";
+        _qadaText = _rec.Qada > 0 ? L.F("{0} nachzuholen", _rec.Qada) : L.T("Alles erledigt");
         _hijri = PrayTimes.Hijri(DateTime.Now, _set.Num("hijriAdj"));
         _excused = r.Excused;
     }
@@ -1130,7 +1131,7 @@ public sealed class PrayerPill : Pill
 
         var hl = _hijriL.Set(dw, _hijri, Fmt(c, 12, 500));
         ctx.DrawTextLayout(new Vector2(fx, r2 + rowH / 2 - _hijriL.H / 2), hl, Brush(fg, 0.55f));
-        _excusedR = MiniButton(ctx, c, _excusedL, "Heute entschuldigt", fr, r2, _excused, _hover == "excused");
+        _excusedR = MiniButton(ctx, c, _excusedL, L.T("Heute entschuldigt"), fr, r2, _excused, _hover == "excused");
     }
 
     private DRect MiniButton(ID2D1DeviceContext ctx, UiContext c, Label label, string text, float right, float top, bool on, bool hover)
@@ -1242,7 +1243,7 @@ public sealed class PrayerPill : Pill
             string kind = row.Options[oi];
             int j = Array.FindIndex(Picks, p => p.Kind == kind);
             if (j < 0) continue;
-            var pl = row.PickL[j].Set(c.DWrite, Picks[j].Label, Fmt(c, 11.5f, 600));
+            var pl = row.PickL[j].Set(c.DWrite, L.T(Picks[j].Label), Fmt(c, 11.5f, 600));
             float w = row.PickL[j].W + 18 * k, ph = 22 * k;
             var r = new DRect(right - w, mid - ph / 2, w, ph);
             row.PickR[j] = r;

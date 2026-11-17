@@ -122,7 +122,7 @@ public sealed class WorkoutBody : IDisposable
         return w;
     }
 
-    public static string Label(string muscle) => Muscles.TryGetValue(muscle, out var m) ? m.Label : muscle;
+    public static string Label(string muscle) => Muscles.TryGetValue(muscle, out var m) ? L.T(m.Label) : muscle;
 
     /* ---------- Geometrie (je Fabrik) ---------- */
 

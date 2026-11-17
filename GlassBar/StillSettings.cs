@@ -153,13 +153,16 @@ public static class StillSettings
     public static string Format(StillSetting s, double v) => s.Fmt switch
     {
         "pct" => $"{Math.Round(v * 100)} %",
-        "pos" => v == 0 ? "Mitte" : $"{Math.Round(Math.Abs(v) * 100)} % {(s.Key == "clockX" ? (v < 0 ? "links" : "rechts") : (v < 0 ? "oben" : "unten"))}",
-        "ml" => v >= 1000 ? $"{v / 1000:0.##} L" : $"{v:0} ml",
-        "min" => $"{v:0} min",
-        "minOff" => v <= 0 ? "Aus" : $"{v:0} min",
+        "pos" => v == 0 ? L.T("Mitte") : $"{Math.Round(Math.Abs(v) * 100)} % {L.T(s.Key == "clockX" ? (v < 0 ? "links" : "rechts") : (v < 0 ? "oben" : "unten"))}",
+        "ml" => v >= 1000 ? L.F("{0:0.##} L", v / 1000) : L.F("{0:0} ml", v),
+        "min" => L.F("{0:0} min", v),
+        "minOff" => v <= 0 ? L.T("Aus") : L.F("{0:0} min", v),
         "hour" => $"{v:00}:00",
-        "sessions" => $"{v:0} Einheiten",
-        "days" => $"{v:0} Tage",
-        _ => $"{v:0.##}",
+        "sessions" => L.F("{0:0} Einheiten", v),
+        "days" => L.F("{0:0} Tage", v),
+        _ => v.ToString("0.##", L.Culture),
     };
+
+    /// <summary>Angezeigter Name eines Reiters (die Reiter selbst bleiben deutsch, sie dienen als Kennung).</summary>
+    public static string TabName(string tab) => L.T(tab);
 }

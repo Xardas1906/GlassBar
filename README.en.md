@@ -40,8 +40,6 @@
 - One-click updates: Settings › System › Updates
 - Language: automatic (like Windows), German or English
 
-> The settings and dock are fully available in English. The pills and cards of the “Still” wallpaper are still German and will be translated next.
-
 ## Installation
 
 1. Download `GlassBar-Setup-X.Y.Z.exe` from [Releases](https://github.com/Xardas1906/GlassBar/releases/latest) and run it.

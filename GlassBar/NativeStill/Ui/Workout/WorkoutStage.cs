@@ -502,11 +502,11 @@ public sealed class WorkoutStage : IOverlay, IDisposable
         Data.History.Add(entry);
         if (Data.History.Count > 2000) Data.History.RemoveRange(0, Data.History.Count - 2000);
         if (r.Plan == "full") Data.FullB = !Data.FullB;
-        string label = WorkoutPlan.Plans.TryGetValue(r.Plan, out var pl) ? pl.Label : "Training";
+        string label = L.T(WorkoutPlan.Plans.TryGetValue(r.Plan, out var pl) ? pl.Label : "Training");
         var fin = new Fin
         {
             Entry = entry, Focus = r.Focus, Mins = mins, Until = WorkoutPlan.NowMs() + 10 * 60000,
-            Sub = $"{label} · {mins} Min. Wie hat sich jede Übung angefühlt? Das bestimmt das nächste Mal.",
+            Sub = L.F("{0} · {1} Min. Wie hat sich jede Übung angefühlt? Das bestimmt das nächste Mal.", label, mins),
         };
         for (int i = 0; i < entry.Done.Count; i++)
         {
@@ -516,7 +516,7 @@ public sealed class WorkoutStage : IOverlay, IDisposable
             var row = new FinRow
             {
                 I = i, Id = d.M, Base = FitFor(d.M, r.Focus),
-                Name = mv.Rungs[Math.Clamp(d.Rung, 0, mv.Rungs.Length - 1)].Name, Amount = $"{d.Sets} × {Wo.Amount(mv, d.N)}",
+                Name = L.T(mv.Rungs[Math.Clamp(d.Rung, 0, mv.Rungs.Length - 1)].Name), Amount = $"{d.Sets} × {Wo.Amount(mv, d.N)}",
             };
             int nudge = r.Nudges.TryGetValue(d.M, out var nv) ? nv : 0;
             if (!r.Gentle && d.Sets >= planned) row.Feel = nudge > 0 ? "easy" : nudge < 0 ? "hard" : "right";
@@ -585,18 +585,20 @@ public sealed class WorkoutStage : IOverlay, IDisposable
         RenderStep();
     }
 
-    /// <summary>Video zur Übung: eine YouTube-Suche im Standardbrowser. Eine laufende Einheit pausiert vorher.</summary>
+    /// <summary>Video zur Übung: eine YouTube-Suche im Standardbrowser. Eine laufende Einheit pausiert vorher.
+    /// name ist der angezeigte (schon übersetzte) Name.</summary>
     public string OpenVideo(string name)
     {
+        // Gespeichert wird die deutsche Notiz; übersetzt wird sie erst beim Anzeigen.
         if (_run is { Paused: false }) TogglePause("Pausiert wegen des Videos");
-        string url = "https://www.youtube.com/results?search_query=" + Uri.EscapeDataString("Ausführung: " + name);
+        string url = "https://www.youtube.com/results?search_query=" + Uri.EscapeDataString(L.F("Ausführung: {0}", name));
         string said;
         try
         {
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-            said = $"YouTube wird geöffnet: {name}";
+            said = L.F("YouTube wird geöffnet: {0}", name);
         }
-        catch { said = $"Der Browser ließ sich nicht öffnen. Suche auf YouTube nach: {name}"; }
+        catch { said = L.F("Der Browser ließ sich nicht öffnen. Suche auf YouTube nach: {0}", name); }
         if (_run != null) Toast(said);
         return said;
     }
@@ -634,20 +636,22 @@ public sealed class WorkoutStage : IOverlay, IDisposable
         var r = m.Rungs[Math.Clamp(target.Rung, 0, m.Rungs.Length - 1)];
         var plan = WorkoutPlan.Plans[_run.Plan];
         var list = _run.Steps.Where(x => x.K == "work").Select(x => x.M).Distinct().ToList();
-        _topL = plan.Circuit ? plan.Label : $"{plan.Label} · Übung {list.IndexOf(target.M) + 1} von {list.Count}";
-        _kick = s.K == "ready" ? "Mach dich bereit" : s.K == "rest" ? "Pause. Als Nächstes" : plan.Circuit ? $"Runde {s.Set + 1} von {s.Sets}" : $"Satz {s.Set + 1} von {s.Sets}";
-        _name = r.Name;
-        _cue = r.Cue;
+        string planLabel = L.T(plan.Label);
+        _topL = plan.Circuit ? planLabel : L.F("{0} · Übung {1} von {2}", planLabel, list.IndexOf(target.M) + 1, list.Count);
+        _kick = s.K == "ready" ? L.T("Mach dich bereit") : s.K == "rest" ? L.T("Pause. Als Nächstes")
+            : plan.Circuit ? L.F("Runde {0} von {1}", s.Set + 1, s.Sets) : L.F("Satz {0} von {1}", s.Set + 1, s.Sets);
+        _name = L.T(r.Name);
+        _cue = L.T(r.Cue);
         if (_bodyFor != target.M)
         {
             _bodyFor = target.M;
             _bodyWorks = WorkoutBody.MusclesFor([target.M]);
-            _works = "Trainiert: " + string.Join(", ", _bodyWorks.PrimaryList.Select(x => WorkoutBody.Label(x).ToLowerInvariant()));
+            _works = L.F("Trainiert: {0}", string.Join(", ", _bodyWorks.PrimaryList.Select(x => WorkoutBody.Label(x).ToLower(L.Culture))));
         }
         _stepKind = s.K;
         _moveKind = m.Kind;
-        _bigReps = s.N.ToString();
-        _repsSmall = r.Sides ? "Wdh. pro Seite" : "Wdh.";
+        _bigReps = s.N.ToString(L.Culture);
+        _repsSmall = L.T(r.Sides ? "Wdh. pro Seite" : "Wdh.");
         _lastSecond = -1;
         _clockFor = _remainFor = -1;
         Version++;
@@ -690,7 +694,7 @@ public sealed class WorkoutStage : IOverlay, IDisposable
             doneMs += total - left;
             double allMs = WorkoutPlan.SessionSeconds(_run.Steps) * 1000.0;
             long remain = Math.Max(0, (long)Math.Ceiling((allMs - doneMs) / 60000));
-            if (remain != _remainFor) { _remainFor = remain; _remain = $"noch {remain} Min."; }
+            if (remain != _remainFor) { _remainFor = remain; _remain = L.F("noch {0} Min.", remain); }
             _bar = Wo.Approach(_bar, (float)Math.Clamp(doneMs / allMs, 0, 1), dt, 10f);
             _countBar = Wo.Approach(_countBar, (float)Math.Clamp(1 - left / total, 0, 1), dt, 10f);
         }
@@ -766,7 +770,8 @@ public sealed class WorkoutStage : IOverlay, IDisposable
         p.Ctx.Transform = Matrix3x2.CreateTranslation(-center) * Matrix3x2.CreateScale(scaleIn) * Matrix3x2.CreateTranslation(center) * saved;
 
         // Messen
-        string topR = paused ? (_run.Note.Length > 0 ? _run.Note : "Pausiert") : _remain;
+        // Die Notiz wird deutsch gespeichert (RunState) und erst hier übersetzt.
+        string topR = paused ? L.T(_run.Note.Length > 0 ? _run.Note : "Pausiert") : _remain;
         var lTop = p.Text(_topL, 17 * k, 600);
         var rTop = p.Text(topR, 17 * k, 600);
         float topH = Math.Max(WorkoutPaint.H(lTop), WorkoutPaint.H(rTop)) + 9 * k + 5 * k;
@@ -790,13 +795,13 @@ public sealed class WorkoutStage : IOverlay, IDisposable
 
         // Knöpfe
         int nb = 0;
-        if (work) { _btns[nb++] = new Btn { Text = "Leichter", Cmd = CEasy }; _btns[nb++] = new Btn { Text = "Schwerer", Cmd = CHard }; }
-        _btns[nb++] = new Btn { Text = paused ? "Fortsetzen" : "Pause", Cmd = CPause, Main = true };
-        _btns[nb++] = new Btn { Text = work ? "Fertig" : "Überspringen", Cmd = CNext };
+        if (work) { _btns[nb++] = new Btn { Text = L.T("Leichter"), Cmd = CEasy }; _btns[nb++] = new Btn { Text = L.T("Schwerer"), Cmd = CHard }; }
+        _btns[nb++] = new Btn { Text = L.T(paused ? "Fortsetzen" : "Pause"), Cmd = CPause, Main = true };
+        _btns[nb++] = new Btn { Text = L.T(work ? "Fertig" : "Überspringen"), Cmd = CNext };
         if (!work) _btns[nb++] = new Btn { Text = "+30 s", Cmd = CMore };
         long now = WorkoutPlan.NowMs();
-        _btns[nb++] = new Btn { Text = now < _endUntil ? "Jetzt beenden?" : "Beenden und speichern", Cmd = CEnd, End = true };
-        _btns[nb++] = new Btn { Text = now < _abortUntil ? "Abbrechen? Dann zählt es nicht" : "Abbrechen", Cmd = CAbort, End = true };
+        _btns[nb++] = new Btn { Text = L.T(now < _endUntil ? "Jetzt beenden?" : "Beenden und speichern"), Cmd = CEnd, End = true };
+        _btns[nb++] = new Btn { Text = L.T(now < _abortUntil ? "Abbrechen? Dann zählt es nicht" : "Abbrechen"), Cmd = CAbort, End = true };
         float bh = 46 * k, bpad = 24 * k, bgap = 10 * k;
         float rowW = 0;
         int rows = 1;
@@ -930,13 +935,13 @@ public sealed class WorkoutStage : IOverlay, IDisposable
         var fg = c.Fg;
         float w = Math.Min(c.Width - 32, 620 * k), pad = 26 * k, gap = 14 * k;
         float inner = w - 2 * pad;
-        var title = p.Text(fin.Entry.Early ? "Gute Leistung." : "Schön gemacht.", 34 * k, 700, true);
+        var title = p.Text(L.T(fin.Entry.Early ? "Gute Leistung." : "Schön gemacht."), 34 * k, 700, true);
         var sub = p.Text(fin.Sub, 14.5f * k, 500, false, inner, WorkoutPaint.Wrap);
 
         // Breite der Gefühls-Knöpfe
         float fh = 32 * k, fpad = 11 * k, fgap = 4 * k;
         float optsW = 0;
-        for (int i = 0; i < 3; i++) optsW += WorkoutPaint.W(p.Text(FeelLabels[i], 12 * k, 600)) + 2 * fpad + (i > 0 ? fgap : 0);
+        for (int i = 0; i < 3; i++) optsW += WorkoutPaint.W(p.Text(L.T(FeelLabels[i]), 12 * k, 600)) + 2 * fpad + (i > 0 ? fgap : 0);
         float nameW = Math.Max(40 * k, inner - optsW - 12 * k);
 
         float rowsH = 0;
@@ -968,7 +973,7 @@ public sealed class WorkoutStage : IOverlay, IDisposable
             float bx = x + w - pad - optsW, by = cy + (rh - fh) / 2;
             for (int i = 0; i < 3; i++)
             {
-                var l = p.Text(FeelLabels[i], 12 * k, 600);
+                var l = p.Text(L.T(FeelLabels[i]), 12 * k, 600);
                 float bw = WorkoutPaint.W(l) + 2 * fpad;
                 var r = new Rect(bx, by, bw, fh);
                 bool on = row.Feel == FeelIds[i], hov = Hover(c, r);
@@ -984,7 +989,7 @@ public sealed class WorkoutStage : IOverlay, IDisposable
         var br = new Rect(x + pad, cy, inner, btnH);
         bool bh = Hover(c, br);
         p.Fill(br, btnH / 2, fg, (bh ? 0.28f : 0.2f) * a);
-        var done = p.Text("Fertig", 13 * k, 600);
+        var done = p.Text(L.T("Fertig"), 13 * k, 600);
         p.Draw(done, br.X + (inner - WorkoutPaint.W(done)) / 2, cy + (btnH - WorkoutPaint.H(done)) / 2, fg, a);
         _hits.Add(new Hit(br, CFinDone, 0));
     }

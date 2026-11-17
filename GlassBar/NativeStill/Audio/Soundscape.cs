@@ -17,6 +17,9 @@ public static class Soundscape
     /// <summary>Die Klänge in der Reihenfolge der Kacheln.</summary>
     public static readonly string[] Ids = { "rain", "stream", "wind", "waves", "fire", "brown" };
     public static readonly string[] Names = { "Regen", "Bach", "Wind", "Wellen", "Feuer", "Braunes Rauschen" };
+
+    /// <summary>Anzeigename des Klangs Nr. <paramref name="i"/> in der Sprache der Oberfläche.</summary>
+    public static string Name(int i) => L.T(Names[i]);
     /// <summary>Stufe, die ein Klang hat, bis man sie selbst setzt.</summary>
     public const double DefaultLevel = 0.75;
     private const string StoreKey = "sound.mix";

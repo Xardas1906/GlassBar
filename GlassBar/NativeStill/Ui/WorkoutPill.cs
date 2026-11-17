@@ -164,8 +164,10 @@ public sealed class WorkoutPill : Pill
     private readonly List<(string Head, string Names)> _entries = new();
     private string _calHint = "";
 
-    private static readonly string[] Months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
-    private static readonly string[] Dow = ["M", "D", "M", "D", "F", "S", "S"];
+    // Monatsnamen kommen aus L.Culture; die Wochentage als Anfangsbuchstaben, Montag zuerst.
+    private static readonly string[] DowDe = ["M", "D", "M", "D", "F", "S", "S"];
+    private static readonly string[] DowEn = ["M", "T", "W", "T", "F", "S", "S"];
+    private static string[] Dow => L.En ? DowEn : DowDe;
 
     private void Rebuild(UiContext c)
     {
@@ -181,8 +183,8 @@ public sealed class WorkoutPill : Pill
         _dotRest = _rec.Kind == "rest";
         int tn = WorkoutPlan.DayNum(today);
         int n = days.Count(d => tn - WorkoutPlan.DayNum(d) is >= 0 and <= 6);
-        _meta = $"{n} von {(int)Math.Round(c.Settings.Num("workoutGoal"))} diese Woche";
-        _title = _page == "history" ? "Verlauf" : _page == "main" ? "Training" : _page == "body" && data.Setup ? "Dein BMI" : "Training einrichten";
+        _meta = L.F("{0} von {1} diese Woche", n, (int)Math.Round(c.Settings.Num("workoutGoal")));
+        _title = L.T(_page == "history" ? "Verlauf" : _page == "main" ? "Training" : _page == "body" && data.Setup ? "Dein BMI" : "Training einrichten");
 
         if (_page == "main") RebuildMain(c, today);
         else if (_page == "history") RebuildHistory(today);
@@ -200,11 +202,11 @@ public sealed class WorkoutPill : Pill
             _own = _chosen != null && _chosen != rec.Plan;
             string note = _own ? WorkoutPlan.NoteFor(_chosen!, data.History, WorkoutPlan.NowMs()) : "";
             _why = _own
-                ? (note.Length > 0 ? note : rec.Kind == "rest" ? "Deine Wahl. Der heutige Vorschlag war Pause." : $"Deine Wahl. Der heutige Vorschlag war {WorkoutPlan.Plans[rec.Plan!].Label}.")
+                ? (note.Length > 0 ? note : rec.Kind == "rest" ? L.T("Deine Wahl. Der heutige Vorschlag war Pause.") : L.F("Deine Wahl. Der heutige Vorschlag war {0}.", L.T(WorkoutPlan.Plans[rec.Plan!].Label)))
                 : rec.Reason;
             _gentle = !_own && rec.Gentle;
-            _kicker = _own ? "Deine Wahl" : "Heute vorgeschlagen";
-            _planName = WorkoutPlan.Plans[_shown].Label;
+            _kicker = L.T(_own ? "Deine Wahl" : "Heute vorgeschlagen");
+            _planName = L.T(WorkoutPlan.Plans[_shown].Label);
             var steps = WorkoutPlan.BuildSession(_shown, data.Targets, Stage.Options(_gentle));
             var seen = new List<string>();
             foreach (var s in steps)
@@ -213,24 +215,25 @@ public sealed class WorkoutPill : Pill
                 seen.Add(s.M);
                 var m = WorkoutPlan.Moves[s.M];
                 var r = m.Rungs[s.Rung];
-                _rows.Add(new ExRow { Name = r.Name, Amount = $"{s.Sets} × {Wo.Amount(m, s.N)}{(r.Sides ? " je Seite" : "")}" });
+                _rows.Add(new ExRow { Name = L.T(r.Name), Amount = $"{s.Sets} × {Wo.Amount(m, s.N)}{(r.Sides ? L.T(" je Seite") : "")}" });
             }
-            _mins = $"etwa {WorkoutPlan.SessionMinutes(steps)} Min.";
+            _mins = L.F("etwa {0} Min.", WorkoutPlan.SessionMinutes(steps));
             var works = WorkoutBody.MusclesFor(seen);
             if (_cardWorks == null || _cardWorks.Key != works.Key) _cardWorks = works;
         }
         else
         {
-            _kicker = "Heute vorgeschlagen";
-            _planName = "Pause";
+            _kicker = L.T("Heute vorgeschlagen");
+            // Nicht über das Wörterbuch: „Pause“ heißt dort der Knopf (Pause), hier der Ruhetag.
+            _planName = L.En ? "Rest day" : "Pause";
             _why = rec.Reason;
             var steps = WorkoutPlan.BuildSession(rec.Alt, data.Targets, Stage.Options(false));
-            _altLabel = $"Trotzdem trainieren: {WorkoutPlan.Plans[rec.Alt].Label}, {WorkoutPlan.SessionMinutes(steps)} Min.";
+            _altLabel = L.F("Trotzdem trainieren: {0}, {1} Min.", L.T(WorkoutPlan.Plans[rec.Alt].Label), WorkoutPlan.SessionMinutes(steps));
         }
         var bmi = c.Settings.Bool("workoutBmi") && data.Body != null ? WorkoutPlan.Bmi(data.Body) : null;
         if (bmi is { } b)
         {
-            _bmiBold = "BMI " + b.Value.ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("de-DE"));
+            _bmiBold = "BMI " + b.Value.ToString("0.0", L.Culture);
             _bmiRest = " · " + b.Label;
         }
         else _bmiBold = _bmiRest = null;
@@ -241,7 +244,7 @@ public sealed class WorkoutPill : Pill
         var now = DateTime.Now;
         var (y, mo) = _calMonth ?? (now.Year, now.Month);
         _calMonth = (y, mo);
-        _monthTitle = $"{Months[mo - 1]} {y}";
+        _monthTitle = $"{L.Culture.DateTimeFormat.GetMonthName(mo)} {y}";
         _monthDays = DateTime.DaysInMonth(y, mo);
         _monthLead = ((int)new DateTime(y, mo, 1).DayOfWeek + 6) % 7; // Montag zuerst
         _monthIsNow = y == now.Year && mo == now.Month;
@@ -264,14 +267,16 @@ public sealed class WorkoutPill : Pill
                 var names = e.Done.Where(x => WorkoutPlan.Moves.ContainsKey(x.M)).Select(x =>
                 {
                     var m = WorkoutPlan.Moves[x.M];
-                    return m.Rungs[Math.Clamp(x.Rung, 0, m.Rungs.Length - 1)].Name;
+                    return L.T(m.Rungs[Math.Clamp(x.Rung, 0, m.Rungs.Length - 1)].Name);
                 });
-                string label = WorkoutPlan.Plans.TryGetValue(e.Plan, out var pl) ? pl.Label : "Training";
-                _entries.Add(($"{label} · {Math.Max(1, e.Mins)} Min.", string.Join(", ", names)));
+                string label = L.T(WorkoutPlan.Plans.TryGetValue(e.Plan, out var pl) ? pl.Label : "Training");
+                _entries.Add((L.F("{0} · {1} Min.", label, Math.Max(1, e.Mins)), string.Join(", ", names)));
             }
             _calHint = "";
         }
-        else _calHint = total > 0 ? $"{total} Training{(total == 1 ? "" : "s")} diesen Monat. Klicke auf einen Tag, um ihn anzusehen." : "Keine Trainings diesen Monat.";
+        else _calHint = total == 0 ? L.T("Keine Trainings diesen Monat.")
+            : total == 1 ? L.T("1 Training diesen Monat. Klicke auf einen Tag, um ihn anzusehen.")
+            : L.F("{0} Trainings diesen Monat. Klicke auf einen Tag, um ihn anzusehen.", total);
     }
 
     private void Go(string page)
@@ -483,25 +488,25 @@ public sealed class WorkoutPill : Pill
     private float ViewLevel(UiContext c, float x, float y0, float w, float a, float gap)
     {
         float k = c.K, y = y0;
-        y += Para(c, "Wie viele Liegestütze schaffst du am Stück?", 17 * k, 650, 1, x, y, w, a) + gap;
-        y += Para(c, "Eine grobe Schätzung genügt. Sie legt fest, wo jede Übung beginnt, und passt sich dann an.", 12 * k, 500, 0.58f, x, y, w, a) + gap;
+        y += Para(c, L.T("Wie viele Liegestütze schaffst du am Stück?"), 17 * k, 650, 1, x, y, w, a) + gap;
+        y += Para(c, L.T("Eine grobe Schätzung genügt. Sie legt fest, wo jede Übung beginnt, und passt sich dann an."), 12 * k, 500, 0.58f, x, y, w, a) + gap;
         var wh = _wheels[0];
         float ww = WorkoutPaint.W(_p.Text(wh.Ghost, 40 * k, 650)) + 40 * k;
         wh.Draw(_p, c, x + (w - ww) / 2, y, ww, 40 * k, a);
         y += WoWheel.Height(40 * k) + gap;
-        y += Button(c, new Rect(x, y, w, 36 * k), "Weiter", true, a, CLevelNext);
+        y += Button(c, new Rect(x, y, w, 36 * k), L.T("Weiter"), true, a, CLevelNext);
         return y - y0;
     }
 
     private float ViewFocus(UiContext c, float x, float y0, float w, float a, float gap)
     {
         float k = c.K, y = y0;
-        y += Para(c, "Worauf möchtest du dich konzentrieren?", 17 * k, 650, 1, x, y, w, a) + gap;
+        y += Para(c, L.T("Worauf möchtest du dich konzentrieren?"), 17 * k, 650, 1, x, y, w, a) + gap;
         string focus = Stage.Focus;
-        y += Option(c, x, y, w, a, focus == "muscle", "Muskelaufbau", "Muskeln aufbauen: 8 bis 20 Wiederholungen, nah am Muskelversagen.", 0) + gap;
-        y += Option(c, x, y, w, a, focus == "strength", "Kraft", "Stärker werden: 3 bis 8 Wiederholungen, schwerere Varianten.", 1) + gap;
-        y += Para(c, "Brich jede Übung ab, die stechende Schmerzen verursacht. Muskelkater am nächsten Tag ist normal.", 12 * k, 500, 0.58f, x, y, w, a) + gap;
-        y += Button(c, new Rect(x, y, w, 36 * k), "Weiter", true, a, CFocusNext);
+        y += Option(c, x, y, w, a, focus == "muscle", L.T("Muskelaufbau"), L.T("Muskeln aufbauen: 8 bis 20 Wiederholungen, nah am Muskelversagen."), 0) + gap;
+        y += Option(c, x, y, w, a, focus == "strength", L.T("Kraft"), L.T("Stärker werden: 3 bis 8 Wiederholungen, schwerere Varianten."), 1) + gap;
+        y += Para(c, L.T("Brich jede Übung ab, die stechende Schmerzen verursacht. Muskelkater am nächsten Tag ist normal."), 12 * k, 500, 0.58f, x, y, w, a) + gap;
+        y += Button(c, new Rect(x, y, w, 36 * k), L.T("Weiter"), true, a, CFocusNext);
         return y - y0;
     }
 
@@ -529,10 +534,11 @@ public sealed class WorkoutPill : Pill
     {
         float k = c.K, y = y0;
         var data = Stage.Data;
-        y += Para(c, data.Setup ? "Werte aktualisieren" : "Möchtest du deinen BMI sehen?", 17 * k, 650, 1, x, y, w, a) + gap;
-        y += Para(c, "Optional und bleibt auf diesem PC. Er unterscheidet nicht zwischen Muskeln und Fett und kann daher steigen, wenn du stärker wirst.", 12 * k, 500, 0.58f, x, y, w, a) + gap;
+        y += Para(c, L.T(data.Setup ? "Werte aktualisieren" : "Möchtest du deinen BMI sehen?"), 17 * k, 650, 1, x, y, w, a) + gap;
+        y += Para(c, L.T("Optional und bleibt auf diesem PC. Er unterscheidet nicht zwischen Muskeln und Fett und kann daher steigen, wenn du stärker wirst."), 12 * k, 500, 0.58f, x, y, w, a) + gap;
         float colW = w / 3, px = 26 * k;
-        string[] labels = ["Alter", "Größe", "Gewicht"];
+        // „Größe“ nicht über das Wörterbuch: anderswo heißt es „Size“, hier die Körpergröße.
+        string[] labels = [L.T("Alter"), L.En ? "Height" : "Größe", L.T("Gewicht")];
         float colH = 0;
         for (int i = 0; i < 3; i++)
         {
@@ -566,10 +572,10 @@ public sealed class WorkoutPill : Pill
             colH = Math.Max(colH, cy - y);
         }
         y += colH + gap;
-        string ghost = data.Setup ? "Zurück" : "Überspringen";
+        string ghost = L.T(data.Setup ? "Zurück" : "Überspringen");
         float gw = WorkoutPaint.W(_p.Text(ghost, 13 * k, 600)) + 32 * k;
         Button(c, new Rect(x, y, gw, 36 * k), ghost, false, a, CBodySkip);
-        Button(c, new Rect(x + gw + 8 * k, y, w - gw - 8 * k, 36 * k), "Speichern", true, a, CBodySave);
+        Button(c, new Rect(x + gw + 8 * k, y, w - gw - 8 * k, 36 * k), L.T("Speichern"), true, a, CBodySave);
         y += 36 * k;
         return y - y0;
     }
@@ -626,7 +632,7 @@ public sealed class WorkoutPill : Pill
                 ly += rowH + 4 * k;
             }
             y += splitH + gap;
-            y += Button(c, new Rect(x, y, w, 36 * k), "Start", true, a, CStart) + gap;
+            y += Button(c, new Rect(x, y, w, 36 * k), L.T("Start"), true, a, CStart) + gap;
         }
         else
         {
@@ -639,7 +645,7 @@ public sealed class WorkoutPill : Pill
         {
             string id = WorkoutPlan.PlanIds[i];
             bool on = _shown == id, sugg = _rec?.Plan == id;
-            var l = _p.Text(WorkoutPlan.Plans[id].Label, 12 * k, 600);
+            var l = _p.Text(L.T(WorkoutPlan.Plans[id].Label), 12 * k, 600);
             float cw = WorkoutPaint.W(l) + 22 * k + (sugg ? 11 * k : 0);
             if (cx > x && cx + cw > x + w) { cx = x; cy += chipH + 5 * k; }
             var r = new Rect(cx, cy, cw, chipH);
@@ -661,7 +667,7 @@ public sealed class WorkoutPill : Pill
         if (_cardNote.Length > 0) y += Para(c, _cardNote, 12 * k, 500, 0.58f, x, y, w, a) + gap;
 
         // Fuß: Verlauf, BMI
-        var hist = _p.Text("Verlauf", 12 * k, 600);
+        var hist = _p.Text(L.T("Verlauf"), 12 * k, 600);
         float fh = Math.Max(22 * k, WorkoutPaint.H(hist) + 6 * k);
         var hr = new Rect(x, y, WorkoutPaint.W(hist), fh);
         _p.Draw(hist, x, y + (fh - WorkoutPaint.H(hist)) / 2, fg, (Hover(c, hr) ? 1f : 0.62f) * a);
@@ -689,7 +695,7 @@ public sealed class WorkoutPill : Pill
         var fg = c.Fg;
         var tp = Wo.Tp(c);
 
-        var back = _p.Text("‹ Zurück zu heute", 12 * k, 600);
+        var back = _p.Text(L.T("‹ Zurück zu heute"), 12 * k, 600);
         float fh = Math.Max(22 * k, WorkoutPaint.H(back) + 6 * k);
         var backR = new Rect(x, y, WorkoutPaint.W(back), fh);
         _p.Draw(back, x, y + (fh - WorkoutPaint.H(back)) / 2, fg, (Hover(c, backR) ? 1f : 0.62f) * a);

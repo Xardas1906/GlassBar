@@ -113,11 +113,14 @@ public partial class SettingsWindow
 
         // Still: Kategorien und alle Einstellungen
         foreach (var tab in StillSettings.Tabs)
-            list.Add(Entry(tab, "Still", "hintergrund", () => GoToStill(tab, null)));
+            list.Add(Entry(StillSettings.TabName(tab), "Still", $"{tab} hintergrund wallpaper", () => GoToStill(tab, null)));
         foreach (var s in StillSettings.All)
         {
-            var opts = s.Options == null ? "" : string.Join(" ", s.Options.Select(o => o.Label));
-            list.Add(Entry(s.Label, $"Still › {s.Tab}", $"{s.Note} {s.Section} {opts} hintergrund", () => GoToStill(s.Tab, s.Label)));
+            // Angezeigt wird die Übersetzung; das Deutsche bleibt im Suchtext, damit beide Sprachen finden
+            var opts = s.Options == null ? "" : string.Join(" ", s.Options.Select(o => o.Label == L.T(o.Label) ? o.Label : $"{o.Label} {L.T(o.Label)}"));
+            var stillLabel = L.T(s.Label);
+            var stillExtra = $"{s.Label} {s.Tab} {s.Note} {s.Section} {(L.En ? $"{L.T(s.Note)} {L.T(s.Section)} " : "")}{opts} hintergrund wallpaper";
+            list.Add(Entry(stillLabel, $"Still › {StillSettings.TabName(s.Tab)}", stillExtra, () => GoToStill(s.Tab, stillLabel)));
         }
         return list;
     }

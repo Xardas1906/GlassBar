@@ -24,10 +24,10 @@ public static class Tones
     public static readonly IReadOnlyList<string> AlarmSounds = ["horizon", "silk", "rise", "harbor"];
 
     /// <summary>Anzeigenamen wie im Original.</summary>
-    public static string DisplayName(string name) => Synth.Defs.TryGetValue(name ?? "", out var d) ? d.Name : name ?? "";
+    public static string DisplayName(string name) => Synth.Defs.TryGetValue(name ?? "", out var d) ? GlassBar.L.T(d.Name) : name ?? "";
 
     /// <summary>Kurzbeschreibung wie im Original (about).</summary>
-    public static string About(string name) => Synth.Defs.TryGetValue(name ?? "", out var d) ? d.About : "";
+    public static string About(string name) => Synth.Defs.TryGetValue(name ?? "", out var d) ? GlassBar.L.T(d.About) : "";
 
     /// <summary>Gibt es diesen Klang?</summary>
     public static bool Exists(string name) => !string.IsNullOrEmpty(name) && (Synth.Defs.ContainsKey(name) || Chimes.TryGet(name, out _));

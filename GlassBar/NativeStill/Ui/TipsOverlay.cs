@@ -229,16 +229,16 @@ public sealed class TipsOverlay : IOverlay, IDisposable
         if (tip == null) return;
         float k = c.K, w = 310 * k, inner = w - 36 * k;
         float h = 16 * k;
-        h += _text.Get(c, "Schon gewusst?", 11.5f * k, 600).Metrics.Height + 2 * k;
-        h += _text.Get(c, tip.Title, 16 * k, 650, inner).Metrics.Height + 4 * k;
-        h += _text.Get(c, tip.Text, 13 * k, 500, inner, 1.42f).Metrics.Height + 12 * k;
+        h += _text.Get(c, L.T("Schon gewusst?"), 11.5f * k, 600).Metrics.Height + 2 * k;
+        h += _text.Get(c, L.T(tip.Title), 16 * k, 650, inner).Metrics.Height + 4 * k;
+        h += _text.Get(c, L.T(tip.Text), 13 * k, 500, inner, 1.42f).Metrics.Height + 12 * k;
         h += 32 * k + 16 * k;
         float bottom = c.Height - 88 * k;
         _card = new Rect(40 * k, bottom - h, w, h);
         float by = _card.Bottom - 16 * k - 32 * k, x = _card.X + 18 * k;
-        float gw = _text.Get(c, tip.Label, 12.5f * k, 650).Metrics.WidthIncludingTrailingWhitespace + 28 * k;
-        float ow = _text.Get(c, "Verstanden", 12.5f * k, 650).Metrics.WidthIncludingTrailingWhitespace + 28 * k;
-        float nw = _text.Get(c, "Weiter", 12.5f * k, 650).Metrics.WidthIncludingTrailingWhitespace + 28 * k;
+        float gw = _text.Get(c, L.T(tip.Label), 12.5f * k, 650).Metrics.WidthIncludingTrailingWhitespace + 28 * k;
+        float ow = _text.Get(c, L.T("Verstanden"), 12.5f * k, 650).Metrics.WidthIncludingTrailingWhitespace + 28 * k;
+        float nw = _text.Get(c, L.T("Weiter"), 12.5f * k, 650).Metrics.WidthIncludingTrailingWhitespace + 28 * k;
         _go = new Rect(x, by, gw, 32 * k);
         _ok = new Rect(x + gw + 6 * k, by, ow, 32 * k);
         _next = new Rect(_card.Right - 18 * k - nw, by, nw, 32 * k);
@@ -338,7 +338,7 @@ public sealed class TipsOverlay : IOverlay, IDisposable
         c.Glass.Panel(ctx, c, _card, 22 * k, a);
 
         float x = _card.X + 18 * k, y = _card.Y + 16 * k, inner = _card.Width - 36 * k;
-        var kick = _text.Get(c, "Schon gewusst?", 11.5f * k, 600);
+        var kick = _text.Get(c, L.T("Schon gewusst?"), 11.5f * k, 600);
         b.Color = Col(fg, 0.55f * a);
         ctx.DrawTextLayout(new Vector2(x, y), kick, b, DrawTextOptions.None);
         int n = Array.IndexOf(_tips, tip) + 1;
@@ -349,18 +349,18 @@ public sealed class TipsOverlay : IOverlay, IDisposable
         // Nach „Weiter“ blenden Titel und Text neu ein
         float sw = (float)Math.Clamp((c.Time - _swapAt) / 0.28, 0, 1);
         float swA = 1 - (1 - sw) * (1 - sw), swY = 4 * k * (1 - swA);
-        var title = _text.Get(c, tip.Title, 16 * k, 650, inner);
+        var title = _text.Get(c, L.T(tip.Title), 16 * k, 650, inner);
         b.Color = Col(fg, a * swA);
         ctx.DrawTextLayout(new Vector2(x, y + swY), title, b, DrawTextOptions.None);
         y += title.Metrics.Height + 4 * k;
-        var text = _text.Get(c, tip.Text, 13 * k, 500, inner, 1.42f);
+        var text = _text.Get(c, L.T(tip.Text), 13 * k, 500, inner, 1.42f);
         b.Color = Col(fg, 0.75f * a * swA);
         ctx.DrawTextLayout(new Vector2(x, y + swY), text, b, DrawTextOptions.None);
 
         string? hover = _pointerIn ? ButtonAt(_pointer) : null;
-        Button(ctx, c, _go, tip.Label, hover == "go" ? 0.3f : 0.22f, 1, a);
-        Button(ctx, c, _ok, "Verstanden", hover == "ok" ? 0.14f : 0.08f, 0.78f, a);
-        Button(ctx, c, _next, "Weiter", hover == "next" ? 0.14f : 0.08f, 0.78f, a);
+        Button(ctx, c, _go, L.T(tip.Label), hover == "go" ? 0.3f : 0.22f, 1, a);
+        Button(ctx, c, _ok, L.T("Verstanden"), hover == "ok" ? 0.14f : 0.08f, 0.78f, a);
+        Button(ctx, c, _next, L.T("Weiter"), hover == "next" ? 0.14f : 0.08f, 0.78f, a);
         ctx.Transform = prev;
     }
 
