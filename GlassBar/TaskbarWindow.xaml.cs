@@ -1038,7 +1038,12 @@ public partial class TaskbarWindow : Window
     }
 
     // ---------- Systemknöpfe ----------
-    private void Start_Click(object s, MouseButtonEventArgs e) => Native.WinKey();
+    private void Start_Click(object s, MouseButtonEventArgs e)
+    {
+        // Nebenbildschirm: Startmenü dort öffnen (die Windows-Taste öffnet es immer auf dem Hauptbildschirm)
+        if (!IsPrimary && StartMenu.Toggle(MonitorFromWindow(new WindowInteropHelper(this).Handle, 2))) return;
+        Native.WinKey();
+    }
     private void Start_RightClick(object s, MouseButtonEventArgs e) { e.Handled = true; Native.WinKey('X'); }
     private void Search_Click(object s, MouseButtonEventArgs e) => Native.WinKey('S');
     private void TaskView_Click(object s, MouseButtonEventArgs e) => Native.WinKey('\t');
