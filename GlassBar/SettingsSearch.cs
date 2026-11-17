@@ -133,6 +133,7 @@ public partial class SettingsWindow
         ("Windows-Taste", "win taste startmenü"),
         ("Zurücksetzen", "standard reset"),
         ("Stadt", "ort wetter"),
+        ("Start-Symbol", "windows logo startknopf start icon symbol bild"),
         ("Nebenbildschirmen", "monitor zweiter bildschirm hintergrund mehrere"),
         ("allen Bildschirmen", "monitor mehrere zweiter bildschirm taskleiste"),
         ("Darstellung", "nativ native browser engine renderer leistung performance schneller leichter webview"),

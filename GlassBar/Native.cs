@@ -163,21 +163,106 @@ internal static class Native
     }
 
     // ---------- Autostart ----------
+    // Über die Aufgabenplanung statt über den Run-Schlüssel: Run-Einträge startet Windows absichtlich verzögert
+    // (bei dir rund 2 Minuten nach dem Hochfahren). Eine Aufgabe „bei Anmeldung“ startet sofort.
+    // Das Anlegen braucht einmal Administratorrechte (Windows fragt nach); GlassBar selbst läuft danach normal.
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    private const string TaskName = "GlassBar";
 
     public static bool Autostart
     {
-        get
-        {
-            using var k = Registry.CurrentUser.OpenSubKey(RunKey);
-            return k?.GetValue("GlassBar") != null;
-        }
+        get => TaskExists() || RunKeyExists();
         set
         {
-            using var k = Registry.CurrentUser.CreateSubKey(RunKey);
-            if (value) k.SetValue("GlassBar", $"\"{Environment.ProcessPath}\"");
-            else k.DeleteValue("GlassBar", false);
+            if (value)
+            {
+                if (CreateTask()) RemoveRunKey();
+                else SetRunKey(); // Rückfrage abgelehnt: wenigstens der (spätere) normale Autostart
+            }
+            else
+            {
+                RemoveRunKey();
+                if (TaskExists()) DeleteTask();
+            }
         }
+    }
+
+    private static bool RunKeyExists()
+    {
+        using var k = Registry.CurrentUser.OpenSubKey(RunKey);
+        return k?.GetValue("GlassBar") != null;
+    }
+
+    private static void SetRunKey()
+    {
+        using var k = Registry.CurrentUser.CreateSubKey(RunKey);
+        k.SetValue("GlassBar", $"\"{Environment.ProcessPath}\"");
+    }
+
+    private static void RemoveRunKey()
+    {
+        using var k = Registry.CurrentUser.CreateSubKey(RunKey);
+        k.DeleteValue("GlassBar", false);
+    }
+
+    private static bool TaskExists() => RunSchtasks($"/Query /TN \"{TaskName}\"", elevated: false) == 0;
+
+    private static bool CreateTask()
+    {
+        var user = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
+        var exe = Environment.ProcessPath ?? "";
+        var esc = (string t) => System.Security.SecurityElement.Escape(t);
+        // Priorität 4 = normal (Standard der Aufgabenplanung wäre „niedriger als normal“); keine Zeitbegrenzung,
+        // auch im Akkubetrieb; nur für dich, ohne Administratorrechte zur Laufzeit.
+        var xml = $"""
+            <?xml version="1.0" encoding="UTF-16"?>
+            <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+              <RegistrationInfo><Description>Startet GlassBar sofort bei der Anmeldung.</Description></RegistrationInfo>
+              <Triggers><LogonTrigger><Enabled>true</Enabled><UserId>{esc(user)}</UserId></LogonTrigger></Triggers>
+              <Principals><Principal id="Author"><UserId>{esc(user)}</UserId><LogonType>InteractiveToken</LogonType><RunLevel>LeastPrivilege</RunLevel></Principal></Principals>
+              <Settings>
+                <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+                <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+                <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+                <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+                <Priority>4</Priority>
+                <StartWhenAvailable>true</StartWhenAvailable>
+              </Settings>
+              <Actions Context="Author"><Exec><Command>{esc(exe)}</Command><WorkingDirectory>{esc(Path.GetDirectoryName(exe) ?? "")}</WorkingDirectory></Exec></Actions>
+            </Task>
+            """;
+        var file = Path.Combine(Path.GetTempPath(), "GlassBar-Autostart.xml");
+        try
+        {
+            File.WriteAllText(file, xml, System.Text.Encoding.Unicode);
+            return RunSchtasks($"/Create /F /TN \"{TaskName}\" /XML \"{file}\"", elevated: true) == 0 && TaskExists();
+        }
+        catch { return false; }
+        finally { try { File.Delete(file); } catch { } }
+    }
+
+    private static void DeleteTask() => RunSchtasks($"/Delete /F /TN \"{TaskName}\"", elevated: true);
+
+    /// <summary>schtasks.exe ausführen; elevated = mit Windows-Rückfrage (UAC). Liefert den Exit-Code (-1 = abgelehnt).</summary>
+    private static int RunSchtasks(string args, bool elevated)
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("schtasks.exe", args)
+            {
+                UseShellExecute = elevated,
+                Verb = elevated ? "runas" : "",
+                CreateNoWindow = true,
+                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
+                RedirectStandardOutput = !elevated,
+                RedirectStandardError = !elevated,
+            };
+            using var p = System.Diagnostics.Process.Start(psi);
+            if (p == null) return -1;
+            p.WaitForExit(15000);
+            return p.HasExited ? p.ExitCode : -1;
+        }
+        catch { return -1; } // z. B. Rückfrage abgelehnt
     }
 
     /// <summary>Löst eine .lnk-Verknüpfung auf (Ziel, Argumente).</summary>

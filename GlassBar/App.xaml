@@ -62,6 +62,8 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock x:Name="Ico" Text="{TemplateBinding Tag}" Style="{StaticResource Glyph}" FontSize="14"
                                                HorizontalAlignment="Left"/>
+                                    <ContentPresenter ContentSource="Icon" Width="16" Height="16" HorizontalAlignment="Left"
+                                                      VerticalAlignment="Center"/>
                                     <TextBlock x:Name="Check" Text="&#xE73E;" Style="{StaticResource Glyph}" FontSize="12"
                                                HorizontalAlignment="Left" Visibility="Collapsed"/>
                                     <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True"

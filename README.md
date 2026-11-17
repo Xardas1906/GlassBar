@@ -8,6 +8,10 @@ Hintergrund „Still“, nativ gezeichnet ohne Browser.
 - Infobereich, Schnelleinstellungen, Uhr, Musik und Wetter
 - Blendet sich aus, wenn ein Fenster darüberliegt (fährt nach unten weg); Windows-Taste: erst Dock, dann Startmenü
 - Auf Wunsch ein Dock pro Bildschirm (Nebenbildschirme nur mit den Programmen ihres Bildschirms)
+- Rechtsklick auf Programme zeigt die Sprungliste wie bei Windows (z. B. Chrome: meistbesucht, Inkognitofenster)
+- Im Spiel: Erster Druck auf die Windows-Taste holt das Dock und gibt die Maus frei
+- Start-Symbol wählbar (blaue Kachel, Glas, nur Logo oder eigenes Bild)
+- Startet mit Windows über die Aufgabenplanung, mit erhöhter Priorität
 - Einstellungsfenster mit Suche
 
 ## Hintergrund „Still“ (nativ)
@@ -16,7 +20,6 @@ Hintergrund „Still“, nativ gezeichnet ohne Browser.
   Klanglandschaften, Wetterkarte, Anordnen-Modus, Tipps
 - Regen auf der Scheibe, Strömung und Leuchten unter der Maus – auf allen Bildschirmen
 - Schläft, sobald er verdeckt ist
-- Alternativ: der Original-Hintergrund im Browser (WebView2)
 
 „Still“ ist ein Hintergrund aus dem Steam Workshop von einem anderen Autor. Der native Teil ist ein Nachbau für den
 privaten Gebrauch, `Still-Deutsch` enthält die deutsche Übersetzung des Originals.

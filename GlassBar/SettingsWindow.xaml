@@ -493,6 +493,21 @@
                 <TextBlock x:Name="SecItems" Text="Elemente im Dock" Style="{StaticResource Section}"/>
                 <Border Style="{StaticResource CardBox}">
                     <StackPanel>
+                        <StackPanel Margin="0,12,0,12">
+                            <TextBlock Text="Start-Symbol" Margin="0,0,0,10"/>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="StartIcon" Content="Blaue Kachel"
+                                             IsChecked="{Binding StartIcon, Converter={StaticResource Eq}, ConverterParameter=Tile}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="StartIcon" Content="Glas"
+                                             IsChecked="{Binding StartIcon, Converter={StaticResource Eq}, ConverterParameter=Glass}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="StartIcon" Content="Nur Logo"
+                                             IsChecked="{Binding StartIcon, Converter={StaticResource Eq}, ConverterParameter=Logo}"/>
+                                <RadioButton x:Name="StartIconCustom" Style="{StaticResource Segment}" GroupName="StartIcon" Content="Eigenes Bild …"
+                                             IsChecked="{Binding StartIcon, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=Custom}"
+                                             Click="StartIconCustom_Click"/>
+                            </WrapPanel>
+                        </StackPanel>
+                        <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding DockOnAllScreens}"/>
                             <TextBlock Style="{StaticResource Label}">
@@ -630,8 +645,8 @@
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowWallpaper}"/>
                             <TextBlock Style="{StaticResource Label}">
-                                Hintergrund „Still (Deutsch)“ von GlassBar anzeigen
-                                <LineBreak/><Run Text="Ersetzt Wallpaper Engine: Beende Wallpaper Engine, wenn du das einschaltest. Bedienung wie gewohnt per Maus auf dem Desktop." Foreground="{StaticResource Sub}" FontSize="12"/>
+                                Hintergrund „Still“ von GlassBar anzeigen
+                                <LineBreak/><Run Text="Ersetzt Wallpaper Engine: Beende Wallpaper Engine, wenn du das einschaltest. Läuft ohne Browser direkt in GlassBar." Foreground="{StaticResource Sub}" FontSize="12"/>
                             </TextBlock>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
@@ -647,25 +662,10 @@
                             </WrapPanel>
                         </StackPanel>
                         <Border Style="{StaticResource RowLine}"/>
-                        <StackPanel x:Name="StillEngineRow" Margin="0,12,0,12" IsEnabled="{Binding ShowWallpaper}">
-                            <TextBlock Margin="0,0,0,10">
-                                Darstellung
-                                <LineBreak/><Run Text="Nativ zeichnet „Still“ ohne Browser – viel leichter für CPU und Speicher, kann aber noch nicht alles." Foreground="{StaticResource Sub}" FontSize="12"/>
-                            </TextBlock>
-                            <WrapPanel>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="StillEngine" Content="Browser (Original)" Tag="Browser"
-                                             Checked="StillEngine_Checked"
-                                             IsChecked="{Binding StillEngine, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=Browser}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="StillEngine" Content="Nativ (schneller, im Aufbau)" Tag="Native"
-                                             Checked="StillEngine_Checked"
-                                             IsChecked="{Binding StillEngine, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=Native}"/>
-                            </WrapPanel>
-                        </StackPanel>
-                        <Border Style="{StaticResource RowLine}"/>
                         <StackPanel Margin="0,12,0,12" IsEnabled="{Binding ShowWallpaper}">
                             <TextBlock Margin="0,0,0,10">
                                 Auf Nebenbildschirmen
-                                <LineBreak/><Run Text="Nur mit der nativen Darstellung. Pillen und Karten gibt es nur auf dem Hauptbildschirm; ein Dock dort ist nicht nötig." Foreground="{StaticResource Sub}" FontSize="12"/>
+                                <LineBreak/><Run Text="Pillen und Karten gibt es nur auf dem Hauptbildschirm; ein Dock dort ist nicht nötig." Foreground="{StaticResource Sub}" FontSize="12"/>
                             </TextBlock>
                             <WrapPanel>
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondary" Content="Aus"

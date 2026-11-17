@@ -85,7 +85,10 @@ public class Config
     /// Wie „Still“ dargestellt wird: "Browser" = das Original im eingebetteten Browser,
     /// "Native" = eigene Darstellung ohne Browser (viel leichter, noch nicht alle Funktionen).
     /// </summary>
-    public string StillEngine { get; set; } = "Browser";
+    /// <summary>Start-Knopf: "Tile" (blaue Kachel), "Glass" (Glas-Kachel), "Logo" (nur das Logo) oder "Custom" (eigenes Bild).</summary>
+    public string StartIcon { get; set; } = "Tile";
+    /// <summary>Eigenes Bild für den Start-Knopf (Kopie in %AppData%\GlassBar).</summary>
+    public string StartIconPath { get; set; } = "";
     /// <summary>Nativer Hintergrund auf Nebenbildschirmen: "Off", "Light" (nur Licht) oder "Clock" (Licht mit Uhr und Datum).</summary>
     public string WallpaperSecondary { get; set; } = "Clock";
 

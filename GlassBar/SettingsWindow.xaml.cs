@@ -122,109 +122,29 @@ public partial class SettingsWindow : Window
 
     // ---------- Einstellungen des Hintergrunds „Still“ (nachgebaut) ----------
     private Dictionary<string, object>? _still;          // aktuelle Werte
-    private System.Text.Json.Nodes.JsonObject? _stillRaw; // gespeicherte Werte inkl. unbekannter Schlüssel
     private string _stillTab = StillSettings.Tabs[0];
-    private readonly System.Windows.Threading.DispatcherTimer _stillSave = new() { Interval = TimeSpan.FromMilliseconds(700) };
-    private bool _stillSaveHooked;
 
     private void PlaceStillOverlay() { }
 
-    private async void ShowStillSettings()
+    private void ShowStillSettings()
     {
-        // Nativ braucht die Browser-Dateien nicht, um die Einstellungen zu bearbeiten
-        bool available = App.Config.ShowWallpaper && (IsNativeStill || Directory.Exists(WallpaperWindow.DefaultFolder));
+        bool available = App.Config.ShowWallpaper;
         StillMissing.Visibility = available ? Visibility.Collapsed : Visibility.Visible;
         StillScroll.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
         if (!available) return;
-
-        if (!_stillSaveHooked)
-        {
-            _stillSaveHooked = true;
-            _stillSave.Tick += (_, _) => { _stillSave.Stop(); SaveStill(); };
-            Closed += (_, _) => { if (_stillSave.IsEnabled) { _stillSave.Stop(); SaveStill(); } };
-        }
-
-        if (_still == null && IsNativeStill)
-            LoadNativeStill();
-        else if (_still == null)
-        {
-            // aktuellen Stand aus dem Hintergrund lesen
-            _still = new Dictionary<string, object>(StillSettings.Defaults);
-            _stillRaw = new System.Text.Json.Nodes.JsonObject();
-            try
-            {
-                var entries = App.Instance.Bar != null ? await App.Instance.Bar.ExportWallpaperStorageAsync() : "[]";
-                foreach (var e in System.Text.Json.JsonDocument.Parse(entries).RootElement.EnumerateArray())
-                    if (e[0].GetString() == "still.settings.v2" && e[1].GetString() is { } json)
-                        _stillRaw = System.Text.Json.Nodes.JsonNode.Parse(json) as System.Text.Json.Nodes.JsonObject ?? new();
-                foreach (var kv in _stillRaw)
-                {
-                    if (kv.Value is not System.Text.Json.Nodes.JsonValue v) continue;
-                    if (v.TryGetValue<bool>(out var b)) _still[kv.Key] = b;
-                    else if (v.TryGetValue<double>(out var d)) _still[kv.Key] = d;
-                    else if (v.TryGetValue<string>(out var s)) _still[kv.Key] = s;
-                }
-            }
-            catch { }
-        }
+        if (_still == null) LoadNativeStill();
         RenderStillTab();
     }
 
-    private bool IsNativeStill => string.Equals(App.Config.StillEngine, "Native", StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>Aktuelle Werte für den nativen Hintergrund (Standardwerte wie bisher ergänzt).</summary>
+    /// <summary>Aktuelle Werte des Hintergrunds (Standardwerte ergänzt).</summary>
     private void LoadNativeStill()
     {
         NativeStill.NativeStillStore.Load();
         _still = new Dictionary<string, object>(StillSettings.Defaults);
-        _stillRaw = null; // nativ wird über NativeStillStore gespeichert
         foreach (var key in StillSettings.Defaults.Keys.ToList())
             _still[key] = NativeStill.NativeStillStore.Values.Get(key);
         foreach (var kv in NativeStill.NativeStillStore.Values.Snapshot())
             _still[kv.Key] = kv.Value;
-    }
-
-    private int _engineSwitch; // zählt Umschaltungen, damit eine ältere nicht nachträglich gewinnt
-
-    /// <summary>
-    /// Darstellung von „Still“ umschalten. Beim ersten Wechsel auf „Nativ“ werden vorher die Werte aus dem
-    /// Browser übernommen – solange der Browser-Hintergrund noch läuft.
-    /// </summary>
-    private async void StillEngine_Checked(object sender, RoutedEventArgs e)
-    {
-        e.Handled = true; // nicht sofort anwenden (siehe unten)
-        if (!IsLoaded || (sender as FrameworkElement)?.Tag is not string engine) return;
-        if (string.Equals(App.Config.StillEngine, engine, StringComparison.OrdinalIgnoreCase)) return;
-        int id = ++_engineSwitch;
-
-        if (engine == "Native" && !NativeStill.NativeStillStore.Exists)
-        {
-            try
-            {
-                var entries = App.Instance.Bar != null ? await App.Instance.Bar.ExportWallpaperStorageAsync() : "[]";
-                string? json = null;
-                foreach (var entry in System.Text.Json.JsonDocument.Parse(entries).RootElement.EnumerateArray())
-                    if (entry[0].GetString() == "still.settings.v2" && entry[1].GetString() is { } s) json = s;
-                NativeStill.NativeStillStore.ImportFromBrowserJson(json ?? "{}");
-
-                // Noch nicht beim Browser angekommene Änderungen aus dieser Seite mitnehmen
-                if (_still != null && _stillSave.IsEnabled)
-                {
-                    _stillSave.Stop();
-                    foreach (var kv in _still) NativeStill.NativeStillStore.Set(kv.Key, kv.Value);
-                }
-            }
-            catch { }
-            if (id != _engineSwitch) return; // inzwischen wieder umgeschaltet
-        }
-
-        // Ausstehendes Speichern gehört noch zur alten Darstellung
-        if (_stillSave.IsEnabled) { _stillSave.Stop(); if (engine == "Native") SaveStill(); }
-
-        App.Config.StillEngine = engine;
-        _still = null; // Werte beim nächsten Öffnen der Seite neu lesen
-        if (StillPage.Visibility == Visibility.Visible) ShowStillSettings();
-        ScheduleApply();
     }
 
     private void StillEditLayout_Click(object sender, RoutedEventArgs e)
@@ -233,32 +153,11 @@ public partial class SettingsWindow : Window
         WindowState = WindowState.Minimized; // den Desktop freigeben
     }
 
+    /// <summary>Wert direkt in den Speicher; der Hintergrund liest die Werte live.</summary>
     private void StillChanged(string key, object value)
     {
         _still![key] = value;
-        // Nativ: direkt in den eigenen Speicher, der Hintergrund liest die Werte live
-        if (IsNativeStill) { NativeStill.NativeStillStore.Set(key, value); return; }
-        // Sofort und ohne Neuladen im Hintergrund übernehmen; nur wenn das nicht geht, neu laden
-        if (App.Instance.Bar?.SetStill(key, value) == true) return;
-        _stillSave.Stop();
-        _stillSave.Start();
-    }
-
-    /// <summary>Werte in den Speicher von „Still“ schreiben und den Hintergrund neu laden.</summary>
-    private void SaveStill()
-    {
-        if (_still == null || _stillRaw == null) return;
-        foreach (var kv in _still)
-            _stillRaw[kv.Key] = kv.Value switch
-            {
-                bool b => System.Text.Json.Nodes.JsonValue.Create(b),
-                double d => System.Text.Json.Nodes.JsonValue.Create(d),
-                string s => System.Text.Json.Nodes.JsonValue.Create(s),
-                _ => null,
-            };
-        var json = _stillRaw.ToJsonString();
-        var entries = System.Text.Json.JsonSerializer.Serialize(new[] { new[] { "still.settings.v2", json } });
-        App.Instance.Bar?.ImportWallpaperStorage(entries);
+        NativeStill.NativeStillStore.Set(key, value);
     }
 
     private readonly List<RadioButton> _stillNav = new();
@@ -468,7 +367,36 @@ public partial class SettingsWindow : Window
         Keyboard.ClearFocus();
     }
 
-    private void Autostart_Click(object sender, RoutedEventArgs e) => Native.Autostart = AutostartBox.IsChecked == true;
+    /// <summary>Eigenes Bild für den Start-Knopf wählen (wird nach %AppData%\GlassBar kopiert).</summary>
+    private void StartIconCustom_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Bild für den Start-Knopf",
+            Filter = "Bilder (*.png;*.jpg;*.jpeg;*.ico;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.ico;*.bmp;*.gif",
+        };
+        if (dlg.ShowDialog(this) == true)
+        {
+            try
+            {
+                var dest = Path.Combine(Config.Folder, "start-icon" + Path.GetExtension(dlg.FileName).ToLowerInvariant());
+                foreach (var old in Directory.GetFiles(Config.Folder, "start-icon.*")) File.Delete(old);
+                File.Copy(dlg.FileName, dest, true);
+                App.Config.StartIconPath = dest;
+                App.Config.StartIcon = "Custom";
+            }
+            catch (Exception ex) { MessageBox.Show(this, "Das Bild konnte nicht übernommen werden:\n" + ex.Message, "GlassBar"); }
+        }
+        // Abgebrochen: Auswahl wieder auf den gespeicherten Stand
+        StartIconCustom.IsChecked = App.Config.StartIcon == "Custom";
+        ScheduleApply();
+    }
+
+    private void Autostart_Click(object sender, RoutedEventArgs e)
+    {
+        Native.Autostart = AutostartBox.IsChecked == true;
+        AutostartBox.IsChecked = Native.Autostart; // Rückfrage abgelehnt? Dann den echten Stand zeigen
+    }
 
     private void Reset_Click(object sender, RoutedEventArgs e)
     {

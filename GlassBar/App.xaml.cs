@@ -33,6 +33,8 @@ public partial class App : Application
         DispatcherUnhandledException += OnCrash;
         AppDomain.CurrentDomain.UnhandledException += (_, _) => Cleanup();
 
+        // Höhere Priorität: Dock und Hintergrund sollen gleich nach der Anmeldung stehen und nie stocken
+        try { System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.AboveNormal; } catch { }
         Config = Config.Load();
         Native.EnableDarkMenus();
 

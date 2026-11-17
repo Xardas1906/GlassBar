@@ -98,7 +98,11 @@ public partial class TaskbarWindow : Window
         DockShown[ScreenName] = true;
         Closed += (_, _) => DockShown.TryRemove(ScreenName, out _);
         // Windows-Taste zeigt alle Docks
-        Action<bool> peek = _ => Dispatcher.BeginInvoke(Peek);
+        Action<bool> peek = held => Dispatcher.BeginInvoke(() =>
+        {
+            Peek();
+            if (held) FreeCapturedMouse();
+        });
         WinKeyHook.Pressed += peek;
         Closed += (_, _) => WinKeyHook.Pressed -= peek;
 
@@ -127,7 +131,6 @@ public partial class TaskbarWindow : Window
             CloseFlyout();
             foreach (var f in _folderCache.Values) { f.KeepAlive = false; f.Close(); }
             _mouseHook?.Dispose(); _mouseHook = null;
-            _wallpaper?.Close(); _wallpaper = null;
             _nativeAudio?.Dispose(); _nativeAudio = null;
             _native?.Dispose(); _native = null;
         };
@@ -175,6 +178,60 @@ public partial class TaskbarWindow : Window
         SetDockShown(true);
         // ganz nach oben, auch über Vollbild-Fenster
         SetWindowPos(new WindowInteropHelper(this).Handle, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010 | 0x0040);
+    }
+
+    // ---------- Maus aus Spielen befreien ----------
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct CURSORINFO { public int cbSize, flags; public IntPtr hCursor; public int x, y; }
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool GetCursorInfo(ref CURSORINFO ci);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool GetClipCursor(out Native.RECT r);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool ClipCursor(IntPtr r);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool SetCursorPos(int x, int y);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr h);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool AttachThreadInput(uint a, uint b, bool attach);
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr MonitorFromWindow(IntPtr h, uint flags);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern void mouse_event(uint f, int dx, int dy, uint d, UIntPtr e);
+
+    /// <summary>
+    /// Erster Druck auf die Windows-Taste in einem Spiel: Das Spiel hält die Maus fest (versteckt oder eingesperrt).
+    /// Dann holt das Dock auf diesem Bildschirm sich den Vordergrund, gibt die Maus frei und setzt sie aufs Dock.
+    /// </summary>
+    private void FreeCapturedMouse()
+    {
+        var fg = GetForegroundWindow();
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (fg == IntPtr.Zero || fg == hwnd) return;
+        GetWindowThreadProcessId(fg, out uint pid);
+        if (pid == OwnPid) return;
+        // nur das Dock auf dem Bildschirm des Spiels
+        if (MonitorFromWindow(fg, 2) != MonitorFromWindow(hwnd, 2)) return;
+
+        var ci = new CURSORINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<CURSORINFO>() };
+        bool hidden = GetCursorInfo(ref ci) && ((ci.flags & 1) == 0 || ci.hCursor == IntPtr.Zero);
+        var screen = ScreenPx;
+        bool clipped = GetClipCursor(out var clip) &&
+            (clip.Right - clip.Left < screen.Right - screen.Left || clip.Bottom - clip.Top < screen.Bottom - screen.Top);
+        if (!hidden && !clipped) return;
+
+        // Vordergrund holen (die Sperre umgehen: an den Eingabe-Thread des Spiels hängen)
+        uint fgThread = GetWindowThreadProcessId(fg, out _), me = GetCurrentThreadId();
+        bool attached = fgThread != me && AttachThreadInput(me, fgThread, true);
+        try
+        {
+            if (!SetForegroundWindow(hwnd))
+            {
+                mouse_event(0x0001 /* MOVE */, 0, 0, 0, UIntPtr.Zero); // eigene Eingabe -> Vordergrund erlaubt
+                SetForegroundWindow(hwnd);
+            }
+        }
+        finally { if (attached) AttachThreadInput(me, fgThread, false); }
+
+        ClipCursor(IntPtr.Zero);
+        // Maus mitten aufs Dock (über dem Spiel bliebe sie unsichtbar)
+        var home = HomeRect(hwnd);
+        SetCursorPos((home.Left + home.Right) / 2, (home.Top + home.Bottom) / 2);
+        _peekUntil = DateTime.Now.AddSeconds(3);
     }
 
     // ---------- Startmenü über das Dock schieben ----------
@@ -265,7 +322,7 @@ public partial class TaskbarWindow : Window
             // pro Bildschirm: dieses Dock prüft seinen eigenen Bildschirm
             var scr = ScreenPx;
             bool hidden = top != IntPtr.Zero && (IsZoomed(top) || IsFullScreen(top, scr) || CoversMostOfScreen(top, scr));
-            if (IsPrimary) { _wallpaper?.SetPaused(hidden); _native?.Renderer?.SetPaused(hidden); }
+            if (IsPrimary) _native?.Renderer?.SetPaused(hidden);
         }
 
         // 2) Maus am unteren Bildschirmrand oder auf dem Dock / einem offenen Fenster davon -> zeigen
@@ -467,6 +524,48 @@ public partial class TaskbarWindow : Window
         try { File.AppendAllText(Path.Combine(Config.Folder, "debug.log"), $"[{DateTime.Now:HH:mm:ss.fff}] {msg}\n"); } catch { }
     }
 
+    private System.Windows.Media.Brush? _startTileBrush;
+
+    /// <summary>Aussehen des Start-Knopfs nach Einstellung (Kachel, Glas, nur Logo oder eigenes Bild).</summary>
+    private void ApplyStartIcon()
+    {
+        _startTileBrush ??= StartTile.Background;
+        var mode = App.Config.StartIcon;
+        System.Windows.Media.Imaging.BitmapImage? img = null;
+        if (mode == "Custom" && File.Exists(App.Config.StartIconPath))
+        {
+            try
+            {
+                img = new System.Windows.Media.Imaging.BitmapImage();
+                img.BeginInit();
+                img.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                img.UriSource = new Uri(App.Config.StartIconPath);
+                img.DecodePixelWidth = 128;
+                img.EndInit();
+                img.Freeze();
+            }
+            catch { img = null; }
+        }
+        if (mode == "Custom" && img == null) mode = "Tile";
+
+        StartImage.Source = img;
+        StartImage.Visibility = img != null ? Visibility.Visible : Visibility.Collapsed;
+        StartLogo.Visibility = img != null ? Visibility.Collapsed : Visibility.Visible;
+        StartTile.Background = mode switch
+        {
+            "Glass" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x3A, 0xFF, 0xFF, 0xFF)),
+            "Logo" or "Custom" => System.Windows.Media.Brushes.Transparent,
+            _ => _startTileBrush,
+        };
+        // Eigenes Bild mit runden Ecken wie die anderen Symbole
+        StartTile.ClipToBounds = mode == "Custom";
+        StartImage.Clip = mode == "Custom"
+            ? new System.Windows.Media.RectangleGeometry(new Rect(0, 0, StartTile.ActualWidth > 0 ? StartTile.ActualWidth : 30,
+                StartTile.ActualHeight > 0 ? StartTile.ActualHeight : 30), 8, 8)
+            : null;
+        StartLogo.Width = StartLogo.Height = mode == "Logo" ? 20 : 16;
+    }
+
     /// <summary>Unten mittig auf seinem Bildschirm, mit Abstand zum Rand.</summary>
     private void PlaceDock()
     {
@@ -583,6 +682,8 @@ public partial class TaskbarWindow : Window
 
         Model.ScreenFilter = AppScreenFilter;
 
+        ApplyStartIcon();
+
         // Verhalten
         _hover.Interval = TimeSpan.FromMilliseconds(Math.Max(0, c.HoverDelayMs));
         UpdateClock();
@@ -669,49 +770,18 @@ public partial class TaskbarWindow : Window
         MusicPill.ToolTip = string.IsNullOrEmpty(_media.Artist) ? _media.Title : $"{_media.Title} – {_media.Artist}";
     }
 
-    // ---------- Hintergrund „Still“ ----------
-    private WallpaperWindow? _wallpaper;
+    // ---------- Hintergrund „Still“ (nativ) ----------
     private DesktopMouseHook? _mouseHook;
-    private string? _wallpaperPlacementKey;
-
-    // Nativer Hintergrund (ohne Browser)
     private NativeStill.NativeStillWindow? _native;
     private AudioSpectrum? _nativeAudio;
 
-    private static bool NativeEngine => App.Config.StillEngine == "Native";
-
     /// <summary>Musik und Wetter im Dock? (Nein, wenn der Hintergrund läuft und sie dort sein sollen.)</summary>
-    private static bool InfoInDock =>
-        !App.Config.ShowWallpaper || App.Config.InfoPlacement != "Wallpaper" || (!NativeEngine && !Directory.Exists(WallpaperWindow.DefaultFolder));
+    private static bool InfoInDock => !App.Config.ShowWallpaper || App.Config.InfoPlacement != "Wallpaper";
 
     private void UpdateWallpaper()
     {
         if (_media == null) return; // wird nach dem Start von Musik/Wetter erneut aufgerufen
         UpdateNativeWallpaper();
-        bool want = IsPrimary && App.Config.ShowWallpaper && !NativeEngine && Directory.Exists(WallpaperWindow.DefaultFolder);
-        var key = $"{App.Config.InfoPlacement}|{App.Config.ShowMusic}|{App.Config.ShowWeather}";
-
-        if (want && _wallpaper == null)
-        {
-            _wallpaper = new WallpaperWindow(_media);
-            _wallpaper.Show();
-            var wp = _wallpaper;
-            _mouseHook = new DesktopMouseHook((msg, x, y, wheel) => wp.ForwardMouse(msg, x, y, wheel),
-                () => wp.IsInteractive, () => wp.OverUi, () => wp.Editing,
-                (x, y) => Dispatcher.BeginInvoke(() => WallpaperWindow.ShowDesktopMenu(x, y)),
-                on => Dispatcher.BeginInvoke(() => wp.SetDesktopHover(on)));
-            _wallpaperPlacementKey = key;
-        }
-        else if (!want && _wallpaper != null)
-        {
-            _mouseHook?.Dispose(); _mouseHook = null;
-            _wallpaper.Close(); _wallpaper = null;
-        }
-        else if (_wallpaper != null)
-        {
-            _wallpaper.ApplySettings(placementChanged: key != _wallpaperPlacementKey);
-            _wallpaperPlacementKey = key;
-        }
     }
 
     /// <summary>Den nativen Hintergrund öffnen oder schließen (je nach Einstellung „Darstellung“).</summary>
@@ -719,7 +789,7 @@ public partial class TaskbarWindow : Window
     {
         // Hauptbildschirm: das Hauptdock; Nebenbildschirme: SecondaryWallpapers (auch ohne Dock dort)
         if (!IsPrimary) return;
-        bool want = App.Config.ShowWallpaper && NativeEngine;
+        bool want = App.Config.ShowWallpaper;
         if (want && _native == null)
         {
             NativeStill.NativeStillStore.Load();
@@ -740,7 +810,7 @@ public partial class TaskbarWindow : Window
                 // Ein Hook für alle Bildschirme: Strömung und Leuchten überall, die Oberfläche nur hier
                 _mouseHook = new DesktopMouseHook(NativeStill.NativeStillWindow.Route,
                     () => false, () => r.OverUi, () => r.OverUi,
-                    (x, y) => Dispatcher.BeginInvoke(() => WallpaperWindow.ShowDesktopMenu(x, y)),
+                    (x, y) => Dispatcher.BeginInvoke(() => DesktopShell.ShowDesktopMenu(x, y)),
                     on => { if (!on) NativeStill.NativeStillWindow.RouteLeave(); }, swallowUiClicks: true, allScreens: true);
                 r.Controls = new NativeStill.Ui.MediaControls
                 {
@@ -835,16 +905,8 @@ public partial class TaskbarWindow : Window
         }
     }
 
-    /// <summary>Hintergrund neu laden (nach Änderungen im Einstellungs-Panel von „Still“).</summary>
-    public void ReloadWallpaper() => _wallpaper?.Reload();
-    public Task<string> ExportWallpaperStorageAsync() => _wallpaper?.ExportStorageAsync() ?? Task.FromResult("[]");
-    public void ImportWallpaperStorage(string entries) => _wallpaper?.ImportStorageAndReload(entries);
-    public bool SetStill(string key, object value) => _wallpaper?.SetStill(key, value) == true;
-    public void EditWallpaperLayout()
-    {
-        _wallpaper?.EditLayout();
-        NativeStill.StillModules.EditLayout(_native?.Renderer);
-    }
+    /// <summary>Anordnen-Modus von „Still“ öffnen (Pillen und Uhr verschieben).</summary>
+    public void EditWallpaperLayout() => NativeStill.StillModules.EditLayout(_native?.Renderer);
 
     private void Music_Click(object s, MouseButtonEventArgs e) => _media?.PlayPause();
     private void MusicPlay_Click(object s, MouseButtonEventArgs e) { e.Handled = true; _media?.PlayPause(); }
@@ -897,7 +959,6 @@ public partial class TaskbarWindow : Window
         ClockButton.ToolTip = now.ToString("dddd, d. MMMM yyyy");
         if (++_tick % 10 == 0) UpdateStatusIcons();
         if (_tick % 5 == 1) RemoveDeadTrayIcons();
-        if (_tick % 3 == 0) _wallpaper?.CheckIconsChanged();
     }
 
     private void UpdateStatusIcons()
@@ -1035,7 +1096,7 @@ public partial class TaskbarWindow : Window
         Menu(
             ("Desktop im Explorer öffnen", "", () => Native.Launch("explorer.exe", $"\"{FolderFlyout.UserDesktop}\""), true),
             ("Desktop anzeigen (alle Fenster minimieren)", "", () => Native.WinKey('D'), true),
-            (WallpaperWindow.IconsHidden() ? "Desktopsymbole einblenden" : "Desktopsymbole ausblenden", "", WallpaperWindow.ToggleDesktopIcons, true),
+            (DesktopShell.IconsHidden() ? "Desktopsymbole einblenden" : "Desktopsymbole ausblenden", "", DesktopShell.ToggleDesktopIcons, true),
             null,
             ("Desktop-Knopf ausblenden", "", () => { App.Config.ShowDesktopButton = false; App.Config.Save(); UpdateDesktopButton(); }, true));
     }
@@ -1112,7 +1173,7 @@ public partial class TaskbarWindow : Window
             case MouseButton.Right:
                 e.Handled = true;
                 CloseFlyout();
-                AppMenu(b);
+                _ = AppMenuAsync(b);
                 return;
         }
     }
@@ -1144,7 +1205,65 @@ public partial class TaskbarWindow : Window
         else if (b.ExecutablePath is { } exe) Native.Launch(exe);
     }
 
-    private void AppMenu(AppButton b)
+    /// <summary>Rechtsklick auf eine App: Sprungliste (zuletzt verwendet, Aufgaben) wie bei Windows, darunter die Dock-Befehle.</summary>
+    private async Task AppMenuAsync(AppButton b)
+    {
+        IReadOnlyList<JumpCategory> cats = Array.Empty<JumpCategory>();
+        if (!b.IsFolder)
+        {
+            var w = b.Windows.FirstOrDefault();
+            string? lnk = b.Pin?.Path is { } p && p.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase) ? p : null;
+            string? aumid = w?.AppUserModelID;
+            string? exe = b.ExecutablePath;
+            IntPtr hwnd = w?.Handle ?? IntPtr.Zero;
+            try
+            {
+                var load = Task.Run(() => JumpList.Load(aumid, exe, lnk, hwnd));
+                // Nicht ewig warten: lieber ohne Sprungliste als ein träges Menü
+                if (await Task.WhenAny(load, Task.Delay(1200)) == load) cats = load.Result;
+            }
+            catch { /* ohne Sprungliste weiter */ }
+        }
+
+        var menu = new ContextMenu();
+        foreach (var c in cats)
+        {
+            if (c.Items.Count == 0) continue;
+            menu.Items.Add(new MenuItem
+            {
+                Header = new TextBlock
+                {
+                    Text = c.Name.Length == 0 ? JumpList.TasksDisplayName : c.Name,
+                    FontSize = 12, FontWeight = FontWeights.SemiBold, Opacity = 0.6,
+                },
+                IsHitTestVisible = false, Focusable = false,
+            });
+            foreach (var it in c.Items)
+            {
+                var mi = new MenuItem
+                {
+                    Header = new TextBlock { Text = it.Title, MaxWidth = 320, TextTrimming = TextTrimming.CharacterEllipsis },
+                    ToolTip = string.IsNullOrEmpty(it.Description) ? it.Title : it.Description,
+                };
+                if (it.Icon != null)
+                    mi.Icon = new System.Windows.Controls.Image { Source = it.Icon, Width = 16, Height = 16 };
+                var item = it;
+                mi.Click += (_, _) => { try { item.Launch(); } catch { } };
+                menu.Items.Add(mi);
+            }
+            menu.Items.Add(new Separator());
+        }
+        foreach (var entry in AppMenuEntries(b))
+        {
+            if (entry is not { } x) { menu.Items.Add(new Separator()); continue; }
+            var mi = new MenuItem { Header = x.Item1, Tag = x.Item2, IsEnabled = x.Item4 };
+            mi.Click += (_, _) => x.Item3();
+            menu.Items.Add(mi);
+        }
+        menu.IsOpen = true;
+    }
+
+    private List<(string, string, Action, bool)?> AppMenuEntries(AppButton b)
     {
         var items = new List<(string, string, Action, bool)?>();
 
@@ -1168,7 +1287,7 @@ public partial class TaskbarWindow : Window
             items.Add((b.WindowCount > 1 ? "Alle Fenster schließen" : "Fenster schließen", "",
                 () => { foreach (var w in b.Windows.ToList()) w.Close(); }, true));
         }
-        Menu(items.ToArray());
+        return items;
     }
 
     // ---------- Ziehen & Ablegen ----------
