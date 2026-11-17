@@ -335,7 +335,7 @@ public partial class TaskbarWindow : Window
         bool inUse = overDock || _flyout != null || ModernMenu.AnyOpen;
         if (atEdge || inUse) _peekUntil = DateTime.Now.AddMilliseconds(700);
 
-        bool show = !_covered || DateTime.Now < _peekUntil;
+        bool show = !_covered || DateTime.Now < _peekUntil || IsFixed;
         SetDockShown(show);
     }
 
@@ -618,6 +618,20 @@ public partial class TaskbarWindow : Window
             }
             catch { img = null; }
         }
+        // Windows-Symbol (z. B. aus imageres.dll): ohne Kachel, das Symbol hat seine eigene Form
+        System.Windows.Media.ImageSource? sys = c.DesktopIcon == "Sys" && c.DesktopIconSource.Length > 0 ? ShellIcons.Load(c.DesktopIconSource) : null;
+        if (sys != null)
+        {
+            DesktopIcon.Visibility = Visibility.Collapsed;
+            DesktopTile.Visibility = Visibility.Visible;
+            DesktopTile.Background = System.Windows.Media.Brushes.Transparent;
+            DesktopGlyph.Text = "";
+            DesktopImage.Source = sys;
+            DesktopImage.Stretch = System.Windows.Media.Stretch.Uniform;
+            DesktopImage.Visibility = Visibility.Visible;
+            return;
+        }
+        DesktopImage.Stretch = System.Windows.Media.Stretch.UniformToFill;
         bool glyph = DesktopGlyphs.TryGetValue(c.DesktopIcon, out var g);
         bool custom = img != null;
         DesktopIcon.Visibility = glyph || custom ? Visibility.Collapsed : Visibility.Visible;
@@ -625,10 +639,13 @@ public partial class TaskbarWindow : Window
         DesktopImage.Source = img;
         DesktopImage.Visibility = custom ? Visibility.Visible : Visibility.Collapsed;
         DesktopGlyph.Text = glyph ? g : "";
-        DesktopGlyph.FontSize = Math.Max(12, c.IconSize * 0.52);
+        // Ohne Kachel darf das Symbol größer sein
+        DesktopGlyph.FontSize = Math.Max(12, c.IconSize * (c.DesktopTileColor == "Transparent" ? 0.8 : 0.52));
         if (custom) { DesktopTile.Background = System.Windows.Media.Brushes.Transparent; return; }
 
-        if (c.DesktopTileColor == "Glass")
+        if (c.DesktopTileColor == "Transparent")
+            DesktopTile.Background = System.Windows.Media.Brushes.Transparent;
+        else if (c.DesktopTileColor == "Glass")
             DesktopTile.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x3A, 0xFF, 0xFF, 0xFF));
         else
         {
@@ -1558,6 +1575,9 @@ public partial class TaskbarWindow : Window
         Menu(
             ("Einstellungen …", "", SettingsWindow.ShowSingle, true),
             null,
+            ((IsFixed ? "✓ " : "") + (Screens > 1 ? "Dock auf diesem Bildschirm fixieren" : "Dock fixieren"), "", ToggleFixed,
+                App.Config.AutoHideMode != "Never"),
+            null,
             ("Task-Manager", "", () => Native.Launch("taskmgr.exe"), true),
             null,
             ("Ordner anheften …", "", PickFolder, true),
@@ -1567,6 +1587,16 @@ public partial class TaskbarWindow : Window
             ((Native.Autostart ? "✓ " : "") + "Mit Windows starten", "", () => Native.Autostart = !Native.Autostart, true),
             null,
             ("GlassBar beenden (Windows-Taskleiste zurück)", "", App.Instance.Quit, true));
+    }
+
+    /// <summary>Dock auf diesem Bildschirm fixiert: blendet sich nicht aus (Issue #3).</summary>
+    private bool IsFixed => App.Config.FixedScreens.Contains(ScreenName);
+    private static int Screens => System.Windows.Forms.Screen.AllScreens.Length;
+
+    private void ToggleFixed()
+    {
+        if (!App.Config.FixedScreens.Remove(ScreenName)) App.Config.FixedScreens.Add(ScreenName);
+        App.Config.Save();
     }
 
     private void PickFolder()

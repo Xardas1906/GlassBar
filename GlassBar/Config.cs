@@ -36,6 +36,8 @@ public class Config
     /// <summary>"Covered" = wenn ein Fenster darüber liegt, "FullScreen" = nur bei Vollbild, "Never" = nie.</summary>
     public string AutoHideMode { get; set; } = "Covered";
     public bool RevealAtEdge { get; set; } = true;
+    /// <summary>Bildschirme (Gerätename), auf denen das Dock fixiert ist und sich nicht ausblendet.</summary>
+    public List<string> FixedScreens { get; set; } = new();
     /// <summary>Dock ausgeblendet: 1. Druck auf die Windows-Taste zeigt nur das Dock, 2. Druck das Startmenü.</summary>
     public bool WinKeyShowsDockFirst { get; set; } = true;
     /// <summary>Windows-Taste: zuerst Docks zeigen, wenn irgendein Dock ausgeblendet ist (sonst nur, wenn das Hauptdock ausgeblendet ist).</summary>
@@ -68,6 +70,8 @@ public class Config
     public string DesktopTileColor { get; set; } = "#3B82F6";
     /// <summary>Eigenes Bild für den Desktop-Stapel (Kopie in %AppData%\GlassBar).</summary>
     public string DesktopIconPath { get; set; } = "";
+    /// <summary>Windows-Symbol für den Desktop-Stapel ("Datei,Index"), wenn DesktopIcon = "Sys".</summary>
+    public string DesktopIconSource { get; set; } = "";
     public bool ShowTray { get; set; } = true;
     public bool ShowQuickSettings { get; set; } = true;
     public bool ShowClock { get; set; } = true;

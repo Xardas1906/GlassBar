@@ -32,6 +32,7 @@ public partial class SettingsWindow : Window
         DataContext = App.Config;
         AutostartBox.IsChecked = Native.Autostart;
         SliderEdit.AttachAll(Content_);
+        BuildDesktopGallery();
         CheckUpdateQuietly();
 
         SourceInitialized += (_, _) =>
@@ -471,6 +472,38 @@ public partial class SettingsWindow : Window
         try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }
         catch { }
         e.Handled = true;
+    }
+
+    /// <summary>Galerie mit Windows-Symbolen für den Desktop-Stapel, dazu „Anderes Windows-Symbol …“.</summary>
+    private void BuildDesktopGallery()
+    {
+        DesktopGallery.Children.Clear();
+        foreach (var (spec, name) in ShellIcons.Gallery)
+        {
+            var icon = ShellIcons.Load(spec, 48);
+            if (icon == null) continue; // gibt es auf diesem Windows nicht
+            var rb = new RadioButton
+            {
+                Style = (Style)FindResource("Segment"), GroupName = "DesktopIcon", ToolTip = name, Tag = spec,
+                Content = new Image { Source = icon, Width = 22, Height = 22 },
+                IsChecked = App.Config.DesktopIcon == "Sys" && App.Config.DesktopIconSource == spec,
+            };
+            rb.Checked += (_, _) => { App.Config.DesktopIcon = "Sys"; App.Config.DesktopIconSource = spec; ScheduleApply(); };
+            DesktopGallery.Children.Add(rb);
+        }
+        var other = new RadioButton
+        {
+            Style = (Style)FindResource("Segment"), GroupName = "DesktopIcon", Content = "Anderes Windows-Symbol …",
+            IsChecked = App.Config.DesktopIcon == "Sys" && !ShellIcons.Gallery.Any(g => g.Spec == App.Config.DesktopIconSource),
+        };
+        other.Click += (_, _) =>
+        {
+            var picked = ShellIcons.Pick(new WindowInteropHelper(this).Handle, App.Config.DesktopIconSource);
+            if (picked != null) { App.Config.DesktopIcon = "Sys"; App.Config.DesktopIconSource = picked; }
+            BuildDesktopGallery(); // Auswahl neu anzeigen
+            ScheduleApply();
+        };
+        DesktopGallery.Children.Add(other);
     }
 
     /// <summary>Eigenes Bild für den Desktop-Stapel wählen (wird nach %AppData%\GlassBar kopiert).</summary>

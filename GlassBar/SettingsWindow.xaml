@@ -628,6 +628,8 @@
                                              IsChecked="{Binding DesktopIcon, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=Custom}"
                                              Click="DesktopIconCustom_Click"/>
                             </WrapPanel>
+                            <TextBlock Text="Windows-Symbole" Foreground="{StaticResource Sub}" FontSize="12" Margin="0,10,0,6"/>
+                            <WrapPanel x:Name="DesktopGallery"/>
                         </StackPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding ShowDesktopButton}">
@@ -636,6 +638,17 @@
                                              IsChecked="{Binding DesktopTileColor, Converter={StaticResource Eq}, ConverterParameter=#3B82F6}"/>
                                 <RadioButton Style="{StaticResource Swatch}" Background="{x:Static SystemParameters.WindowGlassBrush}" ToolTip="Windows-Akzentfarbe" GroupName="DesktopTileColor"
                                              IsChecked="{Binding DesktopTileColor, Converter={StaticResource Eq}, ConverterParameter=Accent}"/>
+                                <RadioButton Style="{StaticResource Swatch}" ToolTip="Transparent (kein Hintergrund)" GroupName="DesktopTileColor"
+                                             IsChecked="{Binding DesktopTileColor, Converter={StaticResource Eq}, ConverterParameter=Transparent}">
+                                    <RadioButton.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#00FFFFFF" Offset="0.45"/>
+                                            <GradientStop Color="#E05050" Offset="0.47"/>
+                                            <GradientStop Color="#E05050" Offset="0.53"/>
+                                            <GradientStop Color="#00FFFFFF" Offset="0.55"/>
+                                        </LinearGradientBrush>
+                                    </RadioButton.Background>
+                                </RadioButton>
                                 <RadioButton Style="{StaticResource Swatch}" Background="#40FFFFFF" ToolTip="Glas" GroupName="DesktopTileColor"
                                              IsChecked="{Binding DesktopTileColor, Converter={StaticResource Eq}, ConverterParameter=Glass}"/>
                                 <RadioButton Style="{StaticResource Swatch}" Background="#7C3AED" ToolTip="Violett" GroupName="DesktopTileColor"
@@ -653,7 +666,7 @@
                             </WrapPanel>
                             <TextBlock Style="{StaticResource Label}">
                                 Farbe hinter dem Symbol
-                                <LineBreak/><Run Text="Nicht bei „Windows“ und „Eigenes Bild“." Foreground="{StaticResource Sub}" FontSize="12"/>
+                                <LineBreak/><Run Text="Für die einfachen Symbole; Windows-Symbole und eigene Bilder bringen ihre eigene Form mit." Foreground="{StaticResource Sub}" FontSize="12"/>
                             </TextBlock>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
