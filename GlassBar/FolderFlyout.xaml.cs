@@ -91,7 +91,8 @@ public partial class FolderFlyout : FlyoutBase
         // Ereignisse kommen teils aus Hintergrund-Threads -> auf den UI-Thread dieses Fensters
         if (_rebuildPending) return;
         _rebuildPending = true;
-        Dispatcher.BeginInvoke(DispatcherPriority.Background, Rebuild);
+        // Datei gelöscht/hinzugefügt: dabei auch den Papierkorb (voll/leer) nachziehen
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, () => { Rebuild(); RefreshRecycleBin(); });
     }
 
     private string GroupKey => _current ?? "<desktop>";
@@ -198,6 +199,34 @@ public partial class FolderFlyout : FlyoutBase
         return set;
     });
 
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct SHQUERYRBINFO { public int cbSize; public long i64Size, i64NumItems; }
+    [System.Runtime.InteropServices.DllImport("shell32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern int SHQueryRecycleBin(string? rootPath, ref SHQUERYRBINFO info);
+    private bool? _binFull;
+
+    /// <summary>
+    /// Der Desktop-Ordner bleibt vorgeladen; das Papierkorb-Symbol (leer/voll) ändert sich aber.
+    /// Beim Öffnen prüfen, ob sich der Füllstand geändert hat, und dann das Symbol neu laden.
+    /// </summary>
+    private void RefreshRecycleBin()
+    {
+        try
+        {
+            var info = new SHQUERYRBINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<SHQUERYRBINFO>() };
+            bool full = SHQueryRecycleBin(null, ref info) == 0 && info.i64NumItems > 0;
+            if (_binFull == full) return;
+            bool first = _binFull == null;
+            _binFull = full;
+            if (first) return; // beim ersten Mal sind die Symbole frisch geladen
+            foreach (var s in _sources)
+                foreach (var item in s.Files.ToList())
+                    if ((item.Path ?? "").Contains("645FF040-5081-101B-9F08-00AA002F954E", StringComparison.OrdinalIgnoreCase))
+                        item.Refresh();
+        }
+        catch { }
+    }
+
     /// <summary>Beim erneuten Öffnen wieder beim Startordner beginnen.</summary>
     public void Reset()
     {
@@ -210,6 +239,7 @@ public partial class FolderFlyout : FlyoutBase
     public override void ShowAt(FrameworkElement anchor)
     {
         Reset();
+        RefreshRecycleBin();
         base.ShowAt(anchor);
     }
 
