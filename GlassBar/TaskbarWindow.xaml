@@ -225,10 +225,12 @@
             </StackPanel>
             <!-- Desktop anzeigen: schmaler Knopf ganz rechts wie bei der Windows-Taskleiste -->
             <Border x:Name="PeekButton" Width="10" Height="34" Margin="6,0,0,0" CornerRadius="4" Cursor="Hand"
-                    VerticalAlignment="Center" Background="Transparent" ToolTip="Desktop anzeigen"
+                    VerticalAlignment="Center" ToolTip="Desktop anzeigen"
                     MouseLeftButtonUp="ShowDesktop_Click">
                 <Border.Style>
                     <Style TargetType="Border">
+                        <!-- Hintergrund im Stil, sonst überschreibt er den Hover-Trigger -->
+                        <Setter Property="Background" Value="Transparent"/>
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="#26FFFFFF"/>

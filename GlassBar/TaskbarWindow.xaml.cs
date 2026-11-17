@@ -564,6 +564,51 @@ public partial class TaskbarWindow : Window
                 StartTile.ActualHeight > 0 ? StartTile.ActualHeight : 30), 8, 8)
             : null;
         StartLogo.Width = StartLogo.Height = mode == "Logo" ? 20 : 16;
+
+        // Kachelfarbe
+        if (mode == "Tile" && App.Config.StartTileColor != "Blue" && ParseColor(App.Config.StartTileColor) is { } tc)
+        {
+            var light = System.Windows.Media.Color.FromRgb((byte)(tc.R + (255 - tc.R) * 0.35), (byte)(tc.G + (255 - tc.G) * 0.35), (byte)(tc.B + (255 - tc.B) * 0.35));
+            StartTile.Background = new System.Windows.Media.LinearGradientBrush(light, tc, 45);
+        }
+
+        // Logo: Stil und Farbe
+        var logoColor = ParseColor(App.Config.StartLogoColor) ?? System.Windows.Media.Colors.White;
+        string[] colorful = { "#F25022", "#7FBA00", "#00A4EF", "#FFB900" };
+        int i = 0;
+        foreach (var r in StartLogo.Children.OfType<System.Windows.Shapes.Rectangle>())
+        {
+            var style = App.Config.StartLogoStyle;
+            var c = style == "Colorful" ? (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorful[i]) : logoColor;
+            var brush = new System.Windows.Media.SolidColorBrush(c);
+            r.Fill = style == "Outline" ? System.Windows.Media.Brushes.Transparent : brush;
+            r.Stroke = style == "Outline" ? brush : null;
+            r.StrokeThickness = style == "Outline" ? 1.3 : 0;
+            r.RadiusX = r.RadiusY = style == "Rounded" ? 2.5 : 0;
+            i++;
+        }
+    }
+
+    /// <summary>"White", "Black", "Accent" (Windows-Akzentfarbe) oder #RRGGBB.</summary>
+    private static System.Windows.Media.Color? ParseColor(string value)
+    {
+        try
+        {
+            return value switch
+            {
+                "White" => System.Windows.Media.Colors.White,
+                "Black" => System.Windows.Media.Color.FromRgb(0x1A, 0x1A, 0x1A),
+                "Accent" => AccentColor(),
+                _ => (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(value),
+            };
+        }
+        catch { return null; }
+    }
+
+    private static System.Windows.Media.Color AccentColor()
+    {
+        var c = new Windows.UI.ViewManagement.UISettings().GetColorValue(Windows.UI.ViewManagement.UIColorType.Accent);
+        return System.Windows.Media.Color.FromRgb(c.R, c.G, c.B);
     }
 
     /// <summary>Unten mittig auf seinem Bildschirm, mit Abstand zum Rand.</summary>

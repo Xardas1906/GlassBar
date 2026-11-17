@@ -509,6 +509,66 @@
                             </WrapPanel>
                         </StackPanel>
                         <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding StartIcon, Converter={StaticResource Eq}, ConverterParameter=Tile}">
+                            <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+                                <RadioButton Style="{StaticResource Swatch}" Background="#3B82F6" ToolTip="Blau (wie Windows)" GroupName="StartTileColor"
+                                             IsChecked="{Binding StartTileColor, Converter={StaticResource Eq}, ConverterParameter=Blue}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="{x:Static SystemParameters.WindowGlassBrush}" ToolTip="Windows-Akzentfarbe" GroupName="StartTileColor"
+                                             IsChecked="{Binding StartTileColor, Converter={StaticResource Eq}, ConverterParameter=Accent}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#7C3AED" ToolTip="Violett" GroupName="StartTileColor"
+                                             IsChecked="{Binding StartTileColor, Converter={StaticResource Eq}, ConverterParameter=#7C3AED}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#16A34A" ToolTip="Grün" GroupName="StartTileColor"
+                                             IsChecked="{Binding StartTileColor, Converter={StaticResource Eq}, ConverterParameter=#16A34A}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#DC2626" ToolTip="Rot" GroupName="StartTileColor"
+                                             IsChecked="{Binding StartTileColor, Converter={StaticResource Eq}, ConverterParameter=#DC2626}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#EA580C" ToolTip="Orange" GroupName="StartTileColor"
+                                             IsChecked="{Binding StartTileColor, Converter={StaticResource Eq}, ConverterParameter=#EA580C}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#DB2777" ToolTip="Pink" GroupName="StartTileColor"
+                                             IsChecked="{Binding StartTileColor, Converter={StaticResource Eq}, ConverterParameter=#DB2777}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#475569" ToolTip="Grau" GroupName="StartTileColor"
+                                             IsChecked="{Binding StartTileColor, Converter={StaticResource Eq}, ConverterParameter=#475569}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#111111" ToolTip="Schwarz" GroupName="StartTileColor"
+                                             IsChecked="{Binding StartTileColor, Converter={StaticResource Eq}, ConverterParameter=#111111}"/>
+                            </WrapPanel>
+                            <TextBlock Style="{StaticResource Label}">
+                                Farbe der Kachel
+                                <LineBreak/><Run Text="Nur bei „Blaue Kachel“." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <StackPanel Margin="0,12,0,12">
+                            <TextBlock Text="Windows-Logo" Margin="0,0,0,10"/>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="StartLogoStyle" Content="Quadrate"
+                                             IsChecked="{Binding StartLogoStyle, Converter={StaticResource Eq}, ConverterParameter=Windows}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="StartLogoStyle" Content="Abgerundet"
+                                             IsChecked="{Binding StartLogoStyle, Converter={StaticResource Eq}, ConverterParameter=Rounded}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="StartLogoStyle" Content="Umriss"
+                                             IsChecked="{Binding StartLogoStyle, Converter={StaticResource Eq}, ConverterParameter=Outline}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="StartLogoStyle" Content="Bunt"
+                                             IsChecked="{Binding StartLogoStyle, Converter={StaticResource Eq}, ConverterParameter=Colorful}"/>
+                            </WrapPanel>
+                        </StackPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}">
+                            <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+                                <RadioButton Style="{StaticResource Swatch}" Background="#FFFFFF" ToolTip="Weiß" GroupName="StartLogoColor"
+                                             IsChecked="{Binding StartLogoColor, Converter={StaticResource Eq}, ConverterParameter=White}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#1A1A1A" ToolTip="Schwarz" GroupName="StartLogoColor"
+                                             IsChecked="{Binding StartLogoColor, Converter={StaticResource Eq}, ConverterParameter=Black}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="{x:Static SystemParameters.WindowGlassBrush}" ToolTip="Windows-Akzentfarbe" GroupName="StartLogoColor"
+                                             IsChecked="{Binding StartLogoColor, Converter={StaticResource Eq}, ConverterParameter=Accent}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#4CC2FF" ToolTip="Hellblau" GroupName="StartLogoColor"
+                                             IsChecked="{Binding StartLogoColor, Converter={StaticResource Eq}, ConverterParameter=#4CC2FF}"/>
+                                <RadioButton Style="{StaticResource Swatch}" Background="#FFB900" ToolTip="Gelb" GroupName="StartLogoColor"
+                                             IsChecked="{Binding StartLogoColor, Converter={StaticResource Eq}, ConverterParameter=#FFB900}"/>
+                            </WrapPanel>
+                            <TextBlock Style="{StaticResource Label}">
+                                Farbe des Logos
+                                <LineBreak/><Run Text="Nicht bei „Bunt“ und „Eigenes Bild“." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding DockOnAllScreens}"/>
                             <TextBlock Style="{StaticResource Label}">

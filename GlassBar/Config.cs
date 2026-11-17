@@ -91,6 +91,12 @@ public class Config
     public string StartIcon { get; set; } = "Tile";
     /// <summary>Eigenes Bild für den Start-Knopf (Kopie in %AppData%\GlassBar).</summary>
     public string StartIconPath { get; set; } = "";
+    /// <summary>Farbe der Kachel: "Blue" (Verlauf wie Windows), "Accent" (Windows-Akzentfarbe) oder #RRGGBB.</summary>
+    public string StartTileColor { get; set; } = "Blue";
+    /// <summary>Logo: "Windows" (vier Quadrate), "Colorful" (bunt), "Outline" (Umriss), "Rounded" (abgerundet).</summary>
+    public string StartLogoStyle { get; set; } = "Windows";
+    /// <summary>Farbe des Logos: "White", "Black", "Accent" oder #RRGGBB.</summary>
+    public string StartLogoColor { get; set; } = "White";
     /// <summary>Nativer Hintergrund auf Nebenbildschirmen: "Off", "Light" (nur Licht) oder "Clock" (Licht mit Uhr und Datum).</summary>
     public string WallpaperSecondary { get; set; } = "Clock";
 
