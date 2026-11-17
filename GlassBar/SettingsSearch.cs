@@ -33,7 +33,7 @@ public partial class SettingsWindow
 
         if (hits.Count == 0)
         {
-            SearchResults.Children.Add(new TextBlock { Text = "Nichts gefunden.", Foreground = (Brush)FindResource("Sub"), Margin = new Thickness(14, 8, 0, 0) });
+            SearchResults.Children.Add(new TextBlock { Text = L.T("Nichts gefunden."), Foreground = (Brush)FindResource("Sub"), Margin = new Thickness(14, 8, 0, 0) });
             return;
         }
         foreach (var hit in hits) SearchResults.Children.Add(ResultItem(hit));
@@ -84,7 +84,7 @@ public partial class SettingsWindow
             {
                 section = head;
                 var target = head;
-                list.Add(Entry(head.Text, "Kategorie", "", () => GoToMain(target, null)));
+                list.Add(Entry(head.Text, L.T("Kategorie"), "", () => GoToMain(target, null)));
                 continue;
             }
             if (section == null) continue;

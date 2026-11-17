@@ -1,4 +1,4 @@
-using System.Collections.Specialized;
+﻿using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -7,7 +7,7 @@ using ManagedShell.ShellFolders;
 
 namespace GlassBar;
 
-/// <summary>Ein Abschnitt im Ordner-Fenster: eine Gruppe oder "Weitere".</summary>
+/// <summary>Ein Abschnitt im Ordner-Fenster: eine Gruppe oder L.T("Weitere").</summary>
 public class FolderSection
 {
     public FolderGroup? Group { get; init; }
@@ -51,6 +51,7 @@ public partial class FolderFlyout : FlyoutBase
     public FolderFlyout(string? path)
     {
         InitializeComponent();
+        L.Apply(this);
         Scroller.MaxHeight = SystemParameters.WorkArea.Height * 0.75;
         Load(path);
         Closed += (_, _) => DisposeSources();
@@ -74,7 +75,7 @@ public partial class FolderFlyout : FlyoutBase
             _sources.Add(f);
         }
 
-        TitleText.Text = path == null ? "Desktop" : new DirectoryInfo(path).Name;
+        TitleText.Text = path == null ? L.T("Desktop") : new DirectoryInfo(path).Name;
         BackButton.Visibility = _history.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         Rebuild();
     }
@@ -151,7 +152,7 @@ public partial class FolderFlyout : FlyoutBase
         if (rest.Count > 0 || sections.Count == 0)
             sections.Add(new FolderSection
             {
-                Header = "Weitere", ShowHeader = sections.Count > 0, Items = rest,
+                Header = L.T("Weitere"), ShowHeader = sections.Count > 0, Items = rest,
                 Collapsed = sections.Count > 0 && q.Length == 0 && App.Config.CollapsedRest.Contains(GroupKey),
             });
 
@@ -161,7 +162,7 @@ public partial class FolderFlyout : FlyoutBase
         int cols = Math.Clamp((int)Math.Ceiling(Math.Sqrt(Math.Max(all.Count, 1) * 1.6)), 4, 8);
         Sections.Width = cols * (ItemWidth + 4);
 
-        EmptyText.Text = q.Length > 0 ? "Keine Treffer." : "Dieser Ordner ist leer.";
+        EmptyText.Text = q.Length > 0 ? L.T("Keine Treffer.") : L.T("Dieser Ordner ist leer.");
         EmptyText.Visibility = all.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -260,7 +261,7 @@ public partial class FolderFlyout : FlyoutBase
     {
         SuppressClose = true;
         string? name;
-        try { name = Ui.Ask(this, "Neue Gruppe", "Neue Gruppe"); }
+        try { name = Ui.Ask(this, "Neue Gruppe", L.T("Neue Gruppe")); }
         finally { SuppressClose = false; Activate(); }
         if (name == null) return null;
 
@@ -277,7 +278,7 @@ public partial class FolderFlyout : FlyoutBase
     {
         if ((sender as FrameworkElement)?.DataContext is not FolderSection s) return;
         if (s.Group is { } g) g.Collapsed = !g.Collapsed;
-        else if (!App.Config.CollapsedRest.Remove(GroupKey)) App.Config.CollapsedRest.Add(GroupKey); // "Weitere"
+        else if (!App.Config.CollapsedRest.Remove(GroupKey)) App.Config.CollapsedRest.Add(GroupKey); // L.T("Weitere")
         App.Config.Save();
         Rebuild();
     }

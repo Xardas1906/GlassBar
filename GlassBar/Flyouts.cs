@@ -197,7 +197,7 @@ public class PreviewFlyout : FlyoutBase
             var close = new Border
             {
                 Width = 26, Height = 26, CornerRadius = new CornerRadius(4), Background = Brushes.Transparent,
-                Visibility = Visibility.Hidden, ToolTip = "Schließen",
+                Visibility = Visibility.Hidden, ToolTip = L.T("Schließen"),
                 Child = new TextBlock
                 {
                     Text = "", FontFamily = IconFont, FontSize = 10, Foreground = Brushes.White,
@@ -301,7 +301,7 @@ public class TrayFlyout : FlyoutBase
 
         var hint = new TextBlock
         {
-            Text = "Umschalt + Rechtsklick: im Dock anzeigen / ausblenden",
+            Text = L.T("Umschalt + Rechtsklick: im Dock anzeigen / ausblenden"),
             Foreground = new SolidColorBrush(Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF)),
             FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Width = 7 * 30.0, Margin = new Thickness(2, 8, 2, 0),
         };

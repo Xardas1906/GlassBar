@@ -11,14 +11,14 @@ public static class Ui
 {
     public static MenuItem Item(string header, string glyph, Action action, bool enabled = true, bool isChecked = false)
     {
-        var mi = new MenuItem { Header = header, Tag = glyph, IsEnabled = enabled, IsChecked = isChecked };
+        var mi = new MenuItem { Header = L.T(header), Tag = glyph, IsEnabled = enabled, IsChecked = isChecked };
         mi.Click += (_, _) => action();
         return mi;
     }
 
     public static MenuItem Sub(string header, string glyph, IEnumerable<object?> children)
     {
-        var mi = new MenuItem { Header = header, Tag = glyph };
+        var mi = new MenuItem { Header = L.T(header), Tag = glyph };
         foreach (var c in children) mi.Items.Add(c ?? new Separator());
         return mi;
     }
@@ -83,7 +83,7 @@ public static class Ui
             Child = new TextBlock { Text = text, Foreground = Brushes.White, FontSize = 13 },
         };
         var ok = Btn("OK", true);
-        var cancel = Btn("Abbrechen", false);
+        var cancel = Btn(L.T("Abbrechen"), false);
 
         var win = new Window
         {
@@ -100,7 +100,7 @@ public static class Ui
                 {
                     Children =
                     {
-                        new TextBlock { Text = title, Foreground = Brushes.White, FontSize = 15, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 12) },
+                        new TextBlock { Text = L.T(title), Foreground = Brushes.White, FontSize = 15, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 12) },
                         box,
                         new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 16, 0, 0), Children = { cancel, ok } },
                     },

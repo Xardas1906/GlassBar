@@ -23,6 +23,11 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // Neustart (z. B. nach Sprachwechsel): erst warten, bis die alte Instanz beendet ist
+        int wi = Array.FindIndex(e.Args, a => a.Equals("--wait-for", StringComparison.OrdinalIgnoreCase));
+        if (wi >= 0 && wi + 1 < e.Args.Length && int.TryParse(e.Args[wi + 1], out int oldPid))
+            try { System.Diagnostics.Process.GetProcessById(oldPid).WaitForExit(15000); } catch { }
+
         // Befehle für den Installer: laufendes GlassBar sauber beenden bzw. Autostart ein-/ausschalten
         var quit = new EventWaitHandle(false, EventResetMode.ManualReset, "GlassBar_Quit");
         if (e.Args.Contains("--quit", StringComparer.OrdinalIgnoreCase))
@@ -58,6 +63,7 @@ public partial class App : Application
         // Höhere Priorität: Dock und Hintergrund sollen gleich nach der Anmeldung stehen und nie stocken
         try { System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.AboveNormal; } catch { }
         Config = Config.Load();
+        L.Init(Config.Language);
         Native.EnableDarkMenus();
 
         var cfg = ShellManager.DefaultShellConfig;
@@ -124,6 +130,19 @@ public partial class App : Application
         }
     }
 
+    /// <summary>GlassBar neu starten (z. B. nach dem Wechsel der Sprache).</summary>
+    public void Restart()
+    {
+        try
+        {
+            var exe = Environment.ProcessPath;
+            if (exe != null)
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, $"--wait-for {Environment.ProcessId}") { UseShellExecute = false });
+        }
+        catch { }
+        Quit();
+    }
+
     public void Quit()
     {
         Cleanup();
@@ -139,7 +158,7 @@ public partial class App : Application
         }
         catch { }
         e.Handled = true;
-        MessageBox.Show("GlassBar ist auf einen Fehler gestoßen und wird beendet.\n\n" + e.Exception.Message,
+        MessageBox.Show(L.T("GlassBar ist auf einen Fehler gestoßen und wird beendet.") + "\n\n" + e.Exception.Message,
             "GlassBar", MessageBoxButton.OK, MessageBoxImage.Error);
         Quit();
     }

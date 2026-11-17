@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Text.Json;
@@ -87,7 +87,7 @@ public static class Updater
         ZipFile.ExtractToDirectory(zip, files);
         // Zip mit Unterordner? Dann den Ordner nehmen, in dem GlassBar.exe liegt
         string? exe = Directory.EnumerateFiles(files, "GlassBar.exe", SearchOption.AllDirectories).FirstOrDefault();
-        if (exe == null) throw new InvalidOperationException("Im Update fehlt GlassBar.exe.");
+        if (exe == null) throw new InvalidOperationException(L.T("Im Update fehlt GlassBar.exe."));
         string source = Path.GetDirectoryName(exe)!;
 
         string target = AppContext.BaseDirectory.TrimEnd('\\');

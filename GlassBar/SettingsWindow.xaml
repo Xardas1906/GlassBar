@@ -902,6 +902,22 @@
                             <TextBlock Text="Mit Windows starten" Style="{StaticResource Label}"/>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
+                        <StackPanel Margin="0,12,0,6">
+                            <TextBlock Margin="0,0,0,10">
+                                <Run Text="Sprache"/> / Language
+                                <LineBreak/><Run Text="Wird nach einem Neustart von GlassBar übernommen." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="Lang" Content="Automatisch (wie Windows)"
+                                             IsChecked="{Binding Language, Converter={StaticResource Eq}, ConverterParameter=Auto}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="Lang" Content="Deutsch"
+                                             IsChecked="{Binding Language, Converter={StaticResource Eq}, ConverterParameter=de}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="Lang" Content="English"
+                                             IsChecked="{Binding Language, Converter={StaticResource Eq}, ConverterParameter=en}"/>
+                                <Button Style="{StaticResource Button}" Content="Jetzt neu starten" Click="Restart_Click" Margin="8,0,0,6"/>
+                            </WrapPanel>
+                        </StackPanel>
+                        <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding SettingsGlass}"/>
                             <TextBlock Style="{StaticResource Label}">

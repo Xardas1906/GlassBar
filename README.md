@@ -12,10 +12,7 @@
 
 ![GlassBar mit dem Hintergrund „Still“](docs/desktop.jpg)
 
-> **English:** GlassBar replaces the Windows 11 taskbar with a floating glass dock (WPF, .NET 10) and ships a native
-> Direct3D/Direct2D recreation of the "Still" wallpaper. The app and its settings are in German.
-> Download the zip from [Releases](https://github.com/Xardas1906/GlassBar/releases/latest), unzip and run `GlassBar.exe`
-> (requires Windows 11 and the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)).
+> **English:** GlassBar replaces the Windows 11 taskbar with a floating glass dock and is available in English (Settings › System › Language). → **[Read the English README](README.en.md)**
 
 ## Funktionen
 
@@ -44,6 +41,7 @@
 - Alles wirkt sofort, mit Suche; Werte neben Reglern lassen sich direkt eintippen
 - Startet mit Windows über die Aufgabenplanung
 - Updates mit einem Klick: Einstellungen › System › Updates
+- Sprache: automatisch (wie Windows), Deutsch oder Englisch
 
 ## Installation
 

@@ -27,6 +27,7 @@ public partial class SettingsWindow : Window
     private SettingsWindow()
     {
         InitializeComponent();
+        L.Apply(this);
         BuildStillNav();
         DataContext = App.Config;
         AutostartBox.IsChecked = Native.Autostart;
@@ -330,7 +331,7 @@ public partial class SettingsWindow : Window
             // Buchstaben zeigen die Unterschiede viel deutlicher als Ziffern
             var sample = new TextBlock
             {
-                Text = DateTime.Now.ToString("ddd, d. MMMM", new System.Globalization.CultureInfo("de-DE")), FontSize = 13.5,
+                Text = DateTime.Now.ToString(L.En ? "ddd, MMMM d" : "ddd, d. MMMM", L.Culture), FontSize = 13.5,
                 HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 4),
             };
             var name = new TextBlock { Text = optLabel, FontSize = 11, Opacity = 0.6, HorizontalAlignment = HorizontalAlignment.Center };
@@ -377,7 +378,7 @@ public partial class SettingsWindow : Window
     {
         var fallback = WeatherService.WallpaperCity();
         CityHint.Text = CityBox.Text.Length > 0 ? "" :
-            string.IsNullOrEmpty(fallback) ? "z. B. Berlin" : $"{fallback} (aus „Still“)";
+            string.IsNullOrEmpty(fallback) ? L.T("z. B. Berlin") : L.F("{0} (aus „Still“)", fallback);
     }
 
     private void City_LostFocus(object sender, RoutedEventArgs e) => ScheduleApply();
@@ -403,8 +404,8 @@ public partial class SettingsWindow : Window
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Bild für den Start-Knopf",
-            Filter = "Bilder (*.png;*.jpg;*.jpeg;*.ico;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.ico;*.bmp;*.gif",
+            Title = L.T("Bild für den Start-Knopf"),
+            Filter = L.T("Bilder (*.png;*.jpg;*.jpeg;*.ico;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.ico;*.bmp;*.gif"),
         };
         if (dlg.ShowDialog(this) == true)
         {
@@ -416,7 +417,7 @@ public partial class SettingsWindow : Window
                 App.Config.StartIconPath = dest;
                 App.Config.StartIcon = "Custom";
             }
-            catch (Exception ex) { MessageBox.Show(this, "Das Bild konnte nicht übernommen werden:\n" + ex.Message, "GlassBar"); }
+            catch (Exception ex) { MessageBox.Show(this, L.T("Das Bild konnte nicht übernommen werden:") + "\n" + ex.Message, "GlassBar"); }
         }
         // Abgebrochen: Auswahl wieder auf den gespeicherten Stand
         StartIconCustom.IsChecked = App.Config.StartIcon == "Custom";
@@ -428,7 +429,7 @@ public partial class SettingsWindow : Window
     private bool _updateBusy;
 
     private void ShowVersion(string? extra = null) =>
-        UpdateStatus.Text = $"Installiert: Version {Updater.Current.ToString(3)}" + (extra != null ? " · " + extra : "");
+        UpdateStatus.Text = L.F("Installiert: Version {0}", Updater.Current.ToString(3)) + (extra != null ? " · " + extra : "");
 
     /// <summary>Beim Öffnen leise nachsehen, ob es etwas Neues gibt.</summary>
     private async void CheckUpdateQuietly()
@@ -445,8 +446,8 @@ public partial class SettingsWindow : Window
     private void OfferUpdate(Updater.Release r)
     {
         _update = r;
-        ShowVersion($"Neu: Version {r.Version.ToString(3)}");
-        UpdateButton.Content = $"Auf {r.Version.ToString(3)} aktualisieren";
+        ShowVersion(L.F("Neu: Version {0}", r.Version.ToString(3)));
+        UpdateButton.Content = L.F("Auf {0} aktualisieren", r.Version.ToString(3));
         UpdateButton.ToolTip = string.IsNullOrWhiteSpace(r.Notes) ? r.Name : r.Notes;
     }
 
@@ -459,12 +460,12 @@ public partial class SettingsWindow : Window
         {
             if (_update == null)
             {
-                UpdateButton.Content = "Suche …";
+                UpdateButton.Content = L.T("Suche …");
                 var r = await Updater.GetLatestAsync();
                 if (r == null || r.Version <= Updater.Current)
                 {
-                    ShowVersion("Du hast die neueste Version.");
-                    UpdateButton.Content = "Nach Updates suchen";
+                    ShowVersion(L.T("Du hast die neueste Version."));
+                    UpdateButton.Content = L.T("Nach Updates suchen");
                     return;
                 }
                 OfferUpdate(r);
@@ -472,26 +473,32 @@ public partial class SettingsWindow : Window
             }
 
             var release = _update;
-            var progress = new Progress<double>(p => UpdateButton.Content = $"Lade … {p * 100:0} %");
+            var progress = new Progress<double>(p => UpdateButton.Content = L.F("Lade … {0} %", Math.Round(p * 100)));
             await Updater.PrepareAsync(release, progress);
-            UpdateButton.Content = "Starte neu …";
+            UpdateButton.Content = L.T("Starte neu …");
             App.Instance.Quit(); // das Update-Skript ersetzt die Dateien und startet GlassBar wieder
         }
         catch (System.ComponentModel.Win32Exception)
         {
-            ShowVersion("Update abgebrochen (keine Administratorrechte).");
-            UpdateButton.Content = _update != null ? $"Auf {_update.Version.ToString(3)} aktualisieren" : "Nach Updates suchen";
+            ShowVersion(L.T("Update abgebrochen (keine Administratorrechte)."));
+            UpdateButton.Content = _update != null ? L.F("Auf {0} aktualisieren", _update.Version.ToString(3)) : L.T("Nach Updates suchen");
         }
         catch (Exception ex)
         {
-            ShowVersion("Update fehlgeschlagen: " + ex.Message);
-            UpdateButton.Content = _update != null ? $"Auf {_update.Version.ToString(3)} aktualisieren" : "Nach Updates suchen";
+            ShowVersion(L.F("Update fehlgeschlagen: {0}", ex.Message));
+            UpdateButton.Content = _update != null ? L.F("Auf {0} aktualisieren", _update.Version.ToString(3)) : L.T("Nach Updates suchen");
         }
         finally
         {
             _updateBusy = false;
             UpdateButton.IsEnabled = true;
         }
+    }
+
+    private void Restart_Click(object sender, RoutedEventArgs e)
+    {
+        App.Config.Save();
+        App.Instance.Restart();
     }
 
     private void Link_Navigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
@@ -511,7 +518,7 @@ public partial class SettingsWindow : Window
             if (icon == null) continue; // gibt es auf diesem Windows nicht
             var rb = new RadioButton
             {
-                Style = (Style)FindResource("Segment"), GroupName = "DesktopIcon", ToolTip = name, Tag = spec,
+                Style = (Style)FindResource("Segment"), GroupName = "DesktopIcon", ToolTip = L.T(name), Tag = spec,
                 Content = new Image { Source = icon, Width = 22, Height = 22 },
                 IsChecked = App.Config.DesktopIcon == "Sys" && App.Config.DesktopIconSource == spec,
             };
@@ -520,7 +527,7 @@ public partial class SettingsWindow : Window
         }
         var other = new RadioButton
         {
-            Style = (Style)FindResource("Segment"), GroupName = "DesktopIcon", Content = "Anderes Windows-Symbol …",
+            Style = (Style)FindResource("Segment"), GroupName = "DesktopIcon", Content = L.T("Anderes Windows-Symbol …"),
             IsChecked = App.Config.DesktopIcon == "Sys" && !ShellIcons.Gallery.Any(g => g.Spec == App.Config.DesktopIconSource),
         };
         other.Click += (_, _) =>
@@ -538,8 +545,8 @@ public partial class SettingsWindow : Window
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Bild für den Desktop-Stapel",
-            Filter = "Bilder (*.png;*.jpg;*.jpeg;*.ico;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.ico;*.bmp;*.gif",
+            Title = L.T("Bild für den Desktop-Stapel"),
+            Filter = L.T("Bilder (*.png;*.jpg;*.jpeg;*.ico;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.ico;*.bmp;*.gif"),
         };
         if (dlg.ShowDialog(this) == true)
         {
@@ -551,7 +558,7 @@ public partial class SettingsWindow : Window
                 App.Config.DesktopIconPath = dest;
                 App.Config.DesktopIcon = "Custom";
             }
-            catch (Exception ex) { MessageBox.Show(this, "Das Bild konnte nicht übernommen werden:\n" + ex.Message, "GlassBar"); }
+            catch (Exception ex) { MessageBox.Show(this, L.T("Das Bild konnte nicht übernommen werden:") + "\n" + ex.Message, "GlassBar"); }
         }
         DesktopIconCustom.IsChecked = App.Config.DesktopIcon == "Custom";
         ScheduleApply();

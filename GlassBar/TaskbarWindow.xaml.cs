@@ -58,6 +58,7 @@ public partial class TaskbarWindow : Window
         ScreenName = screen.DeviceName;
         IsPrimary = screen.Primary;
         InitializeComponent();
+        L.Apply(this);
 
         // Eigenes, schwebendes Fenster mit echtem Windows-Acryl – nur so groß wie das Dock.
         System.Windows.Shell.WindowChrome.SetWindowChrome(this, new System.Windows.Shell.WindowChrome
@@ -1063,16 +1064,16 @@ public partial class TaskbarWindow : Window
             WeatherTemp.Text = $"{Math.Round(_weather.Temperature)}°";
             WeatherButton.ToolTip =
                 $"{_weather.Place}: {_weather.Description}, {Math.Round(_weather.Temperature)}°\n" +
-                $"Gefühlt {Math.Round(_weather.FeelsLike)}° · H {Math.Round(_weather.High)}° · T {Math.Round(_weather.Low)}°\n" +
-                $"Regenwahrscheinlichkeit {_weather.RainChance} %\n" +
-                $"Aktualisiert {_weather.UpdatedAt:HH:mm} · Klicken zum Aktualisieren";
+                L.F("Gefühlt {0}° · H {1}° · T {2}°", Math.Round(_weather.FeelsLike), Math.Round(_weather.High), Math.Round(_weather.Low)) + "\n" +
+                L.F("Regenwahrscheinlichkeit {0} %", _weather.RainChance) + "\n" +
+                L.F("Aktualisiert {0} · Klicken zum Aktualisieren", _weather.UpdatedAt.ToString("t", L.Culture));
         }
         else
         {
             WeatherGlyph.Text = "☁";
             WeatherTemp.Text = "–";
             WeatherButton.ToolTip = _weather.Error + (string.IsNullOrWhiteSpace(WeatherService.EffectiveCity())
-                ? "\nStadt in den GlassBar-Einstellungen eintragen." : "");
+                ? "\n" + L.T("Stadt in den GlassBar-Einstellungen eintragen.") : "");
         }
     }
 
@@ -1081,9 +1082,10 @@ public partial class TaskbarWindow : Window
     private void UpdateClock()
     {
         var now = DateTime.Now;
-        TimeText.Text = now.ToString(App.Config.ShowSeconds ? "HH:mm:ss" : "HH:mm");
-        DateText.Text = now.ToString("dd.MM.yyyy");
-        ClockButton.ToolTip = now.ToString("dddd, d. MMMM yyyy");
+        // Uhrzeit, Datum und Tooltip in der Sprache der Oberfläche (24h bei Deutsch, wie Windows bei Englisch)
+        TimeText.Text = L.En ? now.ToString(App.Config.ShowSeconds ? "T" : "t", L.Culture) : now.ToString(App.Config.ShowSeconds ? "HH:mm:ss" : "HH:mm");
+        DateText.Text = L.En ? now.ToString("d", L.Culture) : now.ToString("dd.MM.yyyy");
+        ClockButton.ToolTip = now.ToString(L.En ? "D" : "dddd, d. MMMM yyyy", L.Culture);
         if (++_tick % 10 == 0) UpdateStatusIcons();
         if (_tick % 5 == 1) RemoveDeadTrayIcons();
     }
@@ -1365,7 +1367,7 @@ public partial class TaskbarWindow : Window
             {
                 Header = new TextBlock
                 {
-                    Text = c.Name.Length == 0 ? JumpList.TasksDisplayName : c.Name,
+                    Text = L.T(c.Name.Length == 0 ? JumpList.TasksDisplayName : c.Name),
                     FontSize = 12, FontWeight = FontWeights.SemiBold, Opacity = 0.6,
                 },
                 IsHitTestVisible = false, Focusable = false,
@@ -1390,7 +1392,7 @@ public partial class TaskbarWindow : Window
         foreach (var entry in AppMenuEntries(b))
         {
             if (entry is not { } x) { menu.Items.Add(new Separator()); continue; }
-            var mi = new MenuItem { Header = x.Item1, Tag = x.Item2, IsEnabled = x.Item4 };
+            var mi = new MenuItem { Header = L.T(x.Item1), Tag = x.Item2, IsEnabled = x.Item4 };
             mi.Click += (_, _) => x.Item3();
             menu.Items.Add(mi);
         }
@@ -1614,7 +1616,7 @@ public partial class TaskbarWindow : Window
 
     private void PickFolder()
     {
-        var dlg = new Microsoft.Win32.OpenFolderDialog { Title = "Ordner für die Taskleiste wählen" };
+        var dlg = new Microsoft.Win32.OpenFolderDialog { Title = L.T("Ordner für die Taskleiste wählen") };
         if (dlg.ShowDialog() == true) Model.AddPin(dlg.FolderName);
     }
 
@@ -1625,9 +1627,9 @@ public partial class TaskbarWindow : Window
             .Count(f => f.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".url", StringComparison.OrdinalIgnoreCase));
         if (count == 0) return;
         var answer = MessageBox.Show(
-            $"Wirklich alle {count} Verknüpfungen vom Desktop einzeln ans Dock anheften?\n\n" +
-            "Du kannst sie danach per Rechtsklick → „Von Taskleiste lösen“ wieder entfernen.",
-            "Alle Desktop-Icons anheften", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+            L.F("Wirklich alle {0} Verknüpfungen vom Desktop einzeln ans Dock anheften?", count) + "\n\n" +
+            L.T("Du kannst sie danach per Rechtsklick → „Von Taskleiste lösen“ wieder entfernen."),
+            L.T("Alle Desktop-Icons anheften"), MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
         if (answer != MessageBoxResult.Yes) return;
 
         int before = Model.Pins.Count;
@@ -1638,7 +1640,7 @@ public partial class TaskbarWindow : Window
                          .OrderBy(Path.GetFileName))
                 Model.AddPin(f);
 
-        MessageBox.Show($"{Model.Pins.Count - before} Verknüpfung(en) angeheftet.", "GlassBar",
+        MessageBox.Show(L.F("{0} Verknüpfung(en) angeheftet.", Model.Pins.Count - before), "GlassBar",
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -1649,7 +1651,7 @@ public partial class TaskbarWindow : Window
         foreach (var entry in entries)
         {
             if (entry is not { } x) { menu.Items.Add(new Separator()); continue; }
-            var mi = new MenuItem { Header = x.Header, Tag = x.Icon, IsEnabled = x.Enabled };
+            var mi = new MenuItem { Header = L.T(x.Header), Tag = x.Icon, IsEnabled = x.Enabled };
             mi.Click += (_, _) => x.Action();
             menu.Items.Add(mi);
         }

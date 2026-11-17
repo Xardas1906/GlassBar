@@ -116,13 +116,13 @@ public class ModernMenu : Window
         var el = new Border
         {
             CornerRadius = new CornerRadius(4), Background = Brushes.Transparent, Padding = new Thickness(6, 8, 6, 6),
-            Margin = new Thickness(1, 0, 1, 0), IsEnabled = b.Enabled, Opacity = b.Enabled ? 1 : 0.4, ToolTip = b.Text,
+            Margin = new Thickness(1, 0, 1, 0), IsEnabled = b.Enabled, Opacity = b.Enabled ? 1 : 0.4, ToolTip = L.T(b.Text),
             Child = new StackPanel
             {
                 Children =
                 {
                     new TextBlock { Text = b.Glyph, FontFamily = IconFont, FontSize = 16, HorizontalAlignment = HorizontalAlignment.Center },
-                    new TextBlock { Text = b.Text, FontSize = 11, Margin = new Thickness(0, 5, 0, 0), HorizontalAlignment = HorizontalAlignment.Center },
+                    new TextBlock { Text = L.T(b.Text), FontSize = 11, Margin = new Thickness(0, 5, 0, 0), HorizontalAlignment = HorizontalAlignment.Center },
                 },
             },
         };
@@ -146,13 +146,13 @@ public class ModernMenu : Window
         icon.VerticalAlignment = VerticalAlignment.Center;
         grid.Children.Add(icon);
 
-        var text = new TextBlock { Text = e.Text, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 24, 0) };
+        var text = new TextBlock { Text = L.T(e.Text), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 24, 0) };
         Grid.SetColumn(text, 1);
         grid.Children.Add(text);
 
         var right = new TextBlock
         {
-            Text = e.Children != null ? "\u203A" : e.Shortcut ?? "",
+            Text = e.Children != null ? "\u203A" : L.T(e.Shortcut ?? ""),
             FontSize = e.Children != null ? 18 : 12,
             Foreground = Dim, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0),
         };

@@ -36,6 +36,8 @@ public class Config
     /// <summary>"Covered" = wenn ein Fenster darüber liegt, "FullScreen" = nur bei Vollbild, "Never" = nie.</summary>
     public string AutoHideMode { get; set; } = "Covered";
     public bool RevealAtEdge { get; set; } = true;
+    /// <summary>Sprache der Oberfläche: "Auto" (wie Windows), "de" oder "en".</summary>
+    public string Language { get; set; } = "Auto";
     /// <summary>Auch über Vollbild-Programmen (Spiele, Videos) am unteren Rand einblenden.</summary>
     public bool RevealOverFullScreen { get; set; }
     /// <summary>Bildschirme (Gerätename), auf denen das Dock fixiert ist und sich nicht ausblendet.</summary>

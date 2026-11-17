@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -47,7 +47,7 @@ public class WeatherService
     public async Task<bool> RefreshAsync()
     {
         var city = EffectiveCity();
-        if (string.IsNullOrWhiteSpace(city)) { Error = "Keine Stadt festgelegt"; HasData = false; return false; }
+        if (string.IsNullOrWhiteSpace(city)) { Error = L.T("Keine Stadt festgelegt"); HasData = false; return false; }
         try
         {
             if (_geoFor != city)
@@ -55,10 +55,10 @@ public class WeatherService
                 if (!TryParseCoords(city, out _lat, out _lon))
                 {
                     var geo = await Http.GetStringAsync(
-                        $"https://geocoding-api.open-meteo.com/v1/search?name={Uri.EscapeDataString(city)}&count=1&language=de&format=json");
+                        $"https://geocoding-api.open-meteo.com/v1/search?name={Uri.EscapeDataString(city)}&count=1&language={(L.En ? "en" : "de")}&format=json");
                     using var gd = JsonDocument.Parse(geo);
                     if (!gd.RootElement.TryGetProperty("results", out var res) || res.GetArrayLength() == 0)
-                    { Error = $"„{city}“ nicht gefunden"; HasData = false; return false; }
+                    { Error = L.F("„{0}“ nicht gefunden", city); HasData = false; return false; }
                     var r = res[0];
                     _lat = r.GetProperty("latitude").GetDouble();
                     _lon = r.GetProperty("longitude").GetDouble();
@@ -89,7 +89,7 @@ public class WeatherService
         }
         catch (Exception ex)
         {
-            Error = "Wetterdienst nicht erreichbar";
+            Error = L.T("Wetterdienst nicht erreichbar");
             System.Diagnostics.Debug.WriteLine(ex);
             return false;
         }
@@ -105,7 +105,7 @@ public class WeatherService
     }
 
     /// <summary>WMO-Wettercode → deutsche Beschreibung.</summary>
-    public string Description => Code switch
+    public string Description => L.T(Code switch
     {
         0 => "Klar",
         1 => "Überwiegend klar",
@@ -128,7 +128,7 @@ public class WeatherService
         95 => "Gewitter",
         96 or 99 => "Gewitter mit Hagel",
         _ => "Wetter",
-    };
+    });
 
     /// <summary>Symbol (Segoe UI Symbol).</summary>
     public string Symbol => Code switch

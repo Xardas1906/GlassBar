@@ -299,7 +299,7 @@ internal static class Native
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Konnte nicht geöffnet werden:\n{path}\n\n{ex.Message}", "GlassBar",
+            System.Windows.MessageBox.Show($"{L.T("Konnte nicht geöffnet werden:")}\n{path}\n\n{ex.Message}", "GlassBar",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
         }
     }
