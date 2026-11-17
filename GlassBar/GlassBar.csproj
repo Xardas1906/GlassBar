@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <Resource Include="Assets\GlassBar.ico" />
+    <Resource Include="Assets\GlassBar.png" />
   </ItemGroup>
 
 </Project>

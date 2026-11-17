@@ -71,6 +71,13 @@ public sealed class StillRenderer : IDisposable
     private ID2D1DeviceContext? _d2d;
     private Vortice.DirectWrite.IDWriteFactory? _dwrite;
     private ID2D1Bitmap1? _targetBmp, _fieldBmp;
+    // Hintergrund ohne Lichtfeld: Zeichenfläche auf _full und das Windows-Hintergrundbild
+    private ID2D1Bitmap1? _fullTarget, _wallBmp;
+    private string? _wallKey;
+    private double _wallCheck;
+
+    /// <summary>"Light" = Lichtfeld, "Image" = Windows-Hintergrundbild, "Solid" = einfarbig (Grundfarbe der Palette).</summary>
+    public static volatile string BackgroundMode = "Light";
     private StillTextLayer? _text;
     private readonly TextFrame _frame = new();
 
@@ -206,6 +213,75 @@ public sealed class StillRenderer : IDisposable
         ReleaseAll();
     }
 
+    /// <summary>
+    /// Statt Lichtfeld: Grundfarbe der Palette und – bei „Image“ – das Windows-Hintergrundbild (wie „Ausfüllen“).
+    /// Alles andere (Uhr, Pillen, Glas, Regen) arbeitet unverändert darauf.
+    /// </summary>
+    private void DrawPlainBackground(ID3D11DeviceContext ctx, double dt)
+    {
+        var c = Palette.Base;
+        ctx.ClearRenderTargetView(_fullRtv!, new Vortice.Mathematics.Color4(c.X, c.Y, c.Z, 1));
+        if (BackgroundMode != "Image") return;
+
+        _wallCheck -= dt;
+        if (_wallCheck <= 0) { _wallCheck = 3; LoadWallpaper(); }
+        if (_wallBmp == null || _fullTarget == null) return;
+
+        var size = _wallBmp.PixelSize;
+        float k = Math.Max((float)_width / size.Width, (float)_height / size.Height);
+        float w = size.Width * k, h = size.Height * k;
+        var dest = new Vortice.RawRectF((_width - w) / 2, (_height - h) / 2, (_width + w) / 2, (_height + h) / 2);
+        _d2d!.Target = _fullTarget;
+        _d2d.BeginDraw();
+        _d2d.DrawBitmap(_wallBmp, dest, 1f, Vortice.Direct2D1.InterpolationMode.HighQualityCubic, null, null);
+        _d2d.EndDraw();
+        _d2d.Target = null;
+    }
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern bool SystemParametersInfo(uint action, uint param, System.Text.StringBuilder buf, uint winIni);
+
+    /// <summary>Aktuelles Windows-Hintergrundbild laden (nur wenn sich Datei oder Änderungszeit geändert haben).</summary>
+    private void LoadWallpaper()
+    {
+        try
+        {
+            var sb = new System.Text.StringBuilder(520);
+            SystemParametersInfo(0x0073 /* SPI_GETDESKWALLPAPER */, (uint)sb.Capacity, sb, 0);
+            string path = sb.ToString();
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                // Windows-Spotlight & Co.: zuletzt umgewandeltes Hintergrundbild
+                path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Microsoft\Windows\Themes\TranscodedWallpaper");
+                if (!File.Exists(path)) { _wallBmp?.Dispose(); _wallBmp = null; _wallKey = null; return; }
+            }
+            string key = path + "|" + File.GetLastWriteTimeUtc(path).Ticks;
+            if (key == _wallKey) return;
+            _wallKey = key;
+            _wallBmp?.Dispose(); _wallBmp = null;
+
+            using var src = new System.Drawing.Bitmap(path);
+            // höchstens doppelt so groß wie der Bildschirm laden
+            float k = Math.Min(1f, Math.Min(2f * _width / src.Width, 2f * _height / src.Height));
+            int bw = Math.Max(1, (int)(src.Width * k)), bh = Math.Max(1, (int)(src.Height * k));
+            using var bmp = new System.Drawing.Bitmap(bw, bh, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            using (var g = System.Drawing.Graphics.FromImage(bmp))
+            {
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.DrawImage(src, 0, 0, bw, bh);
+            }
+            var data = bmp.LockBits(new System.Drawing.Rectangle(0, 0, bw, bh), System.Drawing.Imaging.ImageLockMode.ReadOnly,
+                System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            try
+            {
+                _wallBmp = _d2d!.CreateBitmap(new Vortice.Mathematics.SizeI(bw, bh), data.Scan0, (uint)data.Stride,
+                    new BitmapProperties1(new D2DPixelFormat(Format.B8G8R8A8_UNorm, D2DAlphaMode.Premultiplied), 96, 96, BitmapOptions.None));
+            }
+            finally { bmp.UnlockBits(data); }
+        }
+        catch (Exception ex) { TaskbarWindow.Debug("Still: Hintergrundbild: " + ex.Message); _wallBmp = null; }
+    }
+
     private void Frame(double dt)
     {
         var s = Settings;
@@ -222,6 +298,13 @@ public sealed class StillRenderer : IDisposable
         if (Flow.Cols != _flowCols || Flow.Rows != _flowRows) { CreateFlow(); flowChanged = true; }
         if (flowChanged) _ctx!.UpdateSubresource<float>(Flow.Data, _flowTex!, 0, (uint)(Flow.Cols * 16));
 
+        var ctx = _ctx!;
+        if (BackgroundMode != "Light")
+        {
+            DrawPlainBackground(ctx, dt);
+            goto afterField;
+        }
+
         // 1) Lichtfeld klein
         var p = new FieldParams
         {
@@ -233,7 +316,6 @@ public sealed class StillRenderer : IDisposable
             FlowGlow = (float)(s.Num("waterShine") * 2.6),
             Base = Palette.Base, C0 = Palette.C0, C1 = Palette.C1, C2 = Palette.C2, C3 = Palette.C3,
         };
-        var ctx = _ctx!;
         ctx.UpdateSubresource(in p, _fieldCb!);
         ctx.OMSetRenderTargets(_smallRtv!);
         ctx.RSSetViewport(new Vortice.Mathematics.Viewport(0, 0, _smallW, _smallH));
@@ -258,6 +340,7 @@ public sealed class StillRenderer : IDisposable
         ctx.PSSetShaderResource(0, null!);
         ctx.OMSetRenderTargets((ID3D11RenderTargetView)null!);
 
+    afterField:
         // 2b) Regen auf der Scheibe, wenn der Regen-Klang spielt
         if (_rain != null)
         {
@@ -460,6 +543,7 @@ public sealed class StillRenderer : IDisposable
         _d2d!.Target = null;
         _targetBmp?.Dispose(); _targetBmp = null;
         _fieldBmp?.Dispose(); _fieldBmp = null;
+        _fullTarget?.Dispose(); _fullTarget = null;
         _fullRtv?.Dispose(); _fullSrv?.Dispose(); _full?.Dispose();
         _wetRtv?.Dispose(); _wet?.Dispose();
 
@@ -478,8 +562,12 @@ public sealed class StillRenderer : IDisposable
         using (var surf = _swap.GetBuffer<IDXGISurface>(0))
             _targetBmp = _d2d.CreateBitmapFromDxgiSurface(surf, props);
         using (var fs = _full.QueryInterface<IDXGISurface>())
+        {
             _fieldBmp = _d2d.CreateBitmapFromDxgiSurface(fs,
                 new BitmapProperties1(new D2DPixelFormat(Format.B8G8R8A8_UNorm, D2DAlphaMode.Premultiplied), 96, 96, BitmapOptions.None));
+            _fullTarget = _d2d.CreateBitmapFromDxgiSurface(fs,
+                new BitmapProperties1(new D2DPixelFormat(Format.B8G8R8A8_UNorm, D2DAlphaMode.Premultiplied), 96, 96, BitmapOptions.Target));
+        }
         _smallW = _smallH = 0; // wird im nächsten Bild passend neu angelegt
     }
 
@@ -509,6 +597,7 @@ public sealed class StillRenderer : IDisposable
         _uiFonts?.Dispose(); _uiFonts = null;
         if (_d2d != null) _d2d.Target = null;
         _targetBmp?.Dispose(); _fieldBmp?.Dispose(); _targetBmp = _fieldBmp = null;
+        _fullTarget?.Dispose(); _wallBmp?.Dispose(); _fullTarget = _wallBmp = null; _wallKey = null;
         _d2d?.Dispose(); _d2dDevice?.Dispose(); _d2dFactory?.Dispose(); _dwrite?.Dispose();
         _d2d = null; _d2dDevice = null; _d2dFactory = null; _dwrite = null;
         _flowSrv?.Dispose(); _flowTex?.Dispose(); _smallSrv?.Dispose(); _smallRtv?.Dispose(); _small?.Dispose();

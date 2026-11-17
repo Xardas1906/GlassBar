@@ -111,6 +111,8 @@ public class Config
     public string StartLogoColor { get; set; } = "White";
     /// <summary>Nativer Hintergrund auf Nebenbildschirmen: "Off", "Light" (nur Licht) oder "Clock" (Licht mit Uhr und Datum).</summary>
     public string WallpaperSecondary { get; set; } = "Clock";
+    /// <summary>Was hinter Uhr und Pillen liegt: "Light" (Lichtfeld), "Image" (Windows-Hintergrundbild) oder "Solid" (einfarbig).</summary>
+    public string WallpaperField { get; set; } = "Light";
 
     // ---------- Aufklapp-Fenster ----------
     public bool HoverOpensFolders { get; set; } = true;

@@ -70,6 +70,7 @@ public partial class SettingsWindow : Window
     /// ist das Fenster mindestens zu 55 % getönt.
     /// </summary>
     private (uint Tint, bool Blur)? _glass;
+    private Brush? _frameGlassBrush;
 
     private void ApplyGlass()
     {
@@ -78,10 +79,21 @@ public partial class SettingsWindow : Window
         // Ohne Glaseffekt: fast deckend und ohne Unschärfe – spart auf schwächeren Grafikkarten viel Arbeit,
         // weil Windows den animierten Hintergrund dann nicht bei jedem Bild neu weichzeichnen muss.
         bool blur = App.Config.SettingsGlass;
-        uint tint = App.Config.Tint(blur ? Math.Max(App.Config.DockOpacity, 55) : 96);
+        uint tint = App.Config.Tint(blur ? Math.Max(App.Config.DockOpacity, 55) : 100);
         if (_glass == (tint, blur)) return;
         _glass = (tint, blur);
         Native.ApplyGlass(h, tint, blur);
+
+        // Ohne Glas: ganz deckend (Glasfarbe, etwas aufgehellt, damit Karten und Text wie gewohnt wirken)
+        _frameGlassBrush ??= Frame.Background;
+        if (blur) Frame.Background = _frameGlassBrush;
+        else
+        {
+            uint rgb = tint & 0xFFFFFF;
+            byte r = (byte)(rgb >> 16), g = (byte)(rgb >> 8), b = (byte)rgb;
+            byte Lift(byte c) => (byte)Math.Min(255, c + 14);
+            Frame.Background = new SolidColorBrush(Color.FromRgb(Lift(r), Lift(g), Lift(b)));
+        }
     }
 
     // ---------- Navigation links ----------

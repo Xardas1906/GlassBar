@@ -910,6 +910,7 @@ public partial class TaskbarWindow : Window
         // Hauptbildschirm: das Hauptdock; Nebenbildschirme: SecondaryWallpapers (auch ohne Dock dort)
         if (!IsPrimary) return;
         bool want = App.Config.ShowWallpaper;
+        NativeStill.StillRenderer.BackgroundMode = App.Config.WallpaperField;
         if (want && _native == null)
         {
             NativeStill.NativeStillStore.Load();

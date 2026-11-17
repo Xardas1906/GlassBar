@@ -133,6 +133,7 @@ public partial class SettingsWindow
         ("Windows-Taste", "win taste startmenü"),
         ("Zurücksetzen", "standard reset"),
         ("Stadt", "ort wetter"),
+        ("Hinter Uhr und Pillen", "lichtfeld effekt aus deaktivieren hintergrundbild einfarbig nur uhr pillen"),
         ("Symbol des Desktop-Stapels", "desktop ordner icon symbol bild personalisieren stapel"),
         ("Farbe hinter dem Symbol", "desktop ordner icon farbe kachel"),
         ("Desktop anzeigen", "minimieren alle fenster win+d knopf rechts"),

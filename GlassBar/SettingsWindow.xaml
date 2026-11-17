@@ -262,7 +262,7 @@
     </Window.Resources>
 
     <!-- Rahmen wie beim Dock: heller Verlauf oben, leichter Glanz -->
-    <Border BorderThickness="1" CornerRadius="8">
+    <Border x:Name="Frame" BorderThickness="1" CornerRadius="8">
         <Border.BorderBrush>
             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                 <GradientStop Color="#40FFFFFF" Offset="0"/>
@@ -285,22 +285,8 @@
                     MouseLeftButtonUp="Close_Click" ToolTip="Schließen">
                 <TextBlock Text="&#xE8BB;" Style="{StaticResource Glyph}" FontSize="10"/>
             </Border>
-            <Border Width="30" Height="30" CornerRadius="8" Margin="0,0,12,0" VerticalAlignment="Center">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#4CC2FF" Offset="0"/>
-                        <GradientStop Color="#2563EB" Offset="1"/>
-                    </LinearGradientBrush>
-                </Border.Background>
-                <Grid Width="14" Height="14">
-                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
-                    <Rectangle Fill="White" Margin="0,0,1,1"/>
-                    <Rectangle Grid.Column="1" Fill="White" Margin="1,0,0,1"/>
-                    <Rectangle Grid.Row="1" Fill="White" Margin="0,1,1,0"/>
-                    <Rectangle Grid.Row="1" Grid.Column="1" Fill="White" Margin="1,1,0,0"/>
-                </Grid>
-            </Border>
+            <Image Source="Assets/GlassBar.png" Width="32" Height="32" Margin="0,0,12,0" VerticalAlignment="Center"
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="GlassBar" FontSize="15" FontWeight="SemiBold"/>
                 <TextBlock Text="Einstellungen" FontSize="11.5" Foreground="{StaticResource Sub}"/>
@@ -857,6 +843,21 @@
                                     Foreground="{StaticResource Accent}" FontSize="12">„Still“ von MrShadow (Steam Workshop)</Hyperlink>
                             </TextBlock>
                         </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <StackPanel Margin="0,12,0,6" IsEnabled="{Binding ShowWallpaper}">
+                            <TextBlock Margin="0,0,0,10">
+                                Hinter Uhr und Pillen
+                                <LineBreak/><Run Text="Uhr, Datum, Pillen und Karten bleiben bei allen drei Varianten." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Lichtfeld"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Light}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Windows-Hintergrundbild"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Image}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Einfarbig"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Solid}"/>
+                            </WrapPanel>
+                        </StackPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding ShowWallpaper}">
                             <Grid DockPanel.Dock="Right" Width="320" VerticalAlignment="Center">
