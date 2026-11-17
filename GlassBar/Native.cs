@@ -235,13 +235,20 @@ internal static class Native
         try
         {
             File.WriteAllText(file, xml, System.Text.Encoding.Unicode);
-            return RunSchtasks($"/Create /F /TN \"{TaskName}\" /XML \"{file}\"", elevated: true) == 0 && TaskExists();
+            // Für den eigenen Benutzer klappt es meist ohne Rückfrage; nur wenn nicht, mit Administratorrechten
+            var args = $"/Create /F /TN \"{TaskName}\" /XML \"{file}\"";
+            if (RunSchtasks(args, elevated: false) == 0 && TaskExists()) return true;
+            return RunSchtasks(args, elevated: true) == 0 && TaskExists();
         }
         catch { return false; }
         finally { try { File.Delete(file); } catch { } }
     }
 
-    private static void DeleteTask() => RunSchtasks($"/Delete /F /TN \"{TaskName}\"", elevated: true);
+    private static void DeleteTask()
+    {
+        if (RunSchtasks($"/Delete /F /TN \"{TaskName}\"", elevated: false) != 0 && TaskExists())
+            RunSchtasks($"/Delete /F /TN \"{TaskName}\"", elevated: true);
+    }
 
     /// <summary>schtasks.exe ausführen; elevated = mit Windows-Rückfrage (UAC). Liefert den Exit-Code (-1 = abgelehnt).</summary>
     private static int RunSchtasks(string args, bool elevated)
