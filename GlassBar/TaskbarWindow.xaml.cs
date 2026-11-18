@@ -465,6 +465,9 @@ public partial class TaskbarWindow : Window
         EnumWindows((h, _) =>
         {
             if (!IsWindowVisible(h) || IsIconic(h)) return true;
+            // „Desktop anzeigen“ (Win+D) minimiert unter Windows 11 nichts: Windows hebt den Desktop über alle Fenster.
+            // Alles darunter (z. B. ein randloses Spiel) sieht man nicht – also hier aufhören, nichts deckt das Dock.
+            if (Native.IsDesktopWindow(h)) return false;
             GetWindowThreadProcessId(h, out var pid);
             if (pid == OwnPid) return true;
 

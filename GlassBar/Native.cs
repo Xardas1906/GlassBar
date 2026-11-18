@@ -167,6 +167,23 @@ internal static class Native
         catch { }
     }
 
+    // ---------- Desktop-Fenster ----------
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string? cls, string? title);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr h, System.Text.StringBuilder s, int n);
+
+    /// <summary>
+    /// Das Fenster, das den Desktop trägt: „Progman“ oder (bei anderen Hintergrund-Programmen) die WorkerW mit den
+    /// Desktopsymbolen. Bei „Desktop anzeigen“ (Win+D) hebt Windows 11 es über alle anderen Fenster, statt sie zu
+    /// minimieren – was darunter liegt, ist dann unsichtbar.
+    /// </summary>
+    public static bool IsDesktopWindow(IntPtr h)
+    {
+        var sb = new System.Text.StringBuilder(32);
+        GetClassName(h, sb, 32);
+        string cls = sb.ToString();
+        return cls == "Progman" || (cls == "WorkerW" && FindWindowEx(h, IntPtr.Zero, "SHELLDLL_DefView", null) != IntPtr.Zero);
+    }
+
     // ---------- Autostart ----------
     // Über die Aufgabenplanung statt über den Run-Schlüssel: Run-Einträge startet Windows absichtlich verzögert
     // (bei dir rund 2 Minuten nach dem Hochfahren). Eine Aufgabe „bei Anmeldung“ startet sofort.

@@ -102,13 +102,15 @@ public static class SecondaryWallpapers
         EnumWindows((h, _) =>
         {
             if (!IsWindowVisible(h) || IsIconic(h)) return true;
+            // „Desktop anzeigen“ (Win+D): Windows hebt den Desktop über alle Fenster – was darunter liegt, sieht man nicht
+            if (Native.IsDesktopWindow(h)) return false;
             GetWindowThreadProcessId(h, out var pid);
             if (pid == OwnPid) return true;
             long ex = GetWindowLongPtr(h, -20).ToInt64();
             if ((ex & (0x80 | 0x20 | 0x08000000)) != 0) return true; // Werkzeug-, durchklickbare, nicht aktivierbare Fenster
             if (DwmGetWindowAttribute(h, 14, out var cloaked, 4) == 0 && cloaked != 0) return true;
             cls.Clear(); GetClassName(h, cls, 64);
-            if (cls.ToString() is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") return true;
+            if (cls.ToString() is "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") return true;
             GetWindowRect(h, out var r);
             // Maximierte Fenster ragen 8 px über ihren Bildschirm hinaus – auf die Nachbarn. Rand abziehen.
             r.L += 8; r.T += 8; r.R -= 8; r.B -= 8;
