@@ -20,16 +20,34 @@ public class PinnedItem
     /// <summary>Schlüssel, über den laufende Fenster dem Element zugeordnet werden.</summary>
     public string Key { get; }
 
+    /// <summary>AppUserModelID, wenn das Element eine App aus dem Microsoft Store ist.</summary>
+    public string? Aumid { get; }
+
     public PinnedItem(string path)
     {
         Path = path;
+        Item = new ShellItem(path);
+
+        // shell:AppsFolder\<AUMID> ist kein Dateipfad: nicht als Datei oder Verknüpfung behandeln
+        if (PackagedApps.AumidFromPath(path) is { } aumid)
+        {
+            Aumid = aumid;
+            Target = path;
+            Key = PackagedApps.KeyFor(aumid);
+            return;
+        }
+
         var (target, args) = Native.ResolveShortcut(path);
         Target = target;
         IsFolder = Directory.Exists(Target);
-        Item = new ShellItem(path);
+        // Verknüpfungen auf Paketordner veralten mit jedem Update: auch ohne eingetragene AUMID über die App starten
+        if (path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
+            Aumid = PackagedApps.ShortcutAumid(path) ?? PackagedApps.PackageExeAumid(target, PackagedApps.AumidForFamily);
 
         if (IsFolder)
             Key = "folder:" + Target.ToLowerInvariant();
+        else if (Aumid != null)
+            Key = PackagedApps.KeyFor(Aumid);
         else if (Target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
         {
             // Squirrel-Apps (Discord, Teams …) starten über Update.exe --processStart X.exe
@@ -47,6 +65,8 @@ public class AppButton : INotifyPropertyChanged
     public string Key { get; }
     public PinnedItem? Pin { get; private set; }
     public ObservableCollection<ApplicationWindow> Windows { get; } = new();
+
+    private readonly Dispatcher _ui = Dispatcher.CurrentDispatcher;
 
     public AppButton(string key) => Key = key;
 
@@ -91,15 +111,57 @@ public class AppButton : INotifyPropertyChanged
         }
     }
 
-    public ImageSource? Icon =>
-        Pin?.Item.ExtraLargeIcon ?? ExeItem?.ExtraLargeIcon ?? Windows.FirstOrDefault()?.Icon;
+    public ImageSource? Icon
+    {
+        get
+        {
+            var windowIcon = Windows.FirstOrDefault()?.Icon;
+            if (PackagedAumid is { } aumid)
+            {
+                // Programmdatei mit echten Symbolen oder „Alle Apps“, dann Fenstersymbol, zuletzt das allgemeine Symbol
+                var icon = PackagedIcon(aumid, out bool pending) ?? windowIcon;
+                return icon ?? (pending ? null : Pin?.Item.ExtraLargeIcon ?? ExeItem?.ExtraLargeIcon);
+            }
+
+            // Programme ohne eigene Symbole: Windows liefert nur einen Platzhalter, das Fenster hat meist das echte
+            string? exe = Pin == null ? Windows.FirstOrDefault(w => !w.IsUWP)?.WinFileName
+                : Pin.Path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? Pin.Path : null;
+            if (windowIcon != null && !string.IsNullOrEmpty(exe) && PackagedApps.HasIconResources(exe) == false) return windowIcon;
+            return Pin?.Item.ExtraLargeIcon ?? ExeItem?.ExtraLargeIcon ?? windowIcon;
+        }
+    }
+
+    private ImageSource? _packagedIcon;
+    private string? _packagedIconOf;
+
+    private ImageSource? PackagedIcon(string aumid, out bool pending)
+    {
+        string? exe = Windows.FirstOrDefault(w => !w.IsUWP)?.WinFileName;
+        var icon = PackagedApps.GetIcon(aumid, string.IsNullOrEmpty(exe) ? null : exe, OnPackagedIconLoaded, out pending);
+        if (icon != null) { _packagedIcon = icon; _packagedIconOf = aumid; }
+        // Startet die App gerade, bleibt das bisherige Symbol stehen, bis das neue geladen ist
+        return icon ?? (_packagedIconOf == aumid ? _packagedIcon : null);
+    }
+
+    private void OnPackagedIconLoaded() => _ui.BeginInvoke(Refresh);
 
     public string Title =>
-        Pin?.Item.DisplayName ?? Windows.FirstOrDefault()?.WinFileDescription ?? Windows.FirstOrDefault()?.Title ?? "";
+        PackagedApps.Find(PackagedAumid)?.DisplayName
+        ?? Pin?.Item.DisplayName ?? Windows.FirstOrDefault()?.WinFileDescription ?? Windows.FirstOrDefault()?.Title ?? "";
 
     public string? ExecutablePath =>
-        Pin?.Target is { } t && t.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? t
+        Pin?.Target is { } t && t.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && !PackagedApps.IsShellPath(t) ? t
         : Windows.FirstOrDefault(w => !w.IsUWP)?.WinFileName;
+
+    /// <summary>AUMID, wenn dieser Knopf eine App aus dem Microsoft Store ist (angeheftet oder laufend).</summary>
+    public string? PackagedAumid =>
+        Pin != null ? Pin.Aumid : Windows.Select(PackagedOf).FirstOrDefault(p => p != null)?.Aumid;
+
+    /// <summary>Was beim Anheften gespeichert wird.</summary>
+    public string? PinPath => PackagedAumid is { } aumid ? PackagedApps.PathFromAumid(aumid) : ExecutablePath;
+
+    /// <summary>Was zum Starten geöffnet wird.</summary>
+    public string? LaunchPath => PackagedAumid is { } aumid ? PackagedApps.PathFromAumid(aumid) : Pin?.Path ?? ExecutablePath;
 
     internal void SetPin(PinnedItem? pin)
     {
@@ -126,11 +188,20 @@ public class AppButton : INotifyPropertyChanged
     public void Refresh() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    /// <summary>Paket-App des Fensters: bei ApplicationFrameHost steht sie am Fenster, sonst am Prozess.</summary>
+    internal static PackagedWindow? PackagedOf(ApplicationWindow w)
+    {
+        if (!w.IsUWP) return PackagedApps.ForWindow(w.Handle, w.WinFileName);
+        string? aumid = w.AppUserModelID;
+        return PackagedApps.FamilyFromAumid(aumid) is { } family ? new PackagedWindow(aumid!, family, true) : null;
+    }
+
     public static string KeyOf(ApplicationWindow w)
     {
+        if (PackagedOf(w) is { } packaged) return PackagedApps.KeyFor(packaged.Aumid);
         if (!w.IsUWP && !string.IsNullOrEmpty(w.WinFileName))
             return System.IO.Path.GetFileName(w.WinFileName).ToLowerInvariant();
-        return "aumid:" + (w.AppUserModelID ?? w.Handle.ToString());
+        return PackagedApps.WindowKey(w.AppUserModelID, w.Handle);
     }
 }
 
@@ -195,7 +266,7 @@ public class TaskbarModel
 
     private void LoadPins()
     {
-        var paths = App.Config.Pinned.Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
+        var paths = App.Config.Pinned.Where(PackagedApps.Exists).ToList();
         // vorhandene Einträge behalten (Symbole müssen nicht neu geladen werden)
         var keep = Pins.ToDictionary(p => p.Path, StringComparer.OrdinalIgnoreCase);
         Pins.Clear();
@@ -240,10 +311,11 @@ public class TaskbarModel
             wins = wins.Where(w => string.Equals(screens[w], _screenFilter, StringComparison.OrdinalIgnoreCase)).ToList();
         }
 
+        var keysOfPins = Pins.Select(p => p.Key).ToHashSet();
         var groups = new Dictionary<string, List<ApplicationWindow>>();
         foreach (var w in wins)
         {
-            var k = AppButton.KeyOf(w);
+            var k = GroupKey(w, keysOfPins);
             if (!groups.TryGetValue(k, out var list)) groups[k] = list = new();
             list.Add(w);
             if (!_runOrder.Contains(k)) _runOrder.Add(k);
@@ -283,6 +355,27 @@ public class TaskbarModel
 
     }
 
+    /// <summary>Unter welchem Knopf ein Fenster erscheint – möglichst dem der angehefteten App.</summary>
+    private string GroupKey(ApplicationWindow w, HashSet<string> keysOfPins)
+    {
+        string key = AppButton.KeyOf(w);
+        if (keysOfPins.Contains(key) || AppButton.PackagedOf(w) is not { } packaged) return key;
+
+        // Der Prozess nennt keine sichtbare App des Pakets (Spotify: Starter ≠ Fenster-Prozess) -> über die Paketfamilie.
+        // Nennt er eine andere sichtbare App, bleibt sie ein eigener Knopf.
+        if (!packaged.Exact && packaged.Family != null
+            && Pins.FirstOrDefault(p => string.Equals(PackagedApps.FamilyFromAumid(p.Aumid), packaged.Family, StringComparison.OrdinalIgnoreCase)) is { } pin)
+            return pin.Key;
+
+        // Pin auf die Programmdatei (z. B. Startalias oder nicht umstellbar)
+        if (!w.IsUWP && !string.IsNullOrEmpty(w.WinFileName))
+        {
+            string exeKey = System.IO.Path.GetFileName(w.WinFileName).ToLowerInvariant();
+            if (keysOfPins.Contains(exeKey)) return exeKey;
+        }
+        return key;
+    }
+
     private AppButton Get(string key)
     {
         if (!_byKey.TryGetValue(key, out var b)) _byKey[key] = b = new AppButton(key);
@@ -293,8 +386,12 @@ public class TaskbarModel
 
     public void AddPin(string path, int index = -1)
     {
+        // Store-Apps immer als shell:AppsFolder\<AUMID>, egal woher der Pfad kommt
+        path = PackagedApps.Normalize(path);
+
         // Verknüpfungen werden kopiert, damit sie weiter funktionieren, wenn du sie vom Desktop löschst.
-        if ((path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".url", StringComparison.OrdinalIgnoreCase))
+        if (!PackagedApps.IsShellPath(path)
+            && (path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".url", StringComparison.OrdinalIgnoreCase))
             && !path.StartsWith(PinnedFolder, StringComparison.OrdinalIgnoreCase))
         {
             Directory.CreateDirectory(PinnedFolder);
@@ -338,7 +435,9 @@ public class TaskbarModel
     }
 
     private static bool Same(string a, string b) =>
-        string.Equals(System.IO.Path.GetFullPath(a), System.IO.Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
+        PackagedApps.IsShellPath(a) || PackagedApps.IsShellPath(b)
+            ? string.Equals(a, b, StringComparison.OrdinalIgnoreCase)
+            : string.Equals(System.IO.Path.GetFullPath(a), System.IO.Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>Auf welchem Bildschirm ein Fenster liegt (Gerätename wie „\\.\DISPLAY1“).</summary>

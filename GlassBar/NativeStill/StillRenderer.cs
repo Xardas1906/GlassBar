@@ -116,6 +116,8 @@ public sealed class StillRenderer : IDisposable
     public Func<float> StageBusy { get; set; } = () => 0;
     /// <summary>Liegt unter der Maus gerade etwas Bedienbares? (für die Maus-Weiterleitung, threadsicher)</summary>
     public volatile bool OverUi;
+    /// <summary>Ein Element der Oberfläche hält die Maus gerade fest (threadsicher).</summary>
+    public volatile bool PointerCaptured;
 
     public void SetMedia(MediaState m) { _media = m; _wake.Set(); }
 
@@ -432,6 +434,7 @@ public sealed class StillRenderer : IDisposable
             try { Ui.OnPointer(c, e); } catch (Exception ex) { TaskbarWindow.Debug("Still nativ: Maus: " + ex.Message); }
         }
         c.PointerInside = _pointerInside;
+        PointerCaptured = Ui.HasCapture;
         try
         {
             Ui.Update(c, dt);

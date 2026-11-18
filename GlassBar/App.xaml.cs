@@ -98,6 +98,7 @@ public partial class App : Application
         Config = Config.Load();
         L.Init(Config.Language);
         Theme.Apply(); // helles oder dunkles Design (auch für die Win32-Menüs)
+        PackagedApps.MigrateConfig(Config); // vor dem ersten Dock: alte Pins von Store-Apps umstellen
 
         var cfg = ShellManager.DefaultShellConfig;
         cfg.EnableTasksService = true;

@@ -28,6 +28,10 @@ public sealed record MediaState
     public int CoverVersion { get; init; }
     public bool Playing { get; init; }
     public bool Paused { get; init; }
+    /// <summary>Der Player erlaubt das Springen im Lied.</summary>
+    public bool CanSeek { get; init; }
+    /// <summary>Ändert sich, sobald die Wiedergabe-Seite einen Sprung übernommen oder verworfen hat.</summary>
+    public int SeekGeneration { get; init; }
     /// <summary>Position in Sekunden zum Zeitpunkt <see cref="Stamp"/>; Dauer 0 = unbekannt.</summary>
     public double Position { get; init; }
     public double Duration { get; init; }
@@ -44,6 +48,8 @@ public sealed class MediaControls
     public Action PlayPause { get; init; } = () => { };
     public Action Next { get; init; } = () => { };
     public Action Previous { get; init; } = () => { };
+    /// <summary>Im Lied springen (Sekunden ab Liedanfang).</summary>
+    public Action<double> Seek { get; init; } = _ => { };
 }
 
 public enum PointerKind { Move, Down, Up, Wheel, Leave }
@@ -954,6 +960,9 @@ public sealed class StillUi : IDisposable
     }
 
     // ---------- Maus ----------
+
+    /// <summary>Ein Element hält die Maus seit dem Drücken fest (nur im Render-Thread lesen).</summary>
+    public bool HasCapture => _capture != null;
 
     /// <summary>Maus-Ereignis verteilen; true = von der Oberfläche verarbeitet.</summary>
     public bool OnPointer(UiContext c, PointerEvent e)

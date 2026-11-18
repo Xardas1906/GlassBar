@@ -215,7 +215,9 @@ public class PreviewFlyout : FlyoutBase
             header.Children.Add(icon);
             header.Children.Add(title);
 
-            var fallback = new Image { Source = w.Icon, Width = 48, Height = 48, Opacity = 0.8 };
+            // Gebunden, weil das Fenstersymbol oft erst nach dem Öffnen fertig geladen ist
+            var fallback = new Image { Width = 48, Height = 48, Opacity = 0.8 };
+            fallback.SetBinding(Image.SourceProperty, new Binding(nameof(ApplicationWindow.Icon)) { Source = w });
             var host = new Border { Height = 130, Margin = new Thickness(0, 8, 0, 0), Child = fallback };
 
             var card = new Border

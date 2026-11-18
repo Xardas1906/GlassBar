@@ -24,6 +24,9 @@ public static partial class Strings
         ["Hell"] = "Light",
         ["Wie Windows"] = "Like Windows",
 
+        // ---------- Store-Apps ----------
+        ["Diese App ist nicht mehr installiert."] = "This app is no longer installed.",
+
         // ---------- Tastatur und Maus ----------
         ["Tastatur und Maus"] = "Keyboard and mouse",
         ["Win+1 … 9 öffnet das Programm an dieser Stelle im Dock"] = "Win+1 … 9 opens the app at that position in the dock",

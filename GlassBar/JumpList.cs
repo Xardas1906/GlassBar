@@ -467,8 +467,14 @@ public static class JumpList
                 lpDirectory = string.IsNullOrEmpty(li.Directory) ? null : Environment.ExpandEnvironmentVariables(li.Directory),
                 nShow = li.ShowCmd,
             };
-            if (!string.IsNullOrEmpty(li.File))
-                sei.lpFile = li.File;
+            // Programme in Paketordnern lassen sich nicht direkt starten und wechseln mit Updates den Ordner:
+            // Start über den App-Eintrag (die Argumente kommen dort an), die ID-Liste nur als letzter Ausweg
+            if (PackagedApps.LaunchFile(li.File, PackagedApps.AumidForFamily) is { } file)
+            {
+                sei.lpFile = file;
+                // Das Arbeitsverzeichnis zeigt sonst womöglich auf den alten Versionsordner
+                if (PackagedApps.IsPackageExe(li.File)) sei.lpDirectory = null;
+            }
             else if (li.IdList is { Length: > 0 } ids)
             {
                 pidl = Marshal.AllocCoTaskMem(ids.Length);
@@ -577,15 +583,50 @@ public static class JumpList
         return Frozen(w, h, px, size);
     }
 
-    private static ImageSource? FromHBitmap(IntPtr hbmp, int size)
+    /// <summary>Pixel einer Bitmap als BGRA, oberste Zeile zuerst.</summary>
+    private static byte[]? ReadHBitmap(IntPtr hbmp, out int w, out int h)
     {
+        w = h = 0;
         if (GetObject(hbmp, Marshal.SizeOf<BITMAP>(), out var bm) == 0 || bm.bmWidth <= 0 || bm.bmHeight == 0) return null;
-        int w = bm.bmWidth, h = Math.Abs(bm.bmHeight), stride = w * 4;
-        var px = new byte[stride * h];
+        w = bm.bmWidth;
+        h = Math.Abs(bm.bmHeight);
+        var px = new byte[w * 4 * h];
         var bi = new BITMAPINFOHEADER { biSize = 40, biWidth = w, biHeight = -h, biPlanes = 1, biBitCount = 32 };
         IntPtr dc = GetDC(IntPtr.Zero);
-        try { if (GetDIBits(dc, hbmp, 0, (uint)h, px, ref bi, 0) == 0) return null; }
+        try { return GetDIBits(dc, hbmp, 0, (uint)h, px, ref bi, 0) == 0 ? null : px; }
         finally { ReleaseDC(IntPtr.Zero, dc); }
+    }
+
+    /// <summary>Nur das Symbol eines Shell-Eintrags (Datei oder shell:-Pfad) in dieser Größe; null, wenn es keines gibt.</summary>
+    internal static byte[]? RenderShellItem(string parsingName, int size, out int w, out int h)
+    {
+        w = h = 0;
+        var iid = typeof(IShellItemImageFactory).GUID;
+        if (SHCreateItemFromParsingName(parsingName, IntPtr.Zero, ref iid, out var obj) != 0 || obj == null) return null;
+        try
+        {
+            if (((IShellItemImageFactory)obj).GetImage(new SIZE { cx = size, cy = size }, SIIGBF_ICONONLY, out var hbmp) != 0 || hbmp == IntPtr.Zero) return null;
+            try { return ReadHBitmap(hbmp, out w, out h); }
+            finally { DeleteObject(hbmp); }
+        }
+        finally { Release(obj); }
+    }
+
+    /// <summary>Lässt sich der Shell-Pfad auflösen?</summary>
+    internal static bool ShellItemExists(string parsingName)
+    {
+        var iid = new Guid("43826d1e-e718-42ee-bc55-a1e261c37bfe"); // IShellItem
+        if (SHCreateItemFromParsingNameRaw(parsingName, IntPtr.Zero, ref iid, out var psi) != 0 || psi == IntPtr.Zero) return false;
+        Marshal.Release(psi);
+        return true;
+    }
+
+    /// <summary>In einer Verknüpfung eingetragene AppUserModelID.</summary>
+    internal static string? ShortcutAppId(string lnkPath) => Try(() => FileProperty(lnkPath));
+
+    private static ImageSource? FromHBitmap(IntPtr hbmp, int size)
+    {
+        if (ReadHBitmap(hbmp, out int w, out int h) is not { } px) return null;
 
         // Bitmaps ohne Alphakanal wären sonst unsichtbar
         bool anyAlpha = false;

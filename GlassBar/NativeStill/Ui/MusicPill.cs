@@ -24,6 +24,9 @@ public sealed class MusicPill : Pill
     private static readonly float[] BtnR = { 19, 22, 19 };
     private const double AnnounceSeconds = 4.2, HideGrace = 2.5;
     private const float MarqueeSpeed = 30, MarqueeHold = 3, MarqueeGap = 40;
+    // Fortschrittsbalken als Ziel: Zugabe um die Linie (reicht weder ans Cover noch an die Knöpfe)
+    private const float SeekHitX = 6, SeekHitY = 10;
+    private const double SeekPendingSeconds = 0.6;
 
     private enum Bars { Live, Pause, None }
 
@@ -60,6 +63,15 @@ public sealed class MusicPill : Pill
     private float _pp;                         // 0 = Pause-Symbol (spielt), 1 = Play-Symbol (pausiert)
     private float _pausedA, _glowA = 0.42f;
     private double _position, _duration;
+
+    // Springen im Lied: Ziehen zeigt nur die Vorschau, gesprungen wird beim Loslassen
+    private bool _seekHover, _seekDrag;
+    private double _seekFrac, _seekHoverFrac;
+    private string _seekSong = "";
+    private double? _seekPending;              // Ziel, bis die Wiedergabe-Seite den Sprung übernommen hat
+    private double _seekPendingUntil;
+    private int _seekPendingGen;
+    private float _seekHot;
 
     // Cover
     private float _coverFade = 1;
@@ -163,6 +175,7 @@ public sealed class MusicPill : Pill
         // Kurz nach einem Klick gilt der vorweggenommene Zustand, bis der Player ihn bestätigt.
         if (_optPaused is bool op && (c.Time > _optUntil || (m.HasMedia && m.Playing == !op))) _optPaused = null;
         if (m.HasMedia) { _paused = !m.Playing; _position = m.CurrentPosition; _duration = m.Duration; }
+        UpdateSeek(c, t);
         bool paused = IsPaused(c);
 
         // ---- Liedwechsel und Ankündigung ----
@@ -194,9 +207,9 @@ public sealed class MusicPill : Pill
             _wasShown = true;
         }
 
-        if (s.Str("pillStyle") == "expanded" && shown)
+        if (s.Str("pillStyle") == "expanded" && shown || _seekDrag)
         {
-            // Immer offen: die Ankündigung einfach am Leben halten
+            // Immer offen (oder gerade gezogen): die Ankündigung einfach am Leben halten
             AnnounceFor = 0.5;
             _announceSet = true;
         }
@@ -301,7 +314,25 @@ public sealed class MusicPill : Pill
             || Math.Abs(_pp - (paused ? 1 : 0)) > 0.002f || Math.Abs(_pausedA - (paused ? 1 : 0)) > 0.002f
             || Math.Abs(_glowA - glowTarget) > 0.002f || Math.Abs(_outerA - (mode == Bars.Pause ? 0 : 1)) > 0.002f
             || Math.Abs(_barsA - (mode == Bars.None ? 0 : 1)) > 0.002f || BarsMoving(mode, c)
-            || Unsettled(_oi) || Unsettled(_op) || Unsettled(_oc) || ButtonsMoving();
+            || Unsettled(_oi) || Unsettled(_op) || Unsettled(_oc) || ButtonsMoving()
+            || _seekDrag || _seekPending != null || Unsettled(_seekHot);
+    }
+
+    private static string SongKey(MediaState m) => m.Artist + "\u0001" + m.Title;
+
+    private void UpdateSeek(UiContext c, float t)
+    {
+        var m = c.Media;
+        string song = SongKey(m);
+        if (_seekDrag && (!SeekAllowed(c) || song != _seekSong)) _seekDrag = false;
+        if (_seekPending != null && (!m.HasMedia || song != _seekSong || m.SeekGeneration != _seekPendingGen || c.Time >= _seekPendingUntil))
+            _seekPending = null;
+
+        if (_seekDrag) _position = MediaTimeline.SeekTarget(_seekFrac, m.Duration);
+        else if (_seekPending is double pending) _position = pending;
+
+        if (!SeekReady(c)) _seekHover = false;
+        _seekHot += ((_seekHover || _seekDrag ? 1 : 0) - _seekHot) * (1 - MathF.Exp(-t * 14));
     }
 
     private static bool Unsettled(float v) => v > 0.002f && v < 0.998f;
@@ -361,18 +392,41 @@ public sealed class MusicPill : Pill
         switch (e.Kind)
         {
             case PointerKind.Leave:
-                _hoverBtn = -1; _pressBtn = -1;
+                _hoverBtn = -1; _pressBtn = -1; _seekHover = false;
                 return false;
             case PointerKind.Move:
+                if (_seekDrag) { _seekFrac = SeekFraction(c, e.Pos.X); return true; }
                 _hoverBtn = HitButton(c, e.Pos);
-                return _hoverBtn >= 0;
+                UpdateSeekHover(c, e.Pos);
+                return _hoverBtn >= 0 || _seekHover;
             case PointerKind.Down:
+                // Noch am Ziehen? Dann ging das Loslassen verloren: abbrechen, nicht springen.
+                if (_seekDrag) { _seekDrag = false; return true; }
                 _hoverBtn = HitButton(c, e.Pos);
-                if (e.Button != 0 || _hoverBtn < 0) return false;
+                if (e.Button != 0) return false;
+                if (_hoverBtn < 0)
+                {
+                    if (!HitSeek(c, e.Pos)) return false;
+                    _seekDrag = true;
+                    _seekHover = false;
+                    _seekSong = SongKey(c.Media);
+                    _seekFrac = SeekFraction(c, e.Pos.X);
+                    _seekPending = null;
+                    return true;
+                }
                 _pressBtn = _hoverBtn;
                 return true;
             case PointerKind.Up:
             {
+                if (_seekDrag)
+                {
+                    // Wo die Maus senkrecht steht, ist egal: Es zählt die Stelle auf dem Balken.
+                    _seekDrag = false;
+                    if (e.Button == 0 && SeekAllowed(c) && SongKey(c.Media) == _seekSong)
+                        CommitSeek(c, SeekFraction(c, e.Pos.X));
+                    UpdateSeekHover(c, e.Pos);
+                    return true;
+                }
                 int hit = HitButton(c, e.Pos);
                 int pressed = _pressBtn;
                 _pressBtn = -1;
@@ -402,6 +456,55 @@ public sealed class MusicPill : Pill
             if (btn == 2) c.Controls.Next(); else c.Controls.Previous();
         }
         _busy = true;
+    }
+
+    private void CommitSeek(UiContext c, double fraction)
+    {
+        double target = MediaTimeline.SeekTarget(fraction, c.Media.Duration);
+        _seekPending = target;
+        _seekPendingUntil = c.Time + SeekPendingSeconds;
+        _seekPendingGen = c.Media.SeekGeneration;
+        _position = target;
+        c.Controls.Seek(target);
+        _busy = true;
+    }
+
+    private static bool SeekAllowed(UiContext c)
+    {
+        var m = c.Media;
+        return m.HasMedia && m.CanSeek && m.Duration >= 1 && !c.Editing;
+    }
+
+    /// <summary>Darf der Balken gerade bedient werden (Karte offen, Balken steht)?</summary>
+    private bool SeekReady(UiContext c) => SeekAllowed(c) && Open > 0.9f && _op > 0.6f;
+
+    /// <summary>Lage des Balkens – dieselbe fürs Zeichnen und für die Maus.</summary>
+    private void SeekTrack(UiContext c, out float x0, out float x1, out float cy)
+    {
+        float k = c.K, px = (float)Bounds.X + XPad * k;
+        x0 = px + (TimeW + TimeGap) * k;
+        x1 = px + (RowW - TimeW - TimeGap) * k;
+        cy = (float)Bounds.Y + (XProgY + (1 - _op) * 6 + XProgH / 2) * k;
+    }
+
+    private bool HitSeek(UiContext c, Vector2 p)
+    {
+        if (!SeekReady(c)) return false;
+        SeekTrack(c, out float x0, out float x1, out float cy);
+        float k = c.K;
+        return p.X >= x0 - SeekHitX * k && p.X <= x1 + SeekHitX * k && Math.Abs(p.Y - cy) <= SeekHitY * k;
+    }
+
+    private double SeekFraction(UiContext c, float x)
+    {
+        SeekTrack(c, out float x0, out float x1, out _);
+        return x1 > x0 ? Math.Clamp((x - x0) / (x1 - x0), 0, 1) : 0;
+    }
+
+    private void UpdateSeekHover(UiContext c, Vector2 p)
+    {
+        _seekHover = _pressBtn < 0 && _hoverBtn < 0 && HitSeek(c, p);
+        if (_seekHover) _seekHoverFrac = SeekFraction(c, p.X);
     }
 
     private int HitButton(UiContext c, Vector2 p)
@@ -519,14 +622,21 @@ public sealed class MusicPill : Pill
         // ---- Fortschritt: Zeit, Balken, Rest ----
         if (_op > 0.01f && dur > 0)
         {
-            float px = L + XPad * k, py = T + (XProgY + (1 - _op) * 6) * k, cy = py + XProgH / 2 * k;
+            SeekTrack(c, out float tx0, out float tx1, out float cy);
+            float px = L + XPad * k;
             brush.Color = new Color4(fg.X, fg.Y, fg.Z, 0.5f * _op);
             if (_lElapsed != null) ctx.DrawTextLayout(new Vector2(px, cy - _hTime / 2), _lElapsed, brush, DrawTextOptions.NoSnap);
             if (_lRemain != null) ctx.DrawTextLayout(new Vector2(px + RowW * k - _wRemain, cy - _hTime / 2), _lRemain, brush, DrawTextOptions.NoSnap);
 
-            float tx0 = px + (TimeW + TimeGap) * k, tx1 = px + (RowW - TimeW - TimeGap) * k, th = 4 * k;
+            float th = (4 + 2 * _seekHot) * k;
             brush.Color = new Color4(fg.X, fg.Y, fg.Z, 0.14f * _op);
             ctx.FillRoundedRectangle(RRect(tx0, cy - th / 2, tx1 - tx0, th, th / 2), brush);
+            if (_seekHover)
+            {
+                // Bis zur Maus leicht aufgehellt: dorthin ginge der Sprung
+                brush.Color = new Color4(fg.X, fg.Y, fg.Z, 0.16f * _seekHot * _op);
+                ctx.FillRoundedRectangle(RRect(tx0, cy - th / 2, Math.Max(th, (tx1 - tx0) * (float)_seekHoverFrac), th, th / 2), brush);
+            }
             float fw = (tx1 - tx0) * pct;
             if (fw > 0.5f)
             {
@@ -536,6 +646,12 @@ public sealed class MusicPill : Pill
                 ctx.FillRoundedRectangle(RRect(tx0 - gl / 2, cy - th / 2 - gl / 2, fw + gl, th + gl, (th + gl) / 2), brush);
                 brush.Color = new Color4(a.X, a.Y, a.Z, _op);
                 ctx.FillRoundedRectangle(RRect(tx0, cy - th / 2, Math.Max(th, fw), th, th / 2), brush);
+            }
+            if (_seekHot > 0.01f)
+            {
+                float knob = 6 * k * _seekHot;
+                brush.Color = new Color4(fg.X, fg.Y, fg.Z, _op);
+                ctx.FillEllipse(new Ellipse(new Vector2(tx0 + fw, cy), knob, knob), brush);
             }
         }
 

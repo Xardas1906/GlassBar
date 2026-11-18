@@ -32,7 +32,7 @@ internal sealed class DesktopMouseHook : IDisposable
     private IntPtr _hook;
     private uint _threadId;
     private readonly Action<uint, int, int, int> _forward;
-    private readonly Func<bool> _interactive, _overUi, _editing;
+    private readonly Func<bool> _interactive, _overUi, _editing, _captured;
     private readonly Action<int, int> _rightClick;
     private readonly Action<bool> _desktopChanged;
 
@@ -51,8 +51,10 @@ internal sealed class DesktopMouseHook : IDisposable
     /// Der Hintergrund bekommt die Maus nur über diesen Hook (nativer Hintergrund): Klicks und Mausrad über seiner
     /// Oberfläche werden dann nicht an den Desktop weitergegeben (sonst würde dort markiert/abgewählt).
     /// </param>
+    /// <param name="captured">Ein Element des Hintergrunds hält die Maus gerade fest (Ziehen darf es verlassen).</param>
     public DesktopMouseHook(Action<uint, int, int, int> forward, Func<bool> interactive, Func<bool> overUi, Func<bool> editing,
-                            Action<int, int> rightClick, Action<bool> desktopChanged, bool swallowUiClicks = false, bool allScreens = false)
+                            Action<int, int> rightClick, Action<bool> desktopChanged, bool swallowUiClicks = false, bool allScreens = false,
+                            Func<bool>? captured = null)
     {
         _swallowUiClicks = swallowUiClicks;
         _allScreens = allScreens;
@@ -60,6 +62,7 @@ internal sealed class DesktopMouseHook : IDisposable
         _interactive = interactive;
         _overUi = overUi;
         _editing = editing;
+        _captured = captured ?? (() => false);
         _rightClick = rightClick;
         _desktopChanged = desktopChanged;
 
@@ -120,12 +123,15 @@ internal sealed class DesktopMouseHook : IDisposable
             }
             else if (msg == 0x0202 && !over) _leftDown = false;
             // Gedrückt auf der Oberfläche, losgelassen woanders (über einem Fenster, dem Dock …): das Loslassen
-            // trotzdem melden – sonst hielte eine Karte die Maus fest und bliebe offen.
+            // trotzdem melden – sonst hielte eine Karte die Maus fest und bliebe offen. Das Fenster darunter bekommt
+            // es nicht: Es hat das Drücken nie gesehen, und das Dock löste sonst beim Loslassen etwas aus.
             if (_swallowUiClicks && !over && msg == 0x0202 && _clickToPage)
             {
                 _forward(msg, m.X, m.Y, 0);
                 _clickToPage = false;
                 _leftDown = false;
+                _desktopChanged(false);
+                return (IntPtr)1;
             }
             if (_swallowUiClicks && over && (msg is 0x0201 or 0x0202 && _clickToPage || msg == 0x020A && _overUi()))
             {
@@ -143,7 +149,11 @@ internal sealed class DesktopMouseHook : IDisposable
                 return CallNextHookEx(_hook, code, wParam, lParam);
             }
 
-            if (over && msg is 0x0200 or 0x0201 or 0x0202 or 0x020A) // Bewegung, links runter/hoch, Mausrad
+            // Auf der Oberfläche gedrückt und dort festgehalten: Bewegungen immer melden, auch außerhalb der Karte.
+            // Markieren auf dem Desktop ist nie betroffen – dort gehört das Drücken nicht der Oberfläche.
+            if (_swallowUiClicks && msg == 0x0200 && _leftDown && _clickToPage && _captured())
+                _forward(msg, m.X, m.Y, 0);
+            else if (over && msg is 0x0200 or 0x0201 or 0x0202 or 0x020A) // Bewegung, links runter/hoch, Mausrad
             {
                 // Beim Markieren mit gedrückter Taste keine Bewegungen weitergeben: Der Hintergrund müsste sonst
                 // bei jeder Bewegung mitrechnen und das Markieren ruckelt. (Außer beim Anordnen.)

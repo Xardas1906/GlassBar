@@ -49,10 +49,13 @@ public sealed class NativeStillWindow : IDisposable
     // Alle nativen Hintergründe (einer je Bildschirm), für die Maus-Verteilung
     private static readonly List<NativeStillWindow> All = new();
     private static NativeStillWindow? _lastUnderMouse;
+    // Hintergrund, auf dessen Oberfläche gedrückt wurde: Er bekommt alles bis zum Loslassen (nur Hook-Thread)
+    private static NativeStillWindow? _pressTarget;
 
     /// <summary>
     /// Maus vom Desktop-Hook (Bildschirmkoordinaten) an den Hintergrund des Bildschirms geben, auf dem sie ist.
-    /// Wechselt sie den Bildschirm, bekommt der vorige ein „Maus weg“.
+    /// Wechselt sie den Bildschirm, bekommt der vorige ein „Maus weg“. Nach einem Druck auf seine Oberfläche bleibt
+    /// die Maus bis zum Loslassen bei ihm, auch auf anderen Bildschirmen – sonst bliebe sie dort festgehalten.
     /// </summary>
     public static void Route(uint msg, int x, int y, int wheel)
     {
@@ -60,6 +63,22 @@ public sealed class NativeStillWindow : IDisposable
         lock (All)
             foreach (var w in All)
                 if (w._bounds.Contains(x, y)) { target = w; break; }
+        var pressed = _pressTarget;
+        if (pressed != null && msg != 0x0201)
+        {
+            target = pressed;
+            if (msg == 0x0202) _pressTarget = null;
+        }
+        else if (msg == 0x0201)
+        {
+            // Das Loslassen ging verloren: dort sauber beenden (die Stelle liegt außerhalb, es wird nichts getroffen)
+            if (pressed != null && !ReferenceEquals(pressed, target))
+            {
+                pressed.ForwardMouse(0x0201, x, y);
+                pressed.ForwardMouse(0x0202, x, y);
+            }
+            _pressTarget = target?._renderer?.OverUi == true ? target : null;
+        }
         var last = _lastUnderMouse;
         if (!ReferenceEquals(last, target)) { last?.MouseLeft(); _lastUnderMouse = target; }
         target?.ForwardMouse(msg, x, y, wheel);
@@ -170,7 +189,7 @@ public sealed class NativeStillWindow : IDisposable
         switch (msg)
         {
             case 0x0200:
-                r.Flow.Pointer(pt.X, pt.Y);
+                if (_bounds.Contains(x, y)) r.Flow.Pointer(pt.X, pt.Y); // beim Ziehen kann sie woanders sein
                 r.PostPointer(new Ui.PointerEvent(Ui.PointerKind.Move, pos));
                 break;
             case 0x0201:
@@ -189,6 +208,7 @@ public sealed class NativeStillWindow : IDisposable
     {
         lock (All) All.Remove(this);
         if (ReferenceEquals(_lastUnderMouse, this)) _lastUnderMouse = null;
+        if (ReferenceEquals(_pressTarget, this)) _pressTarget = null;
         _renderer?.Dispose();
         _renderer = null;
         if (_hwnd != IntPtr.Zero) DestroyWindow(_hwnd);

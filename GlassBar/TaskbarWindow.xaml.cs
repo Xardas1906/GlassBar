@@ -948,12 +948,14 @@ public partial class TaskbarWindow : Window
                 _mouseHook = new DesktopMouseHook(NativeStill.NativeStillWindow.Route,
                     () => false, () => r.OverUi, () => r.OverUi,
                     (x, y) => Dispatcher.BeginInvoke(() => DesktopShell.ShowDesktopMenu(x, y)),
-                    on => { if (!on) NativeStill.NativeStillWindow.RouteLeave(); }, swallowUiClicks: true, allScreens: true);
+                    on => { if (!on) NativeStill.NativeStillWindow.RouteLeave(); }, swallowUiClicks: true, allScreens: true,
+                    captured: () => r.PointerCaptured);
                 r.Controls = new NativeStill.Ui.MediaControls
                 {
                     PlayPause = () => Dispatcher.BeginInvoke(() => _media?.PlayPause()),
                     Next = () => Dispatcher.BeginInvoke(() => _media?.Next()),
                     Previous = () => Dispatcher.BeginInvoke(() => _media?.Previous()),
+                    Seek = s => Dispatcher.BeginInvoke(() => _media?.Seek(s)),
                 };
                 NativeStill.StillModules.Register(r, Dispatcher);
                 PushMediaToNative();
@@ -1009,7 +1011,8 @@ public partial class TaskbarWindow : Window
         {
             Title = m.HasMedia && onWall ? m.Title : "", Artist = m.Artist, Album = m.Album, App = m.App,
             CoverBgra = _coverBgra, CoverWidth = _coverW, CoverHeight = _coverH, CoverVersion = _coverVersion,
-            Playing = m.IsPlaying, Paused = m.IsPaused, Position = m.Position, Duration = m.Duration, Stamp = DateTime.Now,
+            Playing = m.IsPlaying, Paused = m.IsPaused, Position = m.Position, Duration = m.Duration, Stamp = m.PositionAt,
+            CanSeek = m.HasMedia && m.CanSeek, SeekGeneration = m.SeekGeneration,
         };
         var v = NativeStill.NativeStillStore.Values;
         bool visible = onWall && v.Bool("showPill") && m.HasMedia && (m.IsPlaying || m.IsPaused);
@@ -1329,7 +1332,7 @@ public partial class TaskbarWindow : Window
         var wins = b.Windows;
         if (wins.Count == 0)
         {
-            if (b.Pin != null) Native.Launch(b.Pin.Path);
+            if (b.LaunchPath is { } path) Native.Launch(path);
             return;
         }
         if (wins.Count == 1)
@@ -1346,8 +1349,7 @@ public partial class TaskbarWindow : Window
 
     private static void NewInstance(AppButton b)
     {
-        if (b.Pin != null) Native.Launch(b.Pin.Path);
-        else if (b.ExecutablePath is { } exe) Native.Launch(exe);
+        if (b.LaunchPath is { } path) Native.Launch(path);
     }
 
     /// <summary>
@@ -1396,8 +1398,9 @@ public partial class TaskbarWindow : Window
         if (!b.IsFolder)
         {
             var w = b.Windows.FirstOrDefault();
-            string? lnk = b.Pin?.Path is { } p && p.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase) ? p : null;
-            string? aumid = w?.AppUserModelID;
+            string? lnk = b.Pin?.Path is { } p && !PackagedApps.IsShellPath(p) && p.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase) ? p : null;
+            // Store-Apps haben oft keine AUMID am Fenster, und ohne laufendes Fenster gibt es gar keines
+            string? aumid = string.IsNullOrEmpty(w?.AppUserModelID) ? b.PackagedAumid : w.AppUserModelID;
             string? exe = b.ExecutablePath;
             IntPtr hwnd = w?.Handle ?? IntPtr.Zero;
             try
@@ -1455,17 +1458,18 @@ public partial class TaskbarWindow : Window
 
         if (b.IsFolder)
             items.Add(("Im Explorer öffnen", "", () => Native.Launch(b.Pin!.Path), true));
-        else if (b.Pin != null || b.ExecutablePath != null)
+        else if (b.LaunchPath != null)
             items.Add((b.IsRunning ? "Neues Fenster" : "Öffnen", "", () => NewInstance(b), true));
 
         if (b.Pin != null)
         {
-            items.Add(("Dateispeicherort öffnen", "",
-                () => Native.Launch("explorer.exe", $"/select,\"{b.Pin.Target}\""), true));
+            if (b.Pin.Aumid == null) // Store-Apps haben keinen zugänglichen Speicherort
+                items.Add(("Dateispeicherort öffnen", "",
+                    () => Native.Launch("explorer.exe", $"/select,\"{b.Pin.Target}\""), true));
             items.Add(("Von Taskleiste lösen", "", () => Model.Unpin(b.Pin), true));
         }
-        else if (b.ExecutablePath is { } exe)
-            items.Add(("An Taskleiste anheften", "", () => Model.AddPin(exe), true));
+        else if (b.PinPath is { } pinPath)
+            items.Add(("An Taskleiste anheften", "", () => Model.AddPin(pinPath), true));
 
         if (b.IsRunning)
         {
@@ -1494,7 +1498,7 @@ public partial class TaskbarWindow : Window
         if (e.Data.GetData(DragFormat) is AppButton src && src != target)
         {
             if (src.Pin != null) Model.MovePin(src.Pin, index);
-            else if (src.ExecutablePath is { } exe) Model.AddPin(exe, index);
+            else if (src.PinPath is { } pinPath) Model.AddPin(pinPath, index);
         }
         else if (e.Data.GetData(DataFormats.FileDrop) is string[] paths)
             foreach (var p in paths) Model.AddPin(p, index++);
@@ -1508,7 +1512,7 @@ public partial class TaskbarWindow : Window
         if (e.Data.GetData(DragFormat) is AppButton src)
         {
             if (src.Pin != null) Model.MovePin(src.Pin, Model.Pins.Count - 1);
-            else if (src.ExecutablePath is { } exe) Model.AddPin(exe);
+            else if (src.PinPath is { } pinPath) Model.AddPin(pinPath);
         }
         else if (e.Data.GetData(DataFormats.FileDrop) is string[] paths)
             foreach (var p in paths) Model.AddPin(p);

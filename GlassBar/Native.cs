@@ -296,6 +296,18 @@ internal static class Native
 
     public static void Launch(string path, string? args = null)
     {
+        // Programme in Paketordnern (Microsoft Store) verweigern den direkten Start
+        if (PackagedApps.IsPackageExe(path))
+        {
+            string shellPath = PackagedApps.Normalize(path);
+            if (!PackagedApps.IsShellPath(shellPath))
+            {
+                System.Windows.MessageBox.Show($"{L.T("Konnte nicht geöffnet werden:")}\n{path}\n\n{L.T("Diese App ist nicht mehr installiert.")}", "GlassBar",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+            path = shellPath;
+        }
         try
         {
             var psi = new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true };

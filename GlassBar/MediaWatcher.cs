@@ -29,6 +29,20 @@ public class MediaWatcher : INotifyPropertyChanged
     public double Position { get; private set; }
     public double Duration { get; private set; }
     public bool IsPaused { get; private set; }
+    /// <summary>Der Player erlaubt das Springen im Lied.</summary>
+    public bool CanSeek { get; private set; }
+    /// <summary>Zeitpunkt, zu dem <see cref="Position"/> galt.</summary>
+    public DateTime PositionAt { get; private set; } = DateTime.Now;
+    /// <summary>Zählt jeden Sprung und jedes Verwerfen eines Sprungs.</summary>
+    public int SeekGeneration => _seekGen;
+
+    // Zeitleiste und laufender Sprung
+    private TimeSpan _timelineStart;
+    private double? _seekTarget;
+    private DateTime _seekAt, _seekUntil;
+    private int _seekGen;
+    private bool? _wasPlaying;
+    private DateTime _playingSince = DateTime.MinValue;
 
     /// <summary>Nur die Abspielposition hat sich geändert.</summary>
     public event Action? TimelineChanged;
@@ -57,6 +71,10 @@ public class MediaWatcher : INotifyPropertyChanged
             _session.TimelinePropertiesChanged -= OnTimeline;
         }
         _session = s;
+        ResetSeek();
+        CanSeek = false;
+        _wasPlaying = null;
+        _playingSince = DateTime.MinValue;
         if (_session != null)
         {
             _session.MediaPropertiesChanged += OnChanged;
@@ -70,15 +88,51 @@ public class MediaWatcher : INotifyPropertyChanged
 
     private void OnTimeline(GlobalSystemMediaTransportControlsSession s, object e) => _ui.BeginInvoke(() =>
     {
+        // Immer die aktuelle Sitzung lesen: Meldungen einer abgelösten Sitzung dürfen nichts mehr setzen.
+        var current = _session;
+        if (current == null) return;
         try
         {
-            var t = s.GetTimelineProperties();
-            Position = t.Position.TotalSeconds;
-            Duration = (t.EndTime - t.StartTime).TotalSeconds;
+            ReadTimeline(current);
             TimelineChanged?.Invoke();
         }
         catch { }
     });
+
+    /// <summary>Zeitleiste übernehmen; kurz nach einem Sprung bleibt die vorweggenommene Position gegen alte Meldungen stehen.</summary>
+    private void ReadTimeline(GlobalSystemMediaTransportControlsSession s)
+    {
+        var t = s.GetTimelineProperties();
+        bool playing = s.GetPlaybackInfo().PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+        var now = DateTime.Now;
+        if (playing && _wasPlaying == false) _playingSince = now;
+        _wasPlaying = playing;
+
+        var n = MediaTimeline.Normalize(t.StartTime, t.EndTime, t.Position);
+        var at = MediaTimeline.SanitizeStamp(t.LastUpdatedTime.LocalDateTime, now, n.Position, n.Duration, playing, _playingSince);
+        _timelineStart = n.Start;
+        Duration = n.Duration;
+        if (_seekTarget is double target)
+        {
+            double reported = MediaTimeline.Advance(n.Position, at, now, playing, n.Duration);
+            if (MediaTimeline.HoldSeek(target, _seekAt, _seekUntil, reported, now, playing, n.Duration, out double expected))
+            {
+                Position = expected;
+                PositionAt = now;
+                return;
+            }
+            _seekTarget = null;
+        }
+        Position = n.Position;
+        PositionAt = at;
+    }
+
+    /// <summary>Laufenden Sprung vergessen (anderes Lied, andere Sitzung); späte Antworten zählen nicht mehr.</summary>
+    private void ResetSeek()
+    {
+        _seekTarget = null;
+        _seekGen++;
+    }
 
     private async Task UpdateAsync()
     {
@@ -86,7 +140,7 @@ public class MediaWatcher : INotifyPropertyChanged
         var s = _session;
         if (s == null)
         {
-            HasMedia = false; IsPlaying = false; Title = Artist = App = ""; Cover = null;
+            HasMedia = false; IsPlaying = false; CanSeek = false; Title = Artist = App = ""; Cover = null;
             Raise();
             return;
         }
@@ -116,13 +170,15 @@ public class MediaWatcher : INotifyPropertyChanged
             }
             if (v != _version) return; // inzwischen neuere Daten
 
+            if ((props?.Title ?? "") != Title || (props?.Artist ?? "") != Artist) ResetSeek();
             Title = props?.Title ?? "";
             Artist = props?.Artist ?? "";
             Cover = cover;
             CoverDataUrl = coverUrl;
             Album = props?.AlbumTitle ?? "";
             IsPaused = info.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Paused;
-            try { var t = s.GetTimelineProperties(); Position = t.Position.TotalSeconds; Duration = (t.EndTime - t.StartTime).TotalSeconds; } catch { }
+            CanSeek = info.Controls?.IsPlaybackPositionEnabled == true;
+            try { ReadTimeline(s); } catch { }
             IsPlaying = info.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
             HasMedia = !string.IsNullOrWhiteSpace(Title) &&
                        info.PlaybackStatus is GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing
@@ -132,6 +188,7 @@ public class MediaWatcher : INotifyPropertyChanged
         catch
         {
             HasMedia = false;
+            CanSeek = false;
         }
         Raise();
     }
@@ -141,4 +198,44 @@ public class MediaWatcher : INotifyPropertyChanged
     public async void PlayPause() { try { if (_session != null) await _session.TryTogglePlayPauseAsync(); } catch { } }
     public async void Next() { try { if (_session != null) await _session.TrySkipNextAsync(); } catch { } }
     public async void Previous() { try { if (_session != null) await _session.TrySkipPreviousAsync(); } catch { } }
+
+    /// <summary>
+    /// Im Lied springen (Sekunden ab Liedanfang, nur vom UI-Thread). Die Anzeige folgt sofort; lehnt der Player ab,
+    /// springt sie gleich zurück, und bewegt er sich trotz Zusage nicht, nach Ablauf der Frist.
+    /// </summary>
+    public async void Seek(double seconds)
+    {
+        var s = _session;
+        if (s == null || !CanSeek || Duration <= 0) return;
+        double target = Math.Clamp(seconds, 0, Duration);
+        double oldPosition = Position;
+        var oldAt = PositionAt;
+        int gen = ++_seekGen;
+        var now = DateTime.Now;
+        var until = now.AddSeconds(MediaTimeline.HoldSeconds);
+        _seekTarget = target; _seekAt = now; _seekUntil = until;
+        Position = target; PositionAt = now;
+        TimelineChanged?.Invoke();
+
+        bool ok = false;
+        try { ok = await s.TryChangePlaybackPositionAsync(MediaTimeline.SeekTicks(_timelineStart, target)); } catch { }
+        if (gen != _seekGen) return; // inzwischen neuer Sprung oder anderes Lied
+        if (!ok)
+        {
+            Position = oldPosition; PositionAt = oldAt;
+            EndSeek(s);
+            return;
+        }
+
+        var wait = until - DateTime.Now + TimeSpan.FromMilliseconds(50);
+        if (wait > TimeSpan.Zero) await Task.Delay(wait);
+        if (gen == _seekGen && _seekTarget != null) EndSeek(s);
+    }
+
+    private void EndSeek(GlobalSystemMediaTransportControlsSession s)
+    {
+        _seekTarget = null;
+        try { ReadTimeline(s); } catch { }
+        TimelineChanged?.Invoke();
+    }
 }
