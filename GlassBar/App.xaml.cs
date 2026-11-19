@@ -121,6 +121,7 @@ public partial class App : Application
         _shell.ExplorerHelper.HideExplorerTaskbar = true;
 
         Updater.StartBackgroundCheck();
+        TrayRescue.Start(_shell); // Symbole von Programmen nachholen, die vor GlassBar gestartet sind
     }
 
     /// <summary>
@@ -214,6 +215,7 @@ public partial class App : Application
     {
         if (_cleanedUp) return;
         _cleanedUp = true;
+        TrayRescue.Stop();
         try
         {
             NativeStill.SecondaryWallpapers.Shutdown();
