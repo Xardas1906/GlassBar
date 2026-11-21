@@ -55,7 +55,7 @@ public partial class SettingsWindow : Window
         BuildStillNav();
         DataContext = App.Config;
         AutostartBox.IsChecked = Native.Autostart;
-        BuildBackgroundStillRows();
+        BuildInlineStillRows();
         RefreshEffectTuning();
         BuildFieldPreviews();
         AddHandler(ToggleButton.CheckedEvent, new RoutedEventHandler((_, e) =>
@@ -250,27 +250,51 @@ public partial class SettingsWindow : Window
     }
 
     /// <summary>
-    /// Einstellungen von „Still“, die zum Hintergrundbild gehören (Palette, Albumcover, Tönung, Körnung, Musikleuchten,
-    /// Qualität), stehen unter „Hintergrund“ – gebaut mit denselben Zeilen wie die Still-Seite (Reiter „Hintergrund“).
+    /// Die Einstellungen der Desktop-Oberfläche stehen in den passenden Abschnitten der Hauptseite (Aussehen, Uhr &amp;
+    /// Wecker, Musik, Wetter, Hintergrund) – gebaut mit denselben Zeilen wie die Seite „Pillen“.
     /// </summary>
-    private void BuildBackgroundStillRows()
+    private void BuildInlineStillRows()
     {
         if (_still == null) LoadNativeStill();
-        StillColorRows.Children.Clear();
-        StillLookRows.Children.Clear();
-        StillMouseRows.Children.Clear();
-        foreach (var s in StillSettings.All.Where(x => x.Tab == "Hintergrund"))
+        _inlinePanels = new[] { StillColorRows, StillLookRows, StillMouseRows, StillGlassRows, StillAppearanceRows,
+                                StillClockRows, StillAlarmRows, StillMusicRows, StillWeatherRows };
+        foreach (var p in _inlinePanels) p.Children.Clear();
+        _inlineRows.Clear();
+        foreach (var s in StillSettings.All.Where(StillSettings.IsInline))
         {
-            var target = s.Key is "theme" or "followAlbum" or "tintStrength" ? StillColorRows
-                       : s.Key.StartsWith("water") || s.Key == "bgParallax" ? StillMouseRows
-                       : StillLookRows;
+            var target = InlinePanel(s);
             if (s.Section != null)
+            {
+                // Überschrift; davor eine Linie, wenn darüber schon Zeilen der Karte stehen
+                if (target != StillColorRows && target != StillMouseRows)
+                    target.Children.Add(new Border { Style = (Style)FindResource("RowLine") });
                 target.Children.Add(new TextBlock { Text = L.T(s.Section), FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 16, 0, 2) });
-            else if (target.Children.Count > 0 || target == StillLookRows)
+            }
+            else if (target.Children.Count > 0 || target == StillLookRows || target == StillClockRows)
                 target.Children.Add(new Border { Style = (Style)FindResource("RowLine") });
-            target.Children.Add(BuildStillRow(s));
+            var row = BuildStillRow(s);
+            _inlineRows[s.Key] = row;
+            target.Children.Add(row);
         }
     }
+
+    /// <summary>Eingebaute Zeilen nach Schlüssel (für die Suche).</summary>
+    private readonly Dictionary<string, FrameworkElement> _inlineRows = new();
+
+    private StackPanel[] _inlinePanels = Array.Empty<StackPanel>();
+
+    private StackPanel InlinePanel(StillSetting s) => s.Tab switch
+    {
+        "Aussehen" => StillAppearanceRows,
+        "Uhr" => StillClockRows,
+        "Wecker" => StillAlarmRows,
+        "Musik" => StillMusicRows,
+        "Wetter" => StillWeatherRows,
+        _ => s.Key is "theme" or "followAlbum" or "tintStrength" ? StillColorRows
+           : s.Key.StartsWith("water") || s.Key == "bgParallax" ? StillMouseRows
+           : s.Key is "rainGlass" or "glassAmount" or "glassLook" ? StillGlassRows
+           : StillLookRows,
+    };
 
     private bool _colorSourceLoad;
 
@@ -309,7 +333,7 @@ public partial class SettingsWindow : Window
     private void RenderStillTab()
     {
         if (_still == null) return;
-        StillTitle.Text = $"Still · {StillSettings.TabName(_stillTab)}";
+        StillTitle.Text = $"{L.T("Pillen")} · {StillSettings.TabName(_stillTab)}";
         StillContent.Children.Clear();
         StillScroll.ScrollToTop();
         var card = new StackPanel();
@@ -795,7 +819,7 @@ public partial class SettingsWindow : Window
     {
         App.Config.ResetAppearanceAndBehavior();
         _still = null; // Darstellung kann sich geändert haben -> Werte neu lesen
-        BuildBackgroundStillRows();
+        BuildInlineStillRows();
         DataContext = null;
         DataContext = App.Config;
         RefreshEffectTuning();

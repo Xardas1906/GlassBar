@@ -330,7 +330,8 @@ public sealed class RainGlass : IDisposable
     public void Update(double dt, bool on, StillValues settings, double surge, int width, int height, double weatherRain = 0)
     {
         // Wie stark es regnet, aus dem Klang: Intensität und Wogen, und wie viel davon man auf der Scheibe will.
-        _wanted = (on || weatherRain > 0) && settings.Bool("soundFx") && settings.Bool("rainGlass");
+        // Klangwelt Regen braucht „Effekte auf dem Bildschirm“ (Pillen › Klangwelten); Regen im Wetter-Hintergrund nicht
+        _wanted = (on && settings.Bool("soundFx") || weatherRain > 0) && settings.Bool("rainGlass");
         _more = settings.Num("glassAmount");
         _look = settings.Num("glassLook");
         double g = _wanted

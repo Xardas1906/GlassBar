@@ -66,7 +66,7 @@ public static partial class Strings
         ["Mit dem Hintergrund verschmelzen"] = "Blend into the background",
         ["Datum"] = "Date",
         ["Heutige Aufgaben"] = "Today's tasks",
-        ["Die Aufgaben selbst trägst du unter „Hintergrund“ ein."] = "You enter the tasks themselves under “Wallpaper”.",
+        ["Die Aufgaben selbst trägst du weiter unten ein."] = "You enter the tasks themselves further down.",
         ["Feiern, wenn erledigt"] = "Celebrate when done",
         ["Erledigt-Klang"] = "Done sound",
         ["Position"] = "Position",

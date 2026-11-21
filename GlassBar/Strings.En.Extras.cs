@@ -38,7 +38,7 @@ public static partial class Strings
         ["Wetter zeigen"] = "Show weather",
         ["Echtes Wetter"] = "Real weather",
         ["Sternennacht"] = "Starry night",
-        ["„Echtes Wetter“ braucht eine Stadt (Uhr, Musik & Wetter). Die anderen zeigen das Wetter dauerhaft, z. B. zum Ausprobieren."] = "“Real weather” needs a city (Clock, music & weather). The others show that weather permanently, e.g. to try it out.",
+        ["„Echtes Wetter“ braucht eine Stadt (Abschnitt Wetter). Die anderen zeigen das Wetter dauerhaft, z. B. zum Ausprobieren."] = "“Real weather” needs a city (Weather section). The others show that weather permanently, e.g. to try it out.",
         ["Sternenhimmel"] = "Starry sky",
         ["Seide"] = "Silk",
         ["Lavalampe"] = "Lava lamp",
@@ -89,6 +89,18 @@ public static partial class Strings
         ["Tastatur und Maus"] = "Keyboard and mouse",
         ["Win+1 … 9 öffnet das Programm an dieser Stelle im Dock"] = "Win+1 … 9 opens the app at that position in the dock",
         ["Wie ein Klick aufs Symbol. Mit Umschalt öffnet sich ein neues Fenster."] = "Like clicking the icon. With Shift, a new window opens.",
+        // ---------- 1.6: Einstellungen neu geordnet ----------
+        ["Uhr & Wecker"] = "Clock & alarm",
+        ["Auf dem Desktop"] = "On the desktop",
+        ["Timer und Wecker"] = "Timer and alarm",
+        ["Pillen"] = "Pills",
+        ["Regen auf dem Bildschirm"] = "Rain on the screen",
+        ["Die kleinen Werkzeuge unten auf dem Desktop. Änderungen sieht man sofort."] = "The little tools at the bottom of the desktop. Changes show up right away.",
+        ["Uhr, Pillen und Karten auf dem Desktop."] = "Clock, pills and cards on the desktop.",
+        ["Auf dem Desktop nur, wenn der Hintergrund von GlassBar eingeschaltet ist."] = "On the desktop only when GlassBar's wallpaper is on.",
+        ["Gilt für das Dock, den Desktop und den Hintergrund „Wetter“."] = "Used by the dock, the desktop and the “Weather” wallpaper.",
+        ["Wenn der Hintergrund „Wetter“ Regen zeigt oder die Klangwelt Regen läuft, rinnen Tropfen über den Bildschirm."] =
+            "When the “Weather” wallpaper shows rain or the rain soundscape is playing, drops run down the screen.",
         ["Mausrad im Dock"] = "Mouse wheel in the dock",
         ["Über Musik und Schnelleinstellungen: Lautstärke. Über einem Programm mit mehreren Fenstern: zwischen ihnen wechseln."] =
             "Over music and quick settings: volume. Over an app with several windows: switch between them.",

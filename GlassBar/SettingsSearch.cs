@@ -91,6 +91,8 @@ public partial class SettingsWindow
             var sec = section;
             foreach (var el in Descendants(child))
             {
+                // Zeilen aus der Still-Liste kommen unten einzeln dazu
+                if (_inlinePanels.Any(p => p == el || p.IsAncestorOf(el))) continue;
                 string? text = null, extra = null;
                 if (el is TextBlock tb && !BindingOperations.IsDataBound(tb, TextBlock.TextProperty)
                     && (tb.Style == labelStyle || tb.Style == null && tb.Foreground != sub))
@@ -113,18 +115,42 @@ public partial class SettingsWindow
             }
         }
 
-        // Still: Kategorien und alle Einstellungen
+        // Einstellungen der Desktop-Oberfläche (aus der Still-Liste gebaut): eingebaute in ihrem Abschnitt der
+        // Hauptseite, die übrigen auf der Seite „Pillen“
+        string pills = L.T("Pillen");
         foreach (var tab in StillSettings.Tabs)
-            list.Add(Entry(StillSettings.TabName(tab), "Still", $"{tab} hintergrund wallpaper", () => GoToStill(tab, null)));
-        foreach (var s in StillSettings.All.Where(x => x.Tab != "Hintergrund"))   // die stehen unter „Hintergrund“ und werden dort gefunden
+            list.Add(Entry(StillSettings.TabName(tab), pills, $"{tab} pille desktop still", () => GoToStill(tab, null)));
+        foreach (var s in StillSettings.All)
         {
             // Angezeigt wird die Übersetzung; das Deutsche bleibt im Suchtext, damit beide Sprachen finden
             var opts = s.Options == null ? "" : string.Join(" ", s.Options.Select(o => o.Label == L.T(o.Label) ? o.Label : $"{o.Label} {L.T(o.Label)}"));
             var stillLabel = L.T(s.Label);
-            var stillExtra = $"{s.Label} {s.Tab} {s.Note} {s.Section} {(L.En ? $"{L.T(s.Note)} {L.T(s.Section)} " : "")}{opts} hintergrund wallpaper";
-            list.Add(Entry(stillLabel, $"Still › {StillSettings.TabName(s.Tab)}", stillExtra, () => GoToStill(s.Tab, stillLabel)));
+            var stillExtra = $"{s.Label} {s.Tab} {s.Note} {s.Section} {(L.En ? $"{L.T(s.Note)} {L.T(s.Section)} " : "")}{opts} desktop still";
+            if (StillSettings.IsInline(s))
+            {
+                var panel = InlinePanel(s);
+                if (SectionOf(panel) is not { } sec) continue;
+                var key = s.Key;
+                list.Add(Entry(stillLabel, sec.Text + (s.Section != null ? $" › {L.T(s.Section)}" : ""), stillExtra, () =>
+                    GoToMain(sec, _inlineRows.GetValueOrDefault(key))));
+            }
+            else
+                list.Add(Entry(stillLabel, $"{pills} › {StillSettings.TabName(s.Tab)}", stillExtra + " pille", () => GoToStill(s.Tab, stillLabel)));
         }
         return list;
+    }
+
+    /// <summary>Abschnittsüberschrift der Hauptseite, unter der ein Element steht.</summary>
+    private TextBlock? SectionOf(FrameworkElement el)
+    {
+        var sectionStyle = FindResource("Section");
+        TextBlock? last = null;
+        foreach (var child in Content_.Children.OfType<FrameworkElement>())
+        {
+            if (child is TextBlock { Style: var st } head && st == sectionStyle) last = head;
+            else if (child == el || child.IsAncestorOf(el)) return last;
+        }
+        return null;
     }
 
     /// <summary>Zusätzliche Suchbegriffe für Einstellungen, die anders heißen, als man sucht.</summary>
@@ -183,8 +209,11 @@ public partial class SettingsWindow
     private FrameworkElement? RowOf(FrameworkElement el)
     {
         DependencyObject? cur = el;
+        var rowStyle = FindResource("Row");
         while (cur != null)
         {
+            // eingebaute Zeilen (z. B. „Auf dem Desktop“) liegen eine Ebene tiefer: die Zeile selbst nehmen
+            if (cur is DockPanel { Style: var rs } && rs == rowStyle) return (FrameworkElement)cur;
             var parent = LogicalTreeHelper.GetParent(cur);
             if (parent is Panel p && LogicalTreeHelper.GetParent(p) is Border { Style: var st } && st == FindResource("CardBox"))
                 return cur as FrameworkElement;
@@ -204,7 +233,7 @@ public partial class SettingsWindow
             var y = el.TransformToAncestor(Content_).Transform(new Point(0, 0)).Y;
             _navClickAt = DateTime.Now;
             Scroller.ScrollToVerticalOffset(Math.Max(0, y - (target == null ? 8 : 90)));
-            if (target != null) Flash(RowOf(target));
+            if (target != null) Flash(_inlineRows.ContainsValue(target) ? target : RowOf(target));
         }, System.Windows.Threading.DispatcherPriority.Loaded);
     }
 

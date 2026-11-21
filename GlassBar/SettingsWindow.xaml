@@ -339,8 +339,14 @@
             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecItems" Checked="Nav_Checked">
                 <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8A9;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Dock-Inhalt"/></StackPanel>
             </RadioButton>
-            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecInfo" Checked="Nav_Checked">
-                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE823;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Uhr, Musik &amp; Wetter"/></StackPanel>
+            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecClock" Checked="Nav_Checked">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE823;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Uhr &amp; Wecker"/></StackPanel>
+            </RadioButton>
+            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecMusic" Checked="Nav_Checked">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8D6;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Musik"/></StackPanel>
+            </RadioButton>
+            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecWeather" Checked="Nav_Checked">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE753;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Wetter"/></StackPanel>
             </RadioButton>
             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecHide" Checked="Nav_Checked">
                 <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7B3;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Ein- und Ausblenden"/></StackPanel>
@@ -360,11 +366,10 @@
             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="SecSystem" Checked="Nav_Checked">
                 <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE770;" Style="{StaticResource NavGlyph}"/><TextBlock Text="System"/></StackPanel>
             </RadioButton>
-            <!-- eigene Seite: Einstellungen des Hintergrunds -->
+            <!-- eigene Seite: die Pillen auf dem Desktop (Trinken, Pomodoro, …) mit Unterpunkten -->
             <Border Height="1" Background="#20FFFFFF" Margin="10,10,10,6"/>
-            <TextBlock Text="Hintergrund-Einstellungen" FontSize="11.5" Foreground="{StaticResource Sub}" Margin="14,2,0,4"/>
             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="StillPage" Checked="Nav_Checked">
-                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE771;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Still"/></StackPanel>
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE71D;" Style="{StaticResource NavGlyph}"/><TextBlock Text="Pillen"/></StackPanel>
             </RadioButton>
         </StackPanel>
         </Grid>
@@ -469,6 +474,8 @@
                                 <LineBreak/><Run Text="Für die Punkte unter laufenden Programmen und die Fortschrittsbalken." Foreground="{StaticResource Sub}" FontSize="12"/>
                             </TextBlock>
                         </DockPanel>
+                        <!-- Schrift, Größe, Karten auf dem Desktop (früher Still › Aussehen und Schrift) -->
+                        <StackPanel x:Name="StillAppearanceRows" Margin="0,0,0,6" IsEnabled="{Binding ShowWallpaper}"/>
                     </StackPanel>
                 </Border>
 
@@ -649,71 +656,6 @@
                                 <LineBreak/><Run Text="Minimiert alle Fenster wie der schmale Knopf an der Windows-Taskleiste; nochmal klicken holt sie zurück." Foreground="{StaticResource Sub}" FontSize="12"/>
                             </TextBlock>
                         </DockPanel>
-                    </StackPanel>
-                </Border>
-
-                <!-- ============ Uhr, Musik &amp; Wetter ============ -->
-                <TextBlock x:Name="SecInfo" Text="Uhr, Musik &amp; Wetter" Style="{StaticResource Section}"/>
-                <Border Style="{StaticResource CardBox}">
-                    <StackPanel>
-                        <DockPanel Style="{StaticResource Row}">
-                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowMusic}"/>
-                            <TextBlock Style="{StaticResource Label}">
-                                Musik: was gerade läuft, mit Cover und Tasten
-                                <LineBreak/><Run Text="Für alles, was in der Windows-Mediensteuerung erscheint (Spotify, Browser …)." Foreground="{StaticResource Sub}" FontSize="12"/>
-                            </TextBlock>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <StackPanel Margin="0,12,0,6" IsEnabled="{Binding ShowWallpaper}">
-                            <TextBlock Margin="0,0,0,10">
-                                Musik anzeigen
-                                <LineBreak/><Run Text="Im Hintergrund nur, wenn der Hintergrund „Still“ eingeschaltet ist." Foreground="{StaticResource Sub}" FontSize="12"/>
-                            </TextBlock>
-                            <WrapPanel>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceMusic" Content="Im Dock"
-                                             IsChecked="{Binding MusicPlacement, Converter={StaticResource Eq}, ConverterParameter=Dock}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceMusic" Content="Im Hintergrund"
-                                             IsChecked="{Binding MusicPlacement, Converter={StaticResource Eq}, ConverterParameter=Wallpaper}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceMusic" Content="Beides"
-                                             IsChecked="{Binding MusicPlacement, Converter={StaticResource Eq}, ConverterParameter=Both}"/>
-                            </WrapPanel>
-                        </StackPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}">
-                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowWeather}"/>
-                            <TextBlock Text="Wetter neben der Uhr" Style="{StaticResource Label}"/>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <StackPanel Margin="0,12,0,6" IsEnabled="{Binding ShowWallpaper}">
-                            <TextBlock Margin="0,0,0,10">
-                                Wetter anzeigen
-                                <LineBreak/><Run Text="Im Hintergrund nur, wenn der Hintergrund „Still“ eingeschaltet ist." Foreground="{StaticResource Sub}" FontSize="12"/>
-                            </TextBlock>
-                            <WrapPanel>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceWeather" Content="Im Dock"
-                                             IsChecked="{Binding WeatherPlacement, Converter={StaticResource Eq}, ConverterParameter=Dock}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceWeather" Content="Im Hintergrund"
-                                             IsChecked="{Binding WeatherPlacement, Converter={StaticResource Eq}, ConverterParameter=Wallpaper}"/>
-                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceWeather" Content="Beides"
-                                             IsChecked="{Binding WeatherPlacement, Converter={StaticResource Eq}, ConverterParameter=Both}"/>
-                            </WrapPanel>
-                        </StackPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding ShowWeather}">
-                            <Grid DockPanel.Dock="Right" Width="220" VerticalAlignment="Center">
-                                <Border CornerRadius="6" Background="#18FFFFFF" BorderBrush="#26FFFFFF" BorderThickness="1"/>
-                                <TextBlock x:Name="CityHint" Foreground="#70FFFFFF" FontSize="12" Margin="10,0,0,0"
-                                           VerticalAlignment="Center" IsHitTestVisible="False"/>
-                                <TextBox x:Name="CityBox" Text="{Binding WeatherCity, UpdateSourceTrigger=LostFocus}"
-                                         Background="Transparent" BorderThickness="0" Foreground="White" CaretBrush="White"
-                                         FontSize="12" Padding="6,7" LostFocus="City_LostFocus" KeyDown="City_KeyDown"
-                                         TextChanged="City_TextChanged"/>
-                            </Grid>
-                            <TextBlock Style="{StaticResource Label}">
-                                Stadt fürs Wetter
-                                <LineBreak/><Run Text="Leer lassen, um die Stadt aus dem Hintergrund „Still“ zu nehmen." Foreground="{StaticResource Sub}" FontSize="12"/>
-                            </TextBlock>
-                        </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowTray}"/>
@@ -724,7 +666,15 @@
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowQuickSettings}"/>
                             <TextBlock Text="Schnelleinstellungen (WLAN, Lautstärke, Akku)" Style="{StaticResource Label}"/>
                         </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ Uhr & Wecker ============ -->
+                <!-- Dock-Uhr und die Uhr auf dem Desktop (früher Still › Uhr, Schrift, Wecker) -->
+                <TextBlock x:Name="SecClock" Text="Uhr &amp; Wecker" Style="{StaticResource Section}"/>
+                <Border Style="{StaticResource CardBox}">
+                    <StackPanel>
+                        <TextBlock Text="Im Dock" FontWeight="SemiBold" Margin="0,12,0,2"/>
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowClock}"/>
                             <TextBlock Text="Uhr" Style="{StaticResource Label}"/>
@@ -739,6 +689,94 @@
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowSeconds}"/>
                             <TextBlock Text="Sekunden anzeigen" Style="{StaticResource Label}"/>
                         </DockPanel>
+                        <StackPanel x:Name="StillClockRows" IsEnabled="{Binding ShowWallpaper}"/>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding ShowWallpaper}">
+                            <Grid DockPanel.Dock="Right" Width="320" VerticalAlignment="Center">
+                                <Border CornerRadius="6" Background="#18FFFFFF" BorderBrush="#26FFFFFF" BorderThickness="1"/>
+                                <TextBox x:Name="TasksBox" Text="{Binding WallpaperTasks, UpdateSourceTrigger=LostFocus}"
+                                         Background="Transparent" BorderThickness="0" Foreground="White" CaretBrush="White"
+                                         FontSize="12" Padding="6,7" LostFocus="City_LostFocus" KeyDown="Tasks_KeyDown"/>
+                            </Grid>
+                            <TextBlock Style="{StaticResource Label}">
+                                Heutige Aufgaben
+                                <LineBreak/><Run Text="Erscheinen unter der Uhr. Mehrere mit ; trennen." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <StackPanel x:Name="StillAlarmRows" Margin="0,0,0,6" IsEnabled="{Binding ShowWallpaper}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ Musik ============ -->
+                <TextBlock x:Name="SecMusic" Text="Musik" Style="{StaticResource Section}"/>
+                <Border Style="{StaticResource CardBox}">
+                    <StackPanel>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowMusic}"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                Musik: was gerade läuft, mit Cover und Tasten
+                                <LineBreak/><Run Text="Für alles, was in der Windows-Mediensteuerung erscheint (Spotify, Browser …)." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <StackPanel Margin="0,12,0,6" IsEnabled="{Binding ShowWallpaper}">
+                            <TextBlock Margin="0,0,0,10">
+                                Musik anzeigen
+                                <LineBreak/><Run Text="Auf dem Desktop nur, wenn der Hintergrund von GlassBar eingeschaltet ist." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceMusic" Content="Im Dock"
+                                             IsChecked="{Binding MusicPlacement, Converter={StaticResource Eq}, ConverterParameter=Dock}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceMusic" Content="Auf dem Desktop"
+                                             IsChecked="{Binding MusicPlacement, Converter={StaticResource Eq}, ConverterParameter=Wallpaper}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceMusic" Content="Beides"
+                                             IsChecked="{Binding MusicPlacement, Converter={StaticResource Eq}, ConverterParameter=Both}"/>
+                            </WrapPanel>
+                        </StackPanel>
+                        <StackPanel x:Name="StillMusicRows" Margin="0,0,0,6" IsEnabled="{Binding ShowWallpaper}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ Wetter ============ -->
+                <TextBlock x:Name="SecWeather" Text="Wetter" Style="{StaticResource Section}"/>
+                <Border Style="{StaticResource CardBox}">
+                    <StackPanel>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowWeather}"/>
+                            <TextBlock Text="Wetter neben der Uhr" Style="{StaticResource Label}"/>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding ShowWeather}">
+                            <Grid DockPanel.Dock="Right" Width="220" VerticalAlignment="Center">
+                                <Border CornerRadius="6" Background="#18FFFFFF" BorderBrush="#26FFFFFF" BorderThickness="1"/>
+                                <TextBlock x:Name="CityHint" Foreground="#70FFFFFF" FontSize="12" Margin="10,0,0,0"
+                                           VerticalAlignment="Center" IsHitTestVisible="False"/>
+                                <TextBox x:Name="CityBox" Text="{Binding WeatherCity, UpdateSourceTrigger=LostFocus}"
+                                         Background="Transparent" BorderThickness="0" Foreground="White" CaretBrush="White"
+                                         FontSize="12" Padding="6,7" LostFocus="City_LostFocus" KeyDown="City_KeyDown"
+                                         TextChanged="City_TextChanged"/>
+                            </Grid>
+                            <TextBlock Style="{StaticResource Label}">
+                                Stadt fürs Wetter
+                                <LineBreak/><Run Text="Gilt für das Dock, den Desktop und den Hintergrund „Wetter“." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <StackPanel Margin="0,12,0,6" IsEnabled="{Binding ShowWallpaper}">
+                            <TextBlock Margin="0,0,0,10">
+                                Wetter anzeigen
+                                <LineBreak/><Run Text="Auf dem Desktop nur, wenn der Hintergrund von GlassBar eingeschaltet ist." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceWeather" Content="Im Dock"
+                                             IsChecked="{Binding WeatherPlacement, Converter={StaticResource Eq}, ConverterParameter=Dock}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceWeather" Content="Auf dem Desktop"
+                                             IsChecked="{Binding WeatherPlacement, Converter={StaticResource Eq}, ConverterParameter=Wallpaper}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="PlaceWeather" Content="Beides"
+                                             IsChecked="{Binding WeatherPlacement, Converter={StaticResource Eq}, ConverterParameter=Both}"/>
+                            </WrapPanel>
+                        </StackPanel>
+                        <StackPanel x:Name="StillWeatherRows" Margin="0,0,0,6" IsEnabled="{Binding ShowWallpaper}"/>
                     </StackPanel>
                 </Border>
 
@@ -1029,7 +1067,7 @@
                                 <StackPanel x:Name="WeatherPresetRow" Margin="0,8,0,0">
                                     <TextBlock Margin="0,0,0,8" TextWrapping="Wrap">
                                         Wetter zeigen
-                                        <LineBreak/><Run Text="„Echtes Wetter“ braucht eine Stadt (Uhr, Musik &amp; Wetter). Die anderen zeigen das Wetter dauerhaft, z. B. zum Ausprobieren." Foreground="{StaticResource Sub}" FontSize="12"/>
+                                        <LineBreak/><Run Text="„Echtes Wetter“ braucht eine Stadt (Abschnitt Wetter). Die anderen zeigen das Wetter dauerhaft, z. B. zum Ausprobieren." Foreground="{StaticResource Sub}" FontSize="12"/>
                                     </TextBlock>
                                     <WrapPanel>
                                         <RadioButton Style="{StaticResource Segment}" GroupName="WpWeather" Content="Echtes Wetter"
@@ -1071,19 +1109,6 @@
                         </StackPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding ShowWallpaper}">
-                            <Grid DockPanel.Dock="Right" Width="320" VerticalAlignment="Center">
-                                <Border CornerRadius="6" Background="#18FFFFFF" BorderBrush="#26FFFFFF" BorderThickness="1"/>
-                                <TextBox x:Name="TasksBox" Text="{Binding WallpaperTasks, UpdateSourceTrigger=LostFocus}"
-                                         Background="Transparent" BorderThickness="0" Foreground="White" CaretBrush="White"
-                                         FontSize="12" Padding="6,7" LostFocus="City_LostFocus" KeyDown="Tasks_KeyDown"/>
-                            </Grid>
-                            <TextBlock Style="{StaticResource Label}">
-                                Heutige Aufgaben
-                                <LineBreak/><Run Text="Erscheinen unter der Uhr. Mehrere mit ; trennen." Foreground="{StaticResource Sub}" FontSize="12"/>
-                            </TextBlock>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding ShowWallpaper}">
                             <TextBlock DockPanel.Dock="Right" Width="60" TextAlignment="Right" VerticalAlignment="Center"
                                        Text="{Binding WallpaperFps, StringFormat={}{0:0} fps}" Foreground="{StaticResource Sub}"/>
                             <Slider DockPanel.Dock="Right" Style="{StaticResource Slide}" Minimum="10" Maximum="60"
@@ -1094,7 +1119,9 @@
                             </TextBlock>
                         </DockPanel>
                         <!-- Maus: Licht unter dem Mauszeiger, Parallaxe (früher Still › Mauszeiger) -->
-                        <StackPanel x:Name="StillMouseRows" Margin="0,6,0,6" IsEnabled="{Binding ShowWallpaper}"/>
+                        <StackPanel x:Name="StillMouseRows" Margin="0,6,0,0" IsEnabled="{Binding ShowWallpaper}"/>
+                        <!-- Tropfen auf dem Glas (früher Still › Effekte) -->
+                        <StackPanel x:Name="StillGlassRows" Margin="0,0,0,6" IsEnabled="{Binding ShowWallpaper}"/>
                     </StackPanel>
                 </Border>
 
@@ -1169,11 +1196,11 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Einstellungs-Panel des Hintergrunds „Still“, direkt hier statt auf dem Desktop -->
+        <!-- Seite „Pillen“: Trinken, Pomodoro, Training, Klangwelten, Gebet (die kleinen Werkzeuge auf dem Desktop) -->
         <DockPanel x:Name="StillPage" Visibility="Collapsed" Margin="18,6,22,22">
-            <TextBlock x:Name="StillTitle" DockPanel.Dock="Top" Text="Still" FontSize="15" FontWeight="SemiBold" Margin="4,4,0,4"/>
+            <TextBlock x:Name="StillTitle" DockPanel.Dock="Top" Text="Pillen" FontSize="15" FontWeight="SemiBold" Margin="4,4,0,4"/>
             <TextBlock DockPanel.Dock="Top" Foreground="{StaticResource Sub}" TextWrapping="Wrap" Margin="4,0,0,10"
-                       Text="Alle Einstellungen des Hintergrunds „Still“. Änderungen sieht man sofort im Hintergrund."/>
+                       Text="Die kleinen Werkzeuge unten auf dem Desktop. Änderungen sieht man sofort."/>
             <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                 <Button Style="{StaticResource Button}" Content="Pillen und Uhr anordnen" Click="StillEditLayout_Click"
                         ToolTip="Öffnet auf dem Desktop den Anordnen-Modus. Fertig: auf eine freie Stelle klicken."/>

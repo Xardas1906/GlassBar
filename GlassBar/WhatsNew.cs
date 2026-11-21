@@ -17,6 +17,19 @@ internal static class WhatsNew
     /// <summary>Neueste zuerst. Kurz halten: das, was man sonst nicht entdeckt.</summary>
     private static readonly Note[] Notes =
     {
+        new("1.6.0",
+            new[]
+            {
+                "Einstellungen neu geordnet: „Still“ gibt es nicht mehr als eigene Seite. Uhr & Wecker, Musik und Wetter haben je einen Abschnitt – für Dock und Desktop zusammen.",
+                "Schrift, Größe und Karten stehen unter Aussehen, Tropfen auf dem Glas unter Hintergrund.",
+                "Neue Seite „Pillen“ für Trinken, Pomodoro, Training, Klangwelten und Gebet. Die Suche findet alles an der neuen Stelle.",
+            },
+            new[]
+            {
+                "Settings reorganized: “Still” is no longer a page of its own. Clock & alarm, music and weather each have one section – for the dock and the desktop together.",
+                "Font, size and cards are under Appearance, drops on the glass under Wallpaper.",
+                "New “Pills” page for drinking, Pomodoro, workout, soundscapes and prayer. Search finds everything in its new place.",
+            }),
         new("1.5.2",
             new[]
             {
