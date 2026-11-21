@@ -180,6 +180,16 @@ public partial class SettingsWindow : Window
 
         // Eigene Seite: Einstellungs-Panel des Hintergrunds
         bool still = name.StartsWith("Still");
+        // „Still“ selbst öffnet den ersten Unterpunkt: diesen markieren (statt des Obereintrags), damit links
+        // steht, was rechts zu sehen ist. Sein Checked-Ereignis zeigt dann die Seite.
+        if (name == "StillPage" && _stillNav.Count > 0)
+        {
+            foreach (var sub in _stillNav) sub.Visibility = Visibility.Visible;
+            _stillNav[0].IsChecked = true;
+            if (sender is FrameworkElement parent)
+                Dispatcher.BeginInvoke(() => parent.BringIntoView(new Rect(0, 0, 1, 420)), System.Windows.Threading.DispatcherPriority.Loaded);
+            return;
+        }
         if (name.StartsWith("Still:")) _stillTab = name.Substring(6);
         else if (name == "StillPage") _stillTab = StillSettings.Tabs[0];
         foreach (var sub in _stillNav) sub.Visibility = still ? Visibility.Visible : Visibility.Collapsed;

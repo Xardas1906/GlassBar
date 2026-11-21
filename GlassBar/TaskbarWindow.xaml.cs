@@ -1391,8 +1391,13 @@ public partial class TaskbarWindow : Window
         int dir = Math.Sign(e.Delta);
         if (ChangeMusicVolume(dir) is { } v)
         {
-            // kurz statt des Interpreten anzeigen
-            MusicArtist.Text = L.F("Lautstärke {0} %", Math.Round(v * 100));
+            // kurz statt des Interpreten: Balken mit Prozent (Balken gleitet zum neuen Wert)
+            MusicArtist.Visibility = Visibility.Hidden;
+            MusicVolume.Visibility = Visibility.Visible;
+            MusicVolumeText.Text = $"{Math.Round(v * 100)} %";
+            MusicVolumeScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty,
+                new System.Windows.Media.Animation.DoubleAnimation(v, TimeSpan.FromMilliseconds(120))
+                { EasingFunction = new System.Windows.Media.Animation.QuadraticEase() });
             _volumeFlash.Stop();
             _volumeFlash.Start();
         }
@@ -1404,7 +1409,13 @@ public partial class TaskbarWindow : Window
     private DispatcherTimer CreateVolumeFlash()
     {
         var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.6) };
-        t.Tick += (_, _) => { t.Stop(); UpdateMusicUi(); };
+        t.Tick += (_, _) =>
+        {
+            t.Stop();
+            MusicVolume.Visibility = Visibility.Collapsed;
+            MusicArtist.Visibility = Visibility.Visible;
+            UpdateMusicUi();
+        };
         return t;
     }
 

@@ -191,7 +191,22 @@
                     <StackPanel Width="132" Margin="8,0,4,0" VerticalAlignment="Center">
                         <TextBlock x:Name="MusicTitle" Foreground="{DynamicResource Fg}" FontSize="12" FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis"/>
-                        <TextBlock x:Name="MusicArtist" Foreground="{DynamicResource FgSub}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                        <Grid>
+                            <TextBlock x:Name="MusicArtist" Foreground="{DynamicResource FgSub}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                            <!-- Nach dem Mausrad kurz statt des Interpreten: Lautstärke des Musikprogramms als Balken -->
+                            <DockPanel x:Name="MusicVolume" Visibility="Collapsed" VerticalAlignment="Center">
+                                <TextBlock x:Name="MusicVolumeText" DockPanel.Dock="Right" Width="30" Margin="6,0,0,0" TextAlignment="Right"
+                                           Foreground="{DynamicResource FgSub}" FontSize="10.5"/>
+                                <Grid Height="4" VerticalAlignment="Center">
+                                    <Border CornerRadius="2" Background="{DynamicResource Track}"/>
+                                    <Border CornerRadius="2" Background="{DynamicResource Dot}" RenderTransformOrigin="0,0.5">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform x:Name="MusicVolumeScale" ScaleX="0"/>
+                                        </Border.RenderTransform>
+                                    </Border>
+                                </Grid>
+                            </DockPanel>
+                        </Grid>
                     </StackPanel>
                     <Border Style="{StaticResource BarButton}" Width="26" Height="28" Margin="0" ToolTip="Vorheriger Titel"
                             MouseLeftButtonUp="MusicPrev_Click">
