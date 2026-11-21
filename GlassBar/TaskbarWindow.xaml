@@ -47,7 +47,7 @@
                         <!-- Fortschritt (Download, Kopieren …) als schmaler Balken unter dem Symbol -->
                         <Grid x:Name="Progress" Height="3" VerticalAlignment="Bottom" Margin="1,0,1,-4" Visibility="Collapsed">
                             <Border CornerRadius="1.5" Background="{DynamicResource Track}"/>
-                            <Border x:Name="ProgressFill" CornerRadius="1.5" Background="#6CCB5F" RenderTransformOrigin="0,0.5">
+                            <Border x:Name="ProgressFill" CornerRadius="1.5" Background="{DynamicResource ProgressFill}" RenderTransformOrigin="0,0.5">
                                 <Border.RenderTransform>
                                     <ScaleTransform ScaleX="{Binding ProgressFraction}"/>
                                 </Border.RenderTransform>
@@ -110,7 +110,8 @@
             <Border Style="{StaticResource BarButton}" Width="28" Height="36" Margin="0"
                     ToolTip="{Binding Title}"
                     MouseEnter="Tray_MouseEnter" MouseLeave="Tray_MouseLeave" MouseMove="Tray_MouseMove"
-                    MouseDown="Tray_MouseDown" MouseUp="Tray_MouseUp">
+                    MouseDown="Tray_MouseDown" MouseUp="Tray_MouseUp"
+                    AllowDrop="True" DragOver="Tray_DragOver" Drop="Tray_Drop">
                 <Image Source="{Binding Icon}" Width="16" Height="16"
                        RenderOptions.BitmapScalingMode="HighQuality"/>
             </Border>
@@ -232,11 +233,13 @@
             <!-- Infobereich, Schnelleinstellungen, Uhr -->
             <StackPanel x:Name="RightArea" Orientation="Horizontal" VerticalAlignment="Center">
                 <Border x:Name="OverflowButton" Style="{StaticResource BarButton}" Width="26" Height="36"
-                        ToolTip="Ausgeblendete Symbole anzeigen" MouseLeftButtonUp="Overflow_Click">
+                        ToolTip="Ausgeblendete Symbole anzeigen" MouseLeftButtonUp="Overflow_Click"
+                        AllowDrop="True" DragOver="Tray_DragOver" Drop="TrayList_Drop">
                     <TextBlock Text="&#xE70E;" Style="{StaticResource Glyph}" FontSize="11"/>
                 </Border>
                 <ItemsControl x:Name="TrayList" ItemTemplate="{StaticResource TrayTemplate}"
-                              ItemsPanel="{StaticResource Horizontal}"/>
+                              ItemsPanel="{StaticResource Horizontal}" Background="Transparent"
+                              AllowDrop="True" DragOver="Tray_DragOver" Drop="TrayList_Drop"/>
                 <!-- Wetter (Open-Meteo) -->
                 <Border x:Name="WeatherButton" Style="{StaticResource BarButton}" Height="36" Padding="8,0"
                         Visibility="Collapsed" MouseLeftButtonUp="Weather_Click">

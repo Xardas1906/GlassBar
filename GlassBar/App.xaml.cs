@@ -11,6 +11,7 @@ public partial class App : Application
     private TaskbarWindow? _bar;
     private bool _cleanedUp;
     private bool _afterCrash;
+    private int? _taskbarState;   // Zustand der Windows-Taskleiste vor GlassBar (siehe Config.TaskbarStateBeforeGlassBar)
     private readonly Queue<DateTime> _recentErrors = new();
 
     public static Config Config { get; private set; } = new();
@@ -79,6 +80,7 @@ public partial class App : Application
         ThreadPool.RegisterWaitForSingleObject(quit,
             (_, _) => Dispatcher.BeginInvoke(Quit), null, Timeout.Infinite, true);
 
+        StartTrace.Mark("App");
         DispatcherUnhandledException += OnCrash;
         AppDomain.CurrentDomain.UnhandledException += (_, ex) =>
         {
@@ -95,10 +97,13 @@ public partial class App : Application
 
         // Höhere Priorität: Dock und Hintergrund sollen gleich nach der Anmeldung stehen und nie stocken
         try { System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.AboveNormal; } catch { }
+        SettingsTransfer.ApplyPending(); // vorgemerkten Import übernehmen, bevor die Einstellungen geladen werden
         Config = Config.Load();
         L.Init(Config.Language);
+        StartTrace.Mark("Einstellungen");
         Theme.Apply(); // helles oder dunkles Design (auch für die Win32-Menüs)
         PackagedApps.MigrateConfig(Config); // vor dem ersten Dock: alte Pins von Store-Apps umstellen
+        StartTrace.Mark("Store-Apps");
 
         var cfg = ShellManager.DefaultShellConfig;
         cfg.EnableTasksService = true;
@@ -110,18 +115,35 @@ public partial class App : Application
             cfg.PinnedNotifyIcons = Config.PinnedTrayIcons;
 
         // vor dem Ausblenden der Taskleiste, damit der Wächter ihren ursprünglichen Zustand kennt
-        Watchdog.Start(_afterCrash);
+        // Zustand der Windows-Taskleiste (automatisch ausblenden ja/nein) vor GlassBar dauerhaft merken.
+        // Beim Ausblenden stellt GlassBar sie auf „automatisch ausblenden“. Endete GlassBar das letzte Mal nicht
+        // sauber, steht sie noch so – dann gilt der gespeicherte Zustand, nicht der jetzige.
+        int taskbarState = Config.TaskbarStateBeforeGlassBar ?? Watchdog.GetTaskbarState();
+        _taskbarState = taskbarState;
+        if (Config.TaskbarStateBeforeGlassBar != taskbarState) { Config.TaskbarStateBeforeGlassBar = taskbarState; Config.Save(); }
+        Watchdog.Start(_afterCrash, taskbarState);
 
         _shell = new ShellManager(cfg);
+        StartTrace.Mark("ShellManager");
 
         UpdateDocks();
+        StartTrace.Mark("Docks");
+        NativeStill.WallpaperRotation.Start(); // automatischer Wechsel der Hintergrundeffekte (falls eingeschaltet)
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += (_, _) => Dispatcher.BeginInvoke(ApplySettingsToDocks);
 
-        // Windows-Taskleiste ausblenden (wird beim Beenden wiederhergestellt)
-        _shell.ExplorerHelper.HideExplorerTaskbar = true;
+        // Windows-Taskleiste ausblenden (wird beim Beenden wiederhergestellt). Das dauert einige Hundert ms –
+        // darum erst nach dem ersten Zeichnen des Docks, damit das Dock nicht darauf wartet.
+        var shell = _shell;
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
+        {
+            if (_cleanedUp) return;
+            shell.ExplorerHelper.HideExplorerTaskbar = true;
+            StartTrace.Mark("Taskleiste versteckt");
+        });
 
         Updater.StartBackgroundCheck();
         TrayRescue.Start(_shell); // Symbole von Programmen nachholen, die vor GlassBar gestartet sind
+        StartTrace.Mark("Ende OnStartup");
     }
 
     /// <summary>
@@ -147,6 +169,7 @@ public partial class App : Application
         {
             if (_docks.Any(d => d.ScreenName == s.DeviceName)) continue;
             var dock = new TaskbarWindow(_shell, s);
+            if (s.Primary) StartTrace.Mark("Dock aufgebaut");
             _docks.Add(dock);
             dock.Show();
         }
@@ -229,6 +252,14 @@ public partial class App : Application
             {
                 _shell.ExplorerHelper.HideExplorerTaskbar = false;
                 _shell.Dispose();
+                // ManagedShell stellt den Zustand her, den es beim Start vorfand – nach einem früheren Absturz falsch.
+                // Darum den gespeicherten ursprünglichen Zustand setzen und die Merkung löschen (sauber zurückgegeben).
+                if (_taskbarState is int original)
+                {
+                    Watchdog.RestoreTaskbar(original);
+                    Config.TaskbarStateBeforeGlassBar = null;
+                    Config.Save();
+                }
             }
         }
         catch (Exception ex) { Log.Error("Beenden: Taskleiste zurückgeben", ex); }

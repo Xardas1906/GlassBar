@@ -49,7 +49,10 @@ internal static class Theme
         r["PillBorder"] = Brush(light ? 0x14000000 : 0x18FFFFFF);
         r["Cover"] = Brush(light ? 0x1A000000 : 0x30FFFFFF);
         r["Track"] = Brush(light ? 0x30000000 : 0x40FFFFFF);
-        r["Dot"] = Brush(light ? 0xB0000000 : 0xD0FFFFFF);
+        // Laufpunkte und Fortschrittsbalken: wahlweise in der Windows-Akzentfarbe
+        var accent = App.Config.UseAccentColor ? WindowsAccent(light) : null;
+        r["Dot"] = accent is { } a ? Solid(a) : Brush(light ? 0xB0000000 : 0xD0FFFFFF);
+        r["ProgressFill"] = accent is { } p ? Solid(p) : Brush(0xFF6CCB5F);
         r["PeekHover"] = Brush(light ? 0x1A000000 : 0x26FFFFFF);
         r["PeekLine"] = Brush(light ? 0x40000000 : 0x50FFFFFF);
         r["MenuBg"] = Brush(light ? 0xF8F9F9F9 : 0xF82B2B2B);
@@ -70,8 +73,9 @@ internal static class Theme
             // „Wie Windows“: auf Änderungen in den Windows-Einstellungen hören
             Microsoft.Win32.SystemEvents.UserPreferenceChanged += (_, e) =>
             {
-                if (e.Category != Microsoft.Win32.UserPreferenceCategory.General || App.Config.Theme != "Auto") return;
-                Application.Current.Dispatcher.BeginInvoke(() => { if (Apply()) App.Instance.ApplySettingsToDocks(); });
+                // „Wie Windows“ oder Akzentfarbe: Design bzw. Akzentfarbe in Windows geändert
+                if (e.Category != Microsoft.Win32.UserPreferenceCategory.General || (App.Config.Theme != "Auto" && !App.Config.UseAccentColor)) return;
+                Application.Current.Dispatcher.BeginInvoke(() => { if (Apply()) App.Instance.ApplySettingsToDocks(); }); // Akzent wirkt über die Ressourcen sofort
             };
         }
         return changed;
@@ -119,6 +123,38 @@ internal static class Theme
             return key?.GetValue("SystemUsesLightTheme") is int v && v != 0;
         }
         catch { return false; }
+    }
+
+    /// <summary>
+    /// Akzentfarbe aus den Windows-Einstellungen (Personalisierung › Farben), passend aufgehellt bzw. abgedunkelt,
+    /// damit sie auf dunklem bzw. hellem Glas gut sichtbar ist. null, wenn sie sich nicht lesen lässt.
+    /// </summary>
+    internal static Color? WindowsAccent(bool light)
+    {
+        try
+        {
+            var c = new Windows.UI.ViewManagement.UISettings().GetColorValue(light
+                ? Windows.UI.ViewManagement.UIColorType.AccentDark1
+                : Windows.UI.ViewManagement.UIColorType.AccentLight2);
+            return Color.FromRgb(c.R, c.G, c.B);
+        }
+        catch { }
+        try
+        {
+            // Rückfall: DWM speichert die Akzentfarbe als ABGR
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\DWM");
+            if (key?.GetValue("AccentColor") is int abgr)
+                return Color.FromRgb((byte)abgr, (byte)(abgr >> 8), (byte)(abgr >> 16));
+        }
+        catch { }
+        return null;
+    }
+
+    private static SolidColorBrush Solid(Color c)
+    {
+        var b = new SolidColorBrush(c);
+        b.Freeze();
+        return b;
     }
 
     private static SolidColorBrush Brush(long argb) // long: Literale wie 0x14000000 sind int, 0xFF1A1A1A ist uint

@@ -20,7 +20,7 @@ namespace GlassBar.NativeStill;
 public sealed class StillRenderer : IDisposable
 {
     [StructLayout(LayoutKind.Sequential)]
-    private struct FieldParams
+    internal struct FieldParams
     {
         public Vector2 Res; public float Time; public float Energy;
         public float Light; public Vector2 Shift; public float FlowOn;
@@ -32,7 +32,7 @@ public sealed class StillRenderer : IDisposable
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct UpscaleParams { public float Grain; public Vector3 Pad; }
+    private struct UpscaleParams { public float Grain; public float Gain; public Vector2 Pad; public Vector3 Base; public float Pad2; }
 
     private static readonly Dictionary<string, int> QualityWidth = new() { ["low"] = 560, ["balanced"] = 900, ["high"] = 1400 };
 
@@ -84,6 +84,25 @@ public sealed class StillRenderer : IDisposable
     /// "Image" = Windows-Hintergrundbild, "Solid" = einfarbig (Grundfarbe der Palette).
     /// </summary>
     public static volatile string BackgroundMode = "Light";
+    /// <summary>Tempo und Stärke je Effekt (1 = normal; aus Config.EffectSpeed/EffectIntensity).</summary>
+    private static volatile Dictionary<string, (float Speed, float Gain)> _tune = new();
+
+    /// <summary>
+    /// Effekt samt Tempo und Stärke aus den Einstellungen übernehmen (gilt für alle Bildschirme). Beim automatischen
+    /// Wechsel bestimmt <see cref="WallpaperRotation"/> den Effekt. Der Wechsel wird weich überblendet.
+    /// </summary>
+    public static void ApplyEffect(Config c)
+    {
+        var tune = new Dictionary<string, (float, float)>();
+        foreach (var m in WallpaperRotation.Effects)
+            tune[m] = ((float)(Config.Percent(c.EffectSpeed, m) / 100), (float)(Config.Percent(c.EffectIntensity, m) / 100));
+        _tune = tune;
+        BackgroundMode = WallpaperRotation.Current(c, DateTime.Now);
+    }
+
+    // gerade gezeigter Effekt und Überblendung (1 = ganz sichtbar, 0 = nur Grundfarbe)
+    private string? _shownMode;
+    private double _fade;
     private StillTextLayer? _text;
     private readonly TextFrame _frame = new();
 
@@ -137,6 +156,8 @@ public sealed class StillRenderer : IDisposable
 
     /// <summary>Uhr, Datum und Wetter zeichnen (aus = nur das Licht).</summary>
     public bool ShowText { get; set; } = true;
+    /// <summary>Eigener Effekt für diesen Bildschirm (Nebenbildschirme); null = BackgroundMode wie der Hauptbildschirm.</summary>
+    public string? ModeOverride { get; set; }
 
     /// <summary>Bilder pro Sekunde (WallpaperFps aus den GlassBar-Einstellungen).</summary>
     public int Fps { get; set; } = 30;
@@ -225,11 +246,11 @@ public sealed class StillRenderer : IDisposable
     /// Statt Lichtfeld: Grundfarbe der Palette und – bei „Image“ – das Windows-Hintergrundbild (wie „Ausfüllen“).
     /// Alles andere (Uhr, Pillen, Glas, Regen) arbeitet unverändert darauf.
     /// </summary>
-    private void DrawPlainBackground(ID3D11DeviceContext ctx, double dt)
+    private void DrawPlainBackground(ID3D11DeviceContext ctx, double dt, string mode, float fade)
     {
         var c = Palette.Base;
         ctx.ClearRenderTargetView(_fullRtv!, new Vortice.Mathematics.Color4(c.X, c.Y, c.Z, 1));
-        if (BackgroundMode != "Image") return;
+        if (mode != "Image") return;
 
         _wallCheck -= dt;
         if (_wallCheck <= 0) { _wallCheck = 3; LoadWallpaper(); }
@@ -241,7 +262,7 @@ public sealed class StillRenderer : IDisposable
         var dest = new Vortice.RawRectF((_width - w) / 2, (_height - h) / 2, (_width + w) / 2, (_height + h) / 2);
         _d2d!.Target = _fullTarget;
         _d2d.BeginDraw();
-        _d2d.DrawBitmap(_wallBmp, dest, 1f, Vortice.Direct2D1.InterpolationMode.HighQualityCubic, null, null);
+        _d2d.DrawBitmap(_wallBmp, dest, fade, Vortice.Direct2D1.InterpolationMode.HighQualityCubic, null, null);
         _d2d.EndDraw();
         _d2d.Target = null;
     }
@@ -295,7 +316,20 @@ public sealed class StillRenderer : IDisposable
         var s = Settings;
         Palette.Step(dt);
         ProcessAudio(dt);
-        _fieldTime += dt * s.Num("motion") * Palette.MoodSpeed;
+        // Effektwechsel weich: alten Effekt zur Grundfarbe ausblenden, dann den neuen einblenden (je 0,8 s)
+        string wanted = ModeOverride ?? BackgroundMode;
+        if (_shownMode == null) { _shownMode = wanted; _fade = 1; }
+        else if (wanted != _shownMode)
+        {
+            _fade -= dt / 0.8;
+            if (_fade <= 0) { _fade = 0; _shownMode = wanted; }
+        }
+        else if (_fade < 1) _fade = Math.Min(1, _fade + dt / 0.8);
+        string mode = _shownMode;
+        float fade = (float)(_fade * _fade * (3 - 2 * _fade));
+        var tune = _tune.TryGetValue(mode, out var tv) ? tv : (Speed: 1f, Gain: 1f);
+
+        _fieldTime += dt * s.Num("motion") * Palette.MoodSpeed * tune.Speed;
         bool flowChanged = Flow.Step(dt, s);
 
         // Qualität: Breite des kleinen Felds
@@ -307,11 +341,10 @@ public sealed class StillRenderer : IDisposable
         if (flowChanged) _ctx!.UpdateSubresource<float>(Flow.Data, _flowTex!, 0, (uint)(Flow.Cols * 16));
 
         var ctx = _ctx!;
-        string mode = BackgroundMode;
         ID3D11PixelShader? effect = mode == "Light" ? _fieldPs : _effectPs.GetValueOrDefault(mode);
         if (effect == null)
         {
-            DrawPlainBackground(ctx, dt);
+            DrawPlainBackground(ctx, dt, mode, fade);
             goto afterField;
         }
 
@@ -344,7 +377,7 @@ public sealed class StillRenderer : IDisposable
         ctx.Draw(3, 0);
 
         // 2) Auf volle Größe ziehen + Körnung
-        var u = new UpscaleParams { Grain = (float)(s.Num("grain") * (Palette.IsLightTheme ? 0.75 : 0.5)) };
+        var u = new UpscaleParams { Grain = (float)(s.Num("grain") * (Palette.IsLightTheme ? 0.75 : 0.5)), Gain = tune.Gain * fade, Base = Palette.Base };
         ctx.UpdateSubresource(in u, _upCb!);
         ctx.PSSetShaderResource(0, null!);
         ctx.OMSetRenderTargets(_fullRtv!);
@@ -557,7 +590,7 @@ public sealed class StillRenderer : IDisposable
         catch (Exception ex) { _rain = null; TaskbarWindow.Debug("Still nativ: Regen nicht verfügbar: " + ex.Message); }
     }
 
-    private static ReadOnlyMemory<byte> Compile(string src, string profile) =>
+    internal static ReadOnlyMemory<byte> Compile(string src, string profile) =>
         Compiler.Compile(src, "main", "still.hlsl", profile, ShaderFlags.OptimizationLevel3);
 
     private void CreateSizeDependent()

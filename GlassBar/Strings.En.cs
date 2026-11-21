@@ -103,6 +103,7 @@ public static partial class Strings
         ["Du kannst sie danach per Rechtsklick → „Von Taskleiste lösen“ wieder entfernen."] = "You can remove them later with right-click → “Unpin from taskbar”.",
         ["{0} Verknüpfung(en) angeheftet."] = "{0} shortcut(s) pinned.",
         ["Umschalt + Rechtsklick: im Dock anzeigen / ausblenden"] = "Shift + right-click: show / hide in the dock",
+        ["Ins Dock ziehen oder Umschalt + Rechtsklick: im Dock anzeigen"] = "Drag into the dock or Shift + right-click: show in the dock",
         ["Angeheftet"] = "Pinned",
         ["Zuletzt verwendet"] = "Recent",
         ["Häufig verwendet"] = "Frequent",

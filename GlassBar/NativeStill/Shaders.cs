@@ -340,7 +340,7 @@ internal static class Shaders
     /// zwei Zufallswerte addiert, Überlagern-Mischung mit grain × 0,5 bzw. × 0,75 beim hellen Theme).
     /// </summary>
     public const string Upscale = """
-        cbuffer U : register(b0) { float u_grain; float3 _pad; };
+        cbuffer U : register(b0) { float u_grain; float u_gain; float2 _pad; float3 u_ubase; float _pad2; };
         Texture2D src : register(t0);
         SamplerState lin : register(s0);
 
@@ -354,6 +354,8 @@ internal static class Shaders
         float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target
         {
             float3 b = src.SampleLevel(lin, uv, 0).rgb;
+            // Stärke des Effekts: Abstand zur Grundfarbe verkleinern oder vergrößern (1 = unverändert)
+            b = saturate(u_ubase + (b - u_ubase) * u_gain);
             if (u_grain > 0.0)
             {
                 float2 cell = fmod(floor(pos.xy), 256.0);

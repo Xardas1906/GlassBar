@@ -55,6 +55,19 @@ public partial class SettingsWindow : Window
         BuildStillNav();
         DataContext = App.Config;
         AutostartBox.IsChecked = Native.Autostart;
+        RefreshEffectTuning();
+        BuildFieldPreviews();
+        AddHandler(ToggleButton.CheckedEvent, new RoutedEventHandler((_, e) =>
+        {
+            // anderer Effekt gewählt: dessen Tempo und Stärke zeigen (nach dem Binding, das WallpaperField setzt);
+            // der Wechsel „nach Zeit“ beginnt ab jetzt beim gewählten Effekt
+            if (e.OriginalSource is RadioButton { GroupName: "WpField" or "WpRotate" })
+                Dispatcher.BeginInvoke(() =>
+                {
+                    if (IsLoaded) App.Config.WallpaperRotationSince = DateTime.Now;
+                    RefreshEffectTuning();
+                });
+        }));
         SliderEdit.AttachAll(Content_);
         BuildDesktopGallery();
         CheckUpdateQuietly();
@@ -76,8 +89,13 @@ public partial class SettingsWindow : Window
         {
             _applyTimer.Stop();
             App.Config.Save();
+            bool wasLight = Theme.IsLight;
             App.Instance.ApplySettingsToDocks();
             ApplyGlass();
+            // Design gewechselt: die Deckkraft-Regler zeigen jetzt die Werte des anderen Designs
+            if (Theme.IsLight != wasLight)
+                foreach (var name in new[] { nameof(Config.DockOpacityNow), nameof(Config.FlyoutOpacityNow), nameof(Config.MenuOpacityNow) })
+                    RefreshBindings(Content_, name);
         };
 
         CloseButton.MouseEnter += (_, _) => CloseButton.Background = new SolidColorBrush(Color.FromRgb(0xC4, 0x2B, 0x1C));
@@ -104,7 +122,7 @@ public partial class SettingsWindow : Window
         // Ohne Glaseffekt: fast deckend und ohne Unschärfe – spart auf schwächeren Grafikkarten viel Arbeit,
         // weil Windows den animierten Hintergrund dann nicht bei jedem Bild neu weichzeichnen muss.
         bool blur = App.Config.SettingsGlass && Native.GlassAvailable;
-        uint tint = App.Config.Tint(blur ? Math.Max(App.Config.DockOpacity, 55) : 100);
+        uint tint = App.Config.Tint(blur ? Math.Max(App.Config.DockOpacityNow, 55) : 100);
         if (_glass == (tint, blur)) return;
         _glass = (tint, blur);
         if (!Native.GlassAvailable) System.Windows.Shell.WindowChrome.GetWindowChrome(this).GlassFrameThickness = new Thickness(0);
@@ -390,6 +408,76 @@ public partial class SettingsWindow : Window
     /// </summary>
     private readonly System.Windows.Threading.DispatcherTimer _applyTimer = new() { Interval = TimeSpan.FromMilliseconds(150) };
 
+    /// <summary>Bindungen an <paramref name="property"/> neu lesen (Config meldet Änderungen nicht selbst).</summary>
+    private static void RefreshBindings(DependencyObject root, string property)
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
+        {
+            foreach (var dp in new[] { System.Windows.Controls.Primitives.RangeBase.ValueProperty, TextBlock.TextProperty })
+                if (BindingOperations.GetBindingExpression(child, dp) is { } be && be.ParentBinding.Path?.Path == property)
+                    be.UpdateTarget();
+            RefreshBindings(child, property);
+        }
+    }
+
+    private bool _tuningLoad = true; // bis RefreshEffectTuning: Werte beim Aufbau des Fensters nicht speichern
+
+    /// <summary>Vorschaubilder in die Knöpfe der Hintergrund-Auswahl setzen (im Hintergrund gezeichnet).</summary>
+    private void BuildFieldPreviews()
+    {
+        string[] keys = { "Light", "Aurora", "Caustics", "Bokeh", "Smoke", "Image", "Solid" };
+        var radios = FieldChoices.Children.OfType<RadioButton>().ToList();
+        var palette = App.Instance.Bar?.NativePalette ?? new NativeStill.StillPalette();
+        Task.Run(() => NativeStill.EffectPreview.RenderAll(palette)).ContinueWith(t =>
+        {
+            if (t.Result is not { } previews) return;
+            for (int i = 0; i < radios.Count && i < keys.Length; i++)
+            {
+                if (!previews.TryGetValue(keys[i], out var img) || radios[i].Content is not string text) continue;
+                var picture = new Border
+                {
+                    Width = NativeStill.EffectPreview.Width * 0.8, Height = NativeStill.EffectPreview.Height * 0.8,
+                    CornerRadius = new CornerRadius(4), Margin = new Thickness(0, 2, 0, 6),
+                    Background = new ImageBrush(img) { Stretch = Stretch.UniformToFill },
+                };
+                var panel = new StackPanel { Width = 150 }; // alle Knöpfe gleich breit
+                panel.Children.Add(picture);
+                panel.Children.Add(new TextBlock { Text = text, HorizontalAlignment = HorizontalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+                radios[i].Content = panel;
+            }
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    /// <summary>Regler „Tempo/Stärke des Effekts“ auf den gewählten Effekt stellen (bei Bild/Einfarbig ausblenden).</summary>
+    private void RefreshEffectTuning()
+    {
+        string m = App.Config.WallpaperField;
+        EffectTuning.Visibility = m is "Image" or "Solid" ? Visibility.Collapsed : Visibility.Visible;
+        RotationMinutesRow.Visibility = App.Config.WallpaperRotation == "Interval" ? Visibility.Visible : Visibility.Collapsed;
+        _tuningLoad = true;
+        EffectSpeedSlider.Value = Config.Percent(App.Config.EffectSpeed, m);
+        EffectGainSlider.Value = Config.Percent(App.Config.EffectIntensity, m);
+        _tuningLoad = false;
+        UpdateTuningText();
+    }
+
+    private void UpdateTuningText()
+    {
+        EffectSpeedText.Text = $"{EffectSpeedSlider.Value:0} %";
+        EffectGainText.Text = $"{EffectGainSlider.Value:0} %";
+    }
+
+    private void EffectTuning_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (EffectSpeedText == null || EffectGainText == null || EffectGainSlider == null) return; // noch in InitializeComponent
+        UpdateTuningText();
+        if (_tuningLoad) return;
+        string m = App.Config.WallpaperField;
+        (App.Config.EffectSpeed ??= new())[m] = Math.Round(EffectSpeedSlider.Value);
+        (App.Config.EffectIntensity ??= new())[m] = Math.Round(EffectGainSlider.Value);
+        NativeStill.StillRenderer.ApplyEffect(App.Config); // sofort sichtbar; gespeichert wird über ScheduleApply
+    }
+
     private void ScheduleApply()
     {
         if (!IsLoaded) return;
@@ -611,6 +699,7 @@ public partial class SettingsWindow : Window
         _still = null; // Darstellung kann sich geändert haben -> Werte neu lesen
         DataContext = null;
         DataContext = App.Config;
+        RefreshEffectTuning();
         App.Config.Save();
         App.Instance.ApplySettingsToDocks();
     }
@@ -619,6 +708,56 @@ public partial class SettingsWindow : Window
         Native.Launch("explorer.exe", $"\"{Config.Folder}\"");
 
     private void Quit_Click(object sender, RoutedEventArgs e) => App.Instance.Quit();
+
+    /// <summary>Fehlerprotokoll im Editor öffnen (für Fehlermeldungen auf GitHub); gibt es keins, den Ordner zeigen.</summary>
+    private void OpenLog_Click(object sender, RoutedEventArgs e)
+    {
+        if (File.Exists(Log.FilePath)) Native.Launch("notepad.exe", $"\"{Log.FilePath}\"");
+        else
+        {
+            MessageBox.Show(this, L.T("Es gibt noch kein Protokoll – bisher ist kein Fehler aufgetreten."), "GlassBar", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private void Export_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            Filter = L.T(SettingsTransfer.FileFilter),
+            FileName = $"GlassBar-{DateTime.Now:yyyy-MM-dd}.glassbar",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        };
+        if (dlg.ShowDialog(this) != true) return;
+        try
+        {
+            App.Config.Save();
+            SettingsTransfer.Export(dlg.FileName);
+            MessageBox.Show(this, L.F("Einstellungen gespeichert in {0}", dlg.FileName), "GlassBar", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Einstellungen exportieren", ex);
+            MessageBox.Show(this, L.T("Die Einstellungen ließen sich nicht exportieren.") + "\n\n" + ex.Message, "GlassBar", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void Import_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = L.T(SettingsTransfer.FileFilter),
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        };
+        if (dlg.ShowDialog(this) != true) return;
+        if (MessageBox.Show(this, L.T("Alle Einstellungen werden durch die aus der Datei ersetzt. GlassBar startet dafür neu. Fortfahren?"),
+                "GlassBar", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        if (SettingsTransfer.Prepare(dlg.FileName) is { } error)
+        {
+            MessageBox.Show(this, error, "GlassBar", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        App.Instance.Restart();
+    }
 }
 
 /// <summary>Für Auswahlknöpfe: true, wenn der Wert dem Parameter entspricht.</summary>

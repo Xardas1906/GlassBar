@@ -117,7 +117,9 @@ public partial class TaskbarWindow : Window
         Closed += (_, _) => WinKeyHook.Pressed -= peek;
 
         // Jedes Dock hat seine eigene Liste: angeheftete Programme überall, laufende Fenster nur auf ihrem Bildschirm
+        if (IsPrimary) StartTrace.Mark("Dock-Fenster");
         Model = new TaskbarModel(shell) { ScreenFilter = AppScreenFilter };
+        if (IsPrimary) StartTrace.Mark("Programmliste");
         Closed += (_, _) => Model.Detach();
         AppList.ItemsSource = Model.Buttons;
 
@@ -125,6 +127,13 @@ public partial class TaskbarWindow : Window
         DesktopButton.ToolTip = "Desktop";
         UpdateDesktopButton();
         Loaded += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, PrewarmDesktop);
+        if (IsPrimary) Loaded += (_, _) => StartTrace.Mark("Loaded");
+        if (IsPrimary)
+            ContentRendered += (_, _) =>
+            {
+                StartTrace.Mark("Dock sichtbar");
+                Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () => { StartTrace.Mark("Leerlauf"); StartTrace.Flush(); });
+            };
 
 
         if (shell.NotificationArea is { } tray)
@@ -144,7 +153,8 @@ public partial class TaskbarWindow : Window
             _nativeAudio?.Dispose(); _nativeAudio = null;
             _native?.Dispose(); _native = null;
         };
-        StartMusicAndWeather();
+        // Musik (Windows-Medienschnittstelle) und Wetter erst nach dem ersten Zeichnen: spart beim Kaltstart ~0,7 s
+        ContentRendered += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Background, () => { StartMusicAndWeather(); if (IsPrimary) StartTrace.Mark("Musik und Wetter"); });
         UpdateClock();
         UpdateStatusIcons();
 
@@ -163,7 +173,7 @@ public partial class TaskbarWindow : Window
         if (HwndSource.FromHwnd(hwnd) is { CompositionTarget: { } ct }) ct.BackgroundColor = System.Windows.Media.Colors.Transparent;
         // Die Leiste soll nie den Fokus klauen – sonst weiß sie nicht mehr, welche App aktiv war.
         Native.AddExStyle(hwnd, Native.WS_EX_NOACTIVATE | Native.WS_EX_TOOLWINDOW);
-        Theme.ApplyGlass(this, hwnd, App.Config.DockOpacity);
+        Theme.ApplyGlass(this, hwnd, App.Config.DockOpacityNow);
     }
 
     [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
@@ -811,7 +821,7 @@ public partial class TaskbarWindow : Window
 
         // Glas
         var hwnd = new WindowInteropHelper(this).Handle;
-        Theme.ApplyGlass(this, hwnd, c.DockOpacity);
+        Theme.ApplyGlass(this, hwnd, c.DockOpacityNow);
         foreach (var f in _folderCache.Values) f.ApplyGlass();
 
         PlaceDock();
@@ -872,6 +882,7 @@ public partial class TaskbarWindow : Window
         _weatherTimer.Tick += (_, _) => RefreshWeather();
         _weatherTimer.Start();
         RefreshWeather();
+        // läuft erst nach dem ersten Zeichnen des Docks (siehe Konstruktor), ebenso der Hintergrund
         UpdateWallpaper();
     }
 
@@ -894,6 +905,8 @@ public partial class TaskbarWindow : Window
     // ---------- Hintergrund „Still“ (nativ) ----------
     private DesktopMouseHook? _mouseHook;
     private NativeStill.NativeStillWindow? _native;
+    /// <summary>Farben des laufenden Hintergrunds (für die Vorschaubilder in den Einstellungen).</summary>
+    public NativeStill.StillPalette? NativePalette => _native?.Renderer?.Palette;
     private AudioSpectrum? _nativeAudio;
 
     /// <summary>Musik bzw. Wetter im Dock? (Nein, wenn der Hintergrund läuft und sie nur dort sein sollen.)</summary>
@@ -912,7 +925,7 @@ public partial class TaskbarWindow : Window
         // Hauptbildschirm: das Hauptdock; Nebenbildschirme: SecondaryWallpapers (auch ohne Dock dort)
         if (!IsPrimary) return;
         bool want = App.Config.ShowWallpaper;
-        NativeStill.StillRenderer.BackgroundMode = App.Config.WallpaperField;
+        NativeStill.StillRenderer.ApplyEffect(App.Config);
         if (want && _native == null)
         {
             NativeStill.NativeStillStore.Load();
@@ -1516,18 +1529,70 @@ public partial class TaskbarWindow : Window
     }
 
     private void Tray_MouseLeave(object s, MouseEventArgs e) => Ctx<NotifyIcon>(s)?.IconMouseLeave(Native.CursorParam());
-    private void Tray_MouseMove(object s, MouseEventArgs e) => Ctx<NotifyIcon>(s)?.IconMouseMove(Native.CursorParam());
+
+    // Ziehen zum Sortieren: im Dock umstellen, aus den ausgeblendeten Symbolen ins Dock ziehen (anheften) oder zurück (lösen)
+    private Point? _trayDragStart;
+    private NotifyIcon? _trayDragIcon;
+
+    private void Tray_MouseMove(object s, MouseEventArgs e)
+    {
+        Ctx<NotifyIcon>(s)?.IconMouseMove(Native.CursorParam());
+        if (e.LeftButton != MouseButtonState.Pressed || _trayDragStart is not { } start || _trayDragIcon is not { } icon) return;
+        var d = e.GetPosition((IInputElement)s) - start;
+        if (Math.Abs(d.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(d.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        _trayDragStart = null;
+        _trayDragIcon = null;
+        DragDrop.DoDragDrop((DependencyObject)s, new DataObject(typeof(NotifyIcon), icon), DragDropEffects.Move);
+    }
+
+    private void Tray_DragOver(object s, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(typeof(NotifyIcon)) ? DragDropEffects.Move : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void Tray_Drop(object s, DragEventArgs e)
+    {
+        if (e.Data.GetData(typeof(NotifyIcon)) is not NotifyIcon dragged) return;
+        e.Handled = true;
+        var target = Ctx<NotifyIcon>(s);
+        if (target == null || ReferenceEquals(target, dragged)) return;
+        if (target.IsPinned)
+        {
+            // links der Mitte: davor, rechts: dahinter
+            var el = (FrameworkElement)s;
+            bool after = e.GetPosition(el).X > el.ActualWidth / 2;
+            dragged.Pin(target.PinOrder + (after ? 1 : 0));
+        }
+        else if (dragged.IsPinned) dragged.Unpin(); // ins Fenster der ausgeblendeten Symbole gezogen
+        App.Instance.SaveTrayPins();
+    }
+
+    /// <summary>Auf freie Fläche des Infobereichs im Dock gezogen: hinten anheften.</summary>
+    private void TrayList_Drop(object s, DragEventArgs e)
+    {
+        if (e.Handled || e.Data.GetData(typeof(NotifyIcon)) is not NotifyIcon dragged) return;
+        e.Handled = true;
+        if (!dragged.IsPinned) { dragged.Pin(); App.Instance.SaveTrayPins(); }
+    }
 
     private void Tray_MouseDown(object s, MouseButtonEventArgs e)
     {
         e.Handled = true;
         if (Keyboard.Modifiers == ModifierKeys.Shift && e.ChangedButton == MouseButton.Right) return;
+        if (e.ChangedButton == MouseButton.Left && Ctx<NotifyIcon>(s) is { } dragIcon)
+        {
+            _trayDragStart = e.GetPosition((IInputElement)s);
+            _trayDragIcon = dragIcon;
+        }
         Ctx<NotifyIcon>(s)?.IconMouseDown(e.ChangedButton, Native.CursorParam(), (int)Native.GetDoubleClickTime());
     }
 
     private void Tray_MouseUp(object s, MouseButtonEventArgs e)
     {
         e.Handled = true;
+        _trayDragStart = null;
+        _trayDragIcon = null;
         if (Ctx<NotifyIcon>(s) is not { } icon) return;
 
         if (Keyboard.Modifiers == ModifierKeys.Shift && e.ChangedButton == MouseButton.Right)

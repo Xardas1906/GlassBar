@@ -22,14 +22,16 @@ internal static class Watchdog
     // ---------- im Hauptprozess ----------
 
     /// <summary>Wächter starten (vor dem Ausblenden der Taskleiste aufrufen, damit ihr Zustand noch stimmt).</summary>
-    public static void Start(bool afterCrash)
+    public static void Start(bool afterCrash) => Start(afterCrash, GetTaskbarState());
+
+    /// <summary>Wächter starten; <paramref name="state"/> = Zustand der Taskleiste, der nach einem Absturz wiederhergestellt wird.</summary>
+    public static void Start(bool afterCrash, int state)
     {
         if (Debugger.IsAttached) return; // beim Entwickeln stört ein Neustart nach „Debuggen beenden“
         try
         {
             int pid = Environment.ProcessId;
             _cleanExit = new EventWaitHandle(false, EventResetMode.ManualReset, CleanExitPrefix + pid);
-            int state = GetTaskbarState();
             string exe = Environment.ProcessPath ?? throw new InvalidOperationException("Kein Programmpfad");
             Process.Start(new ProcessStartInfo(exe, $"--watchdog {pid} {state} {(afterCrash ? 1 : 0)}") { UseShellExecute = false });
         }
@@ -140,7 +142,7 @@ internal static class Watchdog
     private const uint SWP_NOSIZE = 0x1, SWP_NOMOVE = 0x2, SWP_NOACTIVATE = 0x10, SWP_SHOWWINDOW = 0x40, SWP_ASYNCWINDOWPOS = 0x4000;
 
     /// <summary>Zustand der Windows-Taskleiste (automatisch ausblenden ja/nein), bevor GlassBar sie versteckt.</summary>
-    private static int GetTaskbarState()
+    internal static int GetTaskbarState()
     {
         var d = new APPBARDATA { cbSize = Marshal.SizeOf<APPBARDATA>(), hWnd = FindWindow("Shell_TrayWnd", null) };
         return (int)SHAppBarMessage(ABM_GETSTATE, ref d);

@@ -71,6 +71,10 @@ Filename: "{app}\GlassBar.exe"; Parameters: "--autostart on"; Flags: runasorigin
 Filename: "{app}\GlassBar.exe"; Parameters: "--autostart off"; Flags: runasoriginaluser waituntilterminated; Tasks: not autostart
 Filename: "{app}\GlassBar.exe"; Description: "{cm:LaunchNow}"; Flags: nowait postinstall runasoriginaluser
 
+[UninstallDelete]
+; Programmordner auch entfernen, wenn beim Löschen noch eine Datei kurz belegt war
+Type: dirifempty; Name: "{app}"
+
 [UninstallRun]
 Filename: "{app}\GlassBar.exe"; Parameters: "--autostart off"; Flags: waituntilterminated runhidden; RunOnceId: "RemoveAutostart"
 

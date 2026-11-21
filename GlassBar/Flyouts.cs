@@ -22,10 +22,10 @@ public class FlyoutBase : Window
     public FrameworkElement? Anchor { get; set; }
 
     /// <summary>Tönung des Glases (ARGB). Kleinerer Alpha-Wert = durchsichtiger.</summary>
-    public uint GlassTint => Theme.Tint(App.Config, App.Config.FlyoutOpacity);
+    public uint GlassTint => Theme.Tint(App.Config, App.Config.FlyoutOpacityNow);
 
     /// <summary>Glas neu anwenden (nach Änderung in den Einstellungen).</summary>
-    public void ApplyGlass() { if (Handle != IntPtr.Zero) Theme.ApplyGlass(this, Handle, App.Config.FlyoutOpacity); }
+    public void ApplyGlass() { if (Handle != IntPtr.Zero) Theme.ApplyGlass(this, Handle, App.Config.FlyoutOpacityNow); }
 
     /// <summary>Per Klick geöffnet: bleibt offen, bis man woanders hinklickt.</summary>
     public bool Sticky { get; private set; }
@@ -62,7 +62,7 @@ public class FlyoutBase : Window
             Handle = new WindowInteropHelper(this).Handle;
             if (HwndSource.FromHwnd(Handle) is { CompositionTarget: { } ct }) ct.BackgroundColor = Colors.Transparent;
             Native.AddExStyle(Handle, Native.WS_EX_TOOLWINDOW);
-            Theme.ApplyGlass(this, Handle, App.Config.FlyoutOpacity);
+            Theme.ApplyGlass(this, Handle, App.Config.FlyoutOpacityNow);
         };
 
         SizeChanged += (_, _) => Reposition();
@@ -309,7 +309,7 @@ public class TrayFlyout : FlyoutBase
 
         var hint = new TextBlock
         {
-            Text = L.T("Umschalt + Rechtsklick: im Dock anzeigen / ausblenden"),
+            Text = L.T("Ins Dock ziehen oder Umschalt + Rechtsklick: im Dock anzeigen"),
             Foreground = Theme.Get("FgDim"),
             FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Width = 7 * 30.0, Margin = new Thickness(2, 8, 2, 0),
         };

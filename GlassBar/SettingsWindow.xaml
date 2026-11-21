@@ -416,25 +416,28 @@
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">
                             <TextBlock DockPanel.Dock="Right" Width="48" TextAlignment="Right" VerticalAlignment="Center"
-                                       Text="{Binding DockOpacity, StringFormat={}{0:0} %}" Foreground="{StaticResource Sub}"/>
+                                       Text="{Binding DockOpacityNow, StringFormat={}{0:0} %}" Foreground="{StaticResource Sub}"/>
                             <Slider DockPanel.Dock="Right" Style="{StaticResource Slide}" Minimum="0" Maximum="100"
-                                    Value="{Binding DockOpacity}"/>
-                            <TextBlock Text="Deckkraft des Docks" Style="{StaticResource Label}"/>
+                                    Value="{Binding DockOpacityNow}"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                Deckkraft des Docks
+                                <LineBreak/><Run Text="Alle drei Werte merkt sich GlassBar getrennt für helles und dunkles Design." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">
                             <TextBlock DockPanel.Dock="Right" Width="48" TextAlignment="Right" VerticalAlignment="Center"
-                                       Text="{Binding FlyoutOpacity, StringFormat={}{0:0} %}" Foreground="{StaticResource Sub}"/>
+                                       Text="{Binding FlyoutOpacityNow, StringFormat={}{0:0} %}" Foreground="{StaticResource Sub}"/>
                             <Slider DockPanel.Dock="Right" Style="{StaticResource Slide}" Minimum="0" Maximum="100"
-                                    Value="{Binding FlyoutOpacity}"/>
+                                    Value="{Binding FlyoutOpacityNow}"/>
                             <TextBlock Text="Deckkraft von Desktop-Fenster und Vorschau" Style="{StaticResource Label}"/>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">
                             <TextBlock DockPanel.Dock="Right" Width="48" TextAlignment="Right" VerticalAlignment="Center"
-                                       Text="{Binding MenuOpacity, StringFormat={}{0:0} %}" Foreground="{StaticResource Sub}"/>
+                                       Text="{Binding MenuOpacityNow, StringFormat={}{0:0} %}" Foreground="{StaticResource Sub}"/>
                             <Slider DockPanel.Dock="Right" Style="{StaticResource Slide}" Minimum="20" Maximum="100"
-                                    Value="{Binding MenuOpacity}"/>
+                                    Value="{Binding MenuOpacityNow}"/>
                             <TextBlock Text="Deckkraft der Kontextmenüs" Style="{StaticResource Label}"/>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
@@ -457,6 +460,14 @@
                         <DockPanel Style="{StaticResource Row}">
                             <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding ShowRunningDots}"/>
                             <TextBlock Text="Punkt unter laufenden Programmen" Style="{StaticResource Label}"/>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}">
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding UseAccentColor}"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                Windows-Akzentfarbe nutzen
+                                <LineBreak/><Run Text="Für die Punkte unter laufenden Programmen und die Fortschrittsbalken." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
                         </DockPanel>
                     </StackPanel>
                 </Border>
@@ -834,6 +845,23 @@
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondary" Content="Licht mit Uhr und Datum"
                                              IsChecked="{Binding WallpaperSecondary, Converter={StaticResource Eq}, ConverterParameter=Clock}"/>
                             </WrapPanel>
+                            <TextBlock Margin="0,10,0,8" Text="Effekt auf Nebenbildschirmen"/>
+                            <WrapPanel>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Wie Hauptbildschirm"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Same}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Lichtfeld"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Light}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Polarlicht"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Aurora}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Kaustik"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Caustics}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Bokeh-Lichter"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Bokeh}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Nebel"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Smoke}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Einfarbig"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Solid}"/>
+                            </WrapPanel>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -908,11 +936,11 @@
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <StackPanel Margin="0,12,0,6" IsEnabled="{Binding ShowWallpaper}">
-                            <TextBlock Margin="0,0,0,10">
+                            <TextBlock Margin="0,0,0,10" TextWrapping="Wrap">
                                 Hinter Uhr und Pillen
                                 <LineBreak/><Run Text="Uhr, Datum, Pillen und Karten bleiben bei allen Varianten. Die Effekte nutzen die Farben der Palette und reagieren auf Musik und Maus." Foreground="{StaticResource Sub}" FontSize="12"/>
                             </TextBlock>
-                            <WrapPanel>
+                            <WrapPanel x:Name="FieldChoices">
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Lichtfeld"
                                              IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Light}"/>
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Polarlicht"
@@ -928,6 +956,42 @@
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Einfarbig"
                                              IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Solid}"/>
                             </WrapPanel>
+                            <!-- Tempo und Stärke gelten je Effekt (die Regler zeigen die Werte des gewählten) -->
+                            <StackPanel x:Name="EffectTuning" Margin="0,8,0,0">
+                                <DockPanel Margin="0,4">
+                                    <TextBlock x:Name="EffectSpeedText" DockPanel.Dock="Right" Width="48" TextAlignment="Right"
+                                               VerticalAlignment="Center" Foreground="{StaticResource Sub}"/>
+                                    <Slider x:Name="EffectSpeedSlider" DockPanel.Dock="Right" Style="{StaticResource Slide}"
+                                            Minimum="25" Maximum="200" ValueChanged="EffectTuning_Changed"/>
+                                    <TextBlock Text="Tempo des Effekts" Style="{StaticResource Label}"/>
+                                </DockPanel>
+                                <DockPanel Margin="0,4">
+                                    <TextBlock x:Name="EffectGainText" DockPanel.Dock="Right" Width="48" TextAlignment="Right"
+                                               VerticalAlignment="Center" Foreground="{StaticResource Sub}"/>
+                                    <Slider x:Name="EffectGainSlider" DockPanel.Dock="Right" Style="{StaticResource Slide}"
+                                            Minimum="25" Maximum="200" ValueChanged="EffectTuning_Changed"/>
+                                    <TextBlock Text="Stärke des Effekts" Style="{StaticResource Label}"/>
+                                </DockPanel>
+                                <TextBlock Margin="0,10,0,8" TextWrapping="Wrap">
+                                    Effekte automatisch wechseln
+                                    <LineBreak/><Run Text="Nach Tageszeit: morgens Nebel, vormittags Lichtfeld, mittags Kaustik, abends Bokeh-Lichter, nachts Polarlicht." Foreground="{StaticResource Sub}" FontSize="12"/>
+                                </TextBlock>
+                                <WrapPanel>
+                                    <RadioButton Style="{StaticResource Segment}" GroupName="WpRotate" Content="Aus"
+                                                 IsChecked="{Binding WallpaperRotation, Converter={StaticResource Eq}, ConverterParameter=Off}"/>
+                                    <RadioButton Style="{StaticResource Segment}" GroupName="WpRotate" Content="Nach Zeit"
+                                                 IsChecked="{Binding WallpaperRotation, Converter={StaticResource Eq}, ConverterParameter=Interval}"/>
+                                    <RadioButton Style="{StaticResource Segment}" GroupName="WpRotate" Content="Nach Tageszeit"
+                                                 IsChecked="{Binding WallpaperRotation, Converter={StaticResource Eq}, ConverterParameter=TimeOfDay}"/>
+                                </WrapPanel>
+                                <DockPanel x:Name="RotationMinutesRow" Margin="0,8,0,0">
+                                    <TextBlock DockPanel.Dock="Right" Width="64" TextAlignment="Right" VerticalAlignment="Center"
+                                               Text="{Binding WallpaperRotationMinutes, StringFormat={}{0} min}" Foreground="{StaticResource Sub}"/>
+                                    <Slider DockPanel.Dock="Right" Style="{StaticResource Slide}" Minimum="5" Maximum="240"
+                                            TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding WallpaperRotationMinutes}"/>
+                                    <TextBlock Text="Wechsel alle" Style="{StaticResource Label}"/>
+                                </DockPanel>
+                            </StackPanel>
                         </StackPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding ShowWallpaper}">
@@ -1009,6 +1073,9 @@
                         <WrapPanel Margin="0,12,0,12">
                             <Button Style="{StaticResource Button}" Content="Auf Standard zurücksetzen" Click="Reset_Click"/>
                             <Button Style="{StaticResource Button}" Content="Einstellungsordner öffnen" Click="OpenFolder_Click"/>
+                            <Button Style="{StaticResource Button}" Content="Protokoll öffnen" Click="OpenLog_Click"/>
+                            <Button Style="{StaticResource Button}" Content="Einstellungen exportieren …" Click="Export_Click"/>
+                            <Button Style="{StaticResource Button}" Content="Einstellungen importieren …" Click="Import_Click"/>
                             <Button Style="{StaticResource Button}" Content="GlassBar beenden" Click="Quit_Click"/>
                         </WrapPanel>
                     </StackPanel>

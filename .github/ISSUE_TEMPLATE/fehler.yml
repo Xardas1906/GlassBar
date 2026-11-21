@@ -42,3 +42,11 @@ body:
         - "1"
         - "2"
         - "3 oder mehr"
+  - type: textarea
+    id: protokoll
+    attributes:
+      label: Protokoll (falls vorhanden)
+      description: |
+        Einstellungen › System › „Protokoll öffnen“ zeigt die Datei error.log. Bitte die letzten Zeilen rund um den Fehler hier einfügen.
+        Die Datei enthält keine Passwörter, aber Pfade wie C:\Users\<Name> – die kannst du vorher unkenntlich machen.
+      render: text

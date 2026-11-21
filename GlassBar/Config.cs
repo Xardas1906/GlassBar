@@ -16,6 +16,12 @@ public class Config
     // ---------- Inhalte (werden nicht im Einstellungsfenster geändert) ----------
     public List<string> Pinned { get; set; } = new();
     public string[]? PinnedTrayIcons { get; set; }
+    /// <summary>
+    /// Zustand der Windows-Taskleiste vor GlassBar (ABM_GETSTATE: 1 = automatisch ausblenden, 2 = immer oben),
+    /// solange GlassBar sie versteckt; nach sauberem Beenden wieder leer. Steht hier noch ein Wert, endete GlassBar
+    /// zuletzt unsauber, und die Taskleiste steht noch auf „automatisch ausblenden“ von GlassBar.
+    /// </summary>
+    public int? TaskbarStateBeforeGlassBar { get; set; }
     /// <summary>Windows-Auswahl „immer in der Taskleiste“ wurde einmal übernommen (siehe TrayRescue).</summary>
     public bool TrayPromotedImported { get; set; }
 
@@ -28,12 +34,24 @@ public class Config
     // ---------- Aussehen ----------
     /// <summary>Tönung des Dock-Glases (#RRGGBB).</summary>
     public string TintColor { get; set; } = "#181818";
-    /// <summary>Deckkraft der Tönung im Dock, 0–100 %.</summary>
+    /// <summary>Deckkraft der Tönung im Dock, 0–100 % (dunkles Design; hell siehe DockOpacityLight).</summary>
     public double DockOpacity { get; set; } = 19;
-    /// <summary>Deckkraft der Aufklapp-Fenster (Desktop, Vorschau), 0–100 %.</summary>
+    /// <summary>Deckkraft der Aufklapp-Fenster (Desktop, Vorschau), 0–100 % (dunkles Design).</summary>
     public double FlyoutOpacity { get; set; } = 19;
-    /// <summary>Deckkraft der Kontextmenüs, 0–100 %.</summary>
+    /// <summary>Deckkraft der Kontextmenüs, 0–100 % (dunkles Design).</summary>
     public double MenuOpacity { get; set; } = 50;
+    /// <summary>Dasselbe für das helle Design; null = noch nie eingestellt, dann wie im dunklen.</summary>
+    public double? DockOpacityLight { get; set; }
+    public double? FlyoutOpacityLight { get; set; }
+    public double? MenuOpacityLight { get; set; }
+
+    // Deckkraft für das gerade aktive Design (die Regler in den Einstellungen und alle Fenster nutzen diese)
+    [System.Text.Json.Serialization.JsonIgnore]
+    public double DockOpacityNow { get => GlassBar.Theme.IsLight ? DockOpacityLight ?? DockOpacity : DockOpacity; set { if (GlassBar.Theme.IsLight) DockOpacityLight = value; else DockOpacity = value; } }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public double FlyoutOpacityNow { get => GlassBar.Theme.IsLight ? FlyoutOpacityLight ?? FlyoutOpacity : FlyoutOpacity; set { if (GlassBar.Theme.IsLight) FlyoutOpacityLight = value; else FlyoutOpacity = value; } }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public double MenuOpacityNow { get => GlassBar.Theme.IsLight ? MenuOpacityLight ?? MenuOpacity : MenuOpacity; set { if (GlassBar.Theme.IsLight) MenuOpacityLight = value; else MenuOpacity = value; } }
     /// <summary>Icon-Größe im Dock in Pixeln.</summary>
     public double IconSize { get; set; } = 30;
     /// <summary>Abstand des Docks zum unteren Bildschirmrand.</summary>
@@ -91,6 +109,8 @@ public class Config
     public bool ShowDate { get; set; } = true;
     public bool ShowSeconds { get; set; }
     public bool ShowRunningDots { get; set; } = true;
+    /// <summary>Laufpunkte und Fortschrittsbalken in der Windows-Akzentfarbe statt weiß/grün.</summary>
+    public bool UseAccentColor { get; set; }
     /// <summary>Was gerade läuft (Cover, Titel, Tasten) im Dock.</summary>
     public bool ShowMusic { get; set; } = true;
     public bool ShowWeather { get; set; } = true;
@@ -123,7 +143,19 @@ public class Config
     /// <summary>Nativer Hintergrund auf Nebenbildschirmen: "Off", "Light" (nur Licht) oder "Clock" (Licht mit Uhr und Datum).</summary>
     public string WallpaperSecondary { get; set; } = "Clock";
     /// <summary>Was hinter Uhr und Pillen liegt: "Light" (Lichtfeld), "Image" (Windows-Hintergrundbild) oder "Solid" (einfarbig).</summary>
-    public string WallpaperField { get; set; } = "Light"; // auch "Aurora", "Caustics", "Bokeh", "Smoke" (siehe StillRenderer.BackgroundMode)
+    /// <summary>Tempo und Stärke je Hintergrundeffekt in Prozent (100 = normal); fehlt ein Effekt, gilt 100.</summary>
+    public Dictionary<string, double> EffectSpeed { get; set; } = new();
+    public Dictionary<string, double> EffectIntensity { get; set; } = new();
+    public static double Percent(Dictionary<string, double>? d, string effect) =>
+        d != null && d.TryGetValue(effect, out var v) ? Math.Clamp(v, 25, 200) : 100;
+    /// <summary>Automatischer Wechsel der Effekte: "Off", "Interval" (alle WallpaperRotationMinutes reihum) oder "TimeOfDay".</summary>
+    public string WallpaperRotation { get; set; } = "Off";
+    public int WallpaperRotationMinutes { get; set; } = 30;
+    /// <summary>Wann der Effekt zuletzt gewählt wurde – ab da läuft der Wechsel „nach Zeit“ reihum.</summary>
+    public DateTime? WallpaperRotationSince { get; set; }
+    public string WallpaperField { get; set; } = "Light";
+    /// <summary>Effekt auf den Nebenbildschirmen: "Same" (wie Hauptbildschirm, auch beim Wechsel) oder ein eigener.</summary>
+    public string WallpaperSecondaryField { get; set; } = "Same"; // auch "Aurora", "Caustics", "Bokeh", "Smoke" (siehe StillRenderer.BackgroundMode)
 
     // ---------- Aufklapp-Fenster ----------
     public bool HoverOpensFolders { get; set; } = true;
@@ -158,7 +190,7 @@ public class Config
     {
         var d = new Config();
         foreach (var p in typeof(Config).GetProperties())
-            if (p.CanWrite && p.Name is not (nameof(Pinned) or nameof(PinnedTrayIcons) or nameof(TrayPromotedImported) or nameof(FolderGroups) or nameof(CollapsedRest) or nameof(WallpaperTasks) or nameof(WeatherCity)))
+            if (p.CanWrite && !Attribute.IsDefined(p, typeof(System.Text.Json.Serialization.JsonIgnoreAttribute)) && p.Name is not (nameof(Pinned) or nameof(PinnedTrayIcons) or nameof(TrayPromotedImported) or nameof(TaskbarStateBeforeGlassBar) or nameof(FolderGroups) or nameof(CollapsedRest) or nameof(WallpaperTasks) or nameof(WeatherCity)))
                 p.SetValue(this, p.GetValue(d));
         Normalize();
     }

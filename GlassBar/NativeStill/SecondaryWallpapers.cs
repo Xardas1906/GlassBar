@@ -50,6 +50,7 @@ public static class SecondaryWallpapers
         {
             if (w.Renderer is not { } r) continue;
             r.ShowText = mode != "Light";
+            r.ModeOverride = App.Config.WallpaperSecondaryField is { Length: > 0 } f && f != "Same" ? f : null;
             r.Fps = (int)Math.Clamp(App.Config.WallpaperFps, 10, 60);
         }
 

@@ -90,7 +90,7 @@ public class ModernMenu : Window
             var h = new WindowInteropHelper(this).Handle;
             if (HwndSource.FromHwnd(h) is { CompositionTarget: { } ct }) ct.BackgroundColor = Colors.Transparent;
             Native.AddExStyle(h, Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE);
-            Theme.ApplyGlass(this, h, App.Config.MenuOpacity);
+            Theme.ApplyGlass(this, h, App.Config.MenuOpacityNow);
         };
         SizeChanged += (_, _) => Place();
         Native.KeepRounded(this, () => 8);
