@@ -1,0 +1,32 @@
+# Neue Version an winget melden: Sobald ein Release veröffentlicht ist (kein Entwurf, keine Vorabversion),
+# erstellt diese Aktion über den Fork Xardas1906/winget-pkgs einen Pull Request bei microsoft/winget-pkgs.
+# Braucht das Repository-Secret WINGET_TOKEN (klassisches GitHub-Token mit Recht „public_repo“);
+# ohne das Secret wird nur ein Hinweis ausgegeben. Die allererste Version (1.4.4) wurde von Hand eingereicht.
+name: winget
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release-Tag (z. B. v1.4.5)
+        required: true
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    env:
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+    steps:
+      - name: Ohne Token nichts tun
+        if: env.WINGET_TOKEN == ''
+        run: echo "::warning::Secret WINGET_TOKEN fehlt – die Version wird nicht an winget gemeldet."
+
+      - uses: vedantmgoyal9/winget-releaser@v2
+        if: env.WINGET_TOKEN != ''
+        with:
+          identifier: Xardas1906.GlassBar
+          installers-regex: 'GlassBar-Setup-.*\.exe$'
+          release-tag: ${{ github.event.release.tag_name || inputs.tag }}
+          token: ${{ secrets.WINGET_TOKEN }}
