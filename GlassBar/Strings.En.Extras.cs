@@ -24,6 +24,14 @@ public static partial class Strings
         ["Hell"] = "Light",
         ["Wie Windows"] = "Like Windows",
 
+        // ---------- Hintergrund-Effekte ----------
+        ["Uhr, Datum, Pillen und Karten bleiben bei allen Varianten. Die Effekte nutzen die Farben der Palette und reagieren auf Musik und Maus."] =
+            "Clock, date, pills and cards stay with every option. The effects use the palette colors and react to music and the mouse.",
+        ["Polarlicht"] = "Aurora",
+        ["Kaustik"] = "Caustics",
+        ["Bokeh-Lichter"] = "Bokeh lights",
+        ["Nebel"] = "Mist",
+
         // ---------- Store-Apps ----------
         ["Diese App ist nicht mehr installiert."] = "This app is no longer installed.",
 

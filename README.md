@@ -32,7 +32,8 @@
 - Start-Symbol personalisierbar: Kachel, Glas, nur Logo oder eigenes Bild, mit eigener Farbe und Logo-Stil
 
 **Hintergrund „Still“ (nativ, ohne Browser)**
-- Lichtfeld (Direct3D), Uhr mit rollenden Ziffern, Datum und Wetter (Direct2D)
+- Lichtfeld, Polarlicht, Kaustik, Bokeh-Lichter oder Nebel (Direct3D, in den Farben der Palette, reagieren auf Musik und Maus) – oder das Windows-Hintergrundbild / einfarbig
+- Uhr mit rollenden Ziffern, Datum und Wetter (Direct2D)
 - Musik mit Liedtexten, Wasser, Pomodoro, Wecker/Timer, Aufgaben, Training, Gebetszeiten, Klanglandschaften, Wetterkarte
 - Regen auf der Scheibe, Strömung und Leuchten unter der Maus – auf allen Bildschirmen
 - Schläft, sobald er verdeckt ist

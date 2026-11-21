@@ -32,7 +32,8 @@
 - Customizable start icon: tile, glass, logo only or your own image, with colors and logo styles
 
 **Wallpaper “Still” (native, no browser)**
-- Light field (Direct3D), clock with rolling digits, date and weather (Direct2D) – or your Windows wallpaper / a solid color behind clock and pills
+- Light field, aurora, caustics, bokeh lights or mist (Direct3D, in the palette colors, reacting to music and the mouse) – or your Windows wallpaper / a solid color behind clock and pills
+- Clock with rolling digits, date and weather (Direct2D)
 - Music with lyrics, water, Pomodoro, alarms/timers, tasks, workouts, prayer times, soundscapes, weather card
 - Rain on the glass, flow and glow under the mouse – on all monitors
 - Sleeps whenever it is covered

@@ -54,6 +54,9 @@ public sealed class StillRenderer : IDisposable
     private Vortice.DirectComposition.IDCompositionVisual? _dcompVisual;
     private ID3D11VertexShader? _vs;
     private ID3D11PixelShader? _fieldPs, _upPs;
+    /// <summary>Weitere Effekte hinter Uhr und Pillen (Einstellung WallpaperField), gleiche Eingänge wie das Lichtfeld.</summary>
+    private readonly Dictionary<string, ID3D11PixelShader> _effectPs = new();
+    private Vector2 _parallax;   // geglättete Mausposition für Bokeh (−0,5 … 0,5)
     private ID3D11Buffer? _fieldCb, _upCb;
     private ID3D11SamplerState? _sampler;
     private ID3D11Texture2D? _small, _full, _flowTex;
@@ -76,7 +79,10 @@ public sealed class StillRenderer : IDisposable
     private string? _wallKey;
     private double _wallCheck;
 
-    /// <summary>"Light" = Lichtfeld, "Image" = Windows-Hintergrundbild, "Solid" = einfarbig (Grundfarbe der Palette).</summary>
+    /// <summary>
+    /// "Light" = Lichtfeld, "Aurora" = Polarlicht, "Caustics" = Kaustik, "Bokeh" = Bokeh-Lichter, "Smoke" = Nebel,
+    /// "Image" = Windows-Hintergrundbild, "Solid" = einfarbig (Grundfarbe der Palette).
+    /// </summary>
     public static volatile string BackgroundMode = "Light";
     private StillTextLayer? _text;
     private readonly TextFrame _frame = new();
@@ -301,11 +307,18 @@ public sealed class StillRenderer : IDisposable
         if (flowChanged) _ctx!.UpdateSubresource<float>(Flow.Data, _flowTex!, 0, (uint)(Flow.Cols * 16));
 
         var ctx = _ctx!;
-        if (BackgroundMode != "Light")
+        string mode = BackgroundMode;
+        ID3D11PixelShader? effect = mode == "Light" ? _fieldPs : _effectPs.GetValueOrDefault(mode);
+        if (effect == null)
         {
             DrawPlainBackground(ctx, dt);
             goto afterField;
         }
+
+        // Bokeh: Lichter weichen der Maus leicht aus (geglättet; ohne Maus zurück zur Mitte)
+        var target = _pointerInside && _width > 0 && _height > 0
+            ? new Vector2(_lastPointer.X / _width - 0.5f, 0.5f - _lastPointer.Y / _height) : Vector2.Zero;
+        _parallax += (target - _parallax) * (float)(1 - Math.Exp(-dt * 2.5));
 
         // 1) Lichtfeld klein
         var p = new FieldParams
@@ -317,13 +330,14 @@ public sealed class StillRenderer : IDisposable
             FlowOn = Flow.Active && s.Bool("water") ? 1 : 0,
             FlowGlow = (float)(s.Num("waterShine") * 2.6),
             Base = Palette.Base, C0 = Palette.C0, C1 = Palette.C1, C2 = Palette.C2, C3 = Palette.C3,
+            Shift = mode == "Bokeh" ? _parallax : Vector2.Zero,   // das Lichtfeld bleibt wie im Original
         };
         ctx.UpdateSubresource(in p, _fieldCb!);
         ctx.OMSetRenderTargets(_smallRtv!);
         ctx.RSSetViewport(new Vortice.Mathematics.Viewport(0, 0, _smallW, _smallH));
         ctx.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
         ctx.VSSetShader(_vs);
-        ctx.PSSetShader(_fieldPs);
+        ctx.PSSetShader(effect);
         ctx.PSSetConstantBuffer(0, _fieldCb);
         ctx.PSSetSampler(0, _sampler);
         ctx.PSSetShaderResource(0, _flowSrv);
@@ -528,6 +542,11 @@ public sealed class StillRenderer : IDisposable
         _vs = _device.CreateVertexShader(vsCode.Span);
         _fieldPs = _device.CreatePixelShader(Compile(Shaders.Field, "ps_5_0").Span);
         _upPs = _device.CreatePixelShader(Compile(Shaders.Upscale, "ps_5_0").Span);
+        foreach (var (name, src) in new[] { ("Aurora", Shaders.Aurora), ("Caustics", Shaders.Caustics), ("Bokeh", Shaders.Bokeh), ("Smoke", Shaders.Smoke) })
+        {
+            try { _effectPs[name] = _device.CreatePixelShader(Compile(src, "ps_5_0").Span); }
+            catch (Exception ex) { Log.Error("Hintergrund-Effekt " + name, ex); } // fehlt er, gibt es einfarbig
+        }
         _fieldCb = _device.CreateBuffer(new BufferDescription((uint)Marshal.SizeOf<FieldParams>(), BindFlags.ConstantBuffer));
         _upCb = _device.CreateBuffer(new BufferDescription((uint)Marshal.SizeOf<UpscaleParams>(), BindFlags.ConstantBuffer));
         _sampler = _device.CreateSamplerState(new SamplerDescription(Vortice.Direct3D11.Filter.MinMagMipLinear, TextureAddressMode.Clamp));
@@ -609,6 +628,8 @@ public sealed class StillRenderer : IDisposable
         _rain?.Dispose(); _rain = null;
         _fullSrv = null; _wetRtv = null; _wet = null;
         _sampler?.Dispose(); _fieldCb?.Dispose(); _upCb?.Dispose(); _vs?.Dispose(); _fieldPs?.Dispose(); _upPs?.Dispose();
+        foreach (var ps in _effectPs.Values) ps.Dispose();
+        _effectPs.Clear();
         _dcompVisual?.Dispose(); _dcompTarget?.Dispose(); _dcomp?.Dispose();
         _dcompVisual = null; _dcompTarget = null; _dcomp = null;
         _swap?.Dispose(); _ctx?.ClearState(); _ctx?.Dispose(); _device?.Dispose();

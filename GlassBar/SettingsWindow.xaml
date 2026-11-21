@@ -910,11 +910,19 @@
                         <StackPanel Margin="0,12,0,6" IsEnabled="{Binding ShowWallpaper}">
                             <TextBlock Margin="0,0,0,10">
                                 Hinter Uhr und Pillen
-                                <LineBreak/><Run Text="Uhr, Datum, Pillen und Karten bleiben bei allen drei Varianten." Foreground="{StaticResource Sub}" FontSize="12"/>
+                                <LineBreak/><Run Text="Uhr, Datum, Pillen und Karten bleiben bei allen Varianten. Die Effekte nutzen die Farben der Palette und reagieren auf Musik und Maus." Foreground="{StaticResource Sub}" FontSize="12"/>
                             </TextBlock>
                             <WrapPanel>
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Lichtfeld"
                                              IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Light}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Polarlicht"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Aurora}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Kaustik"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Caustics}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Bokeh-Lichter"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Bokeh}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Nebel"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Smoke}"/>
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Windows-Hintergrundbild"
                                              IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Image}"/>
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Einfarbig"
