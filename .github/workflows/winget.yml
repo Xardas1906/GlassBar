@@ -1,7 +1,9 @@
 # Neue Version an winget melden: Sobald ein Release veröffentlicht ist (kein Entwurf, keine Vorabversion),
 # erstellt diese Aktion über den Fork Xardas1906/winget-pkgs einen Pull Request bei microsoft/winget-pkgs.
-# Braucht das Repository-Secret WINGET_TOKEN (klassisches GitHub-Token mit Recht „public_repo“);
-# ohne das Secret wird nur ein Hinweis ausgegeben. Die allererste Version (1.4.4) wurde von Hand eingereicht.
+# Braucht das Repository-Secret WINGET_TOKEN (klassisches GitHub-Token mit Recht „public_repo“).
+# Die Aktion kann nur Versionen zu einem Paket nachreichen, das schon in winget steht. Solange die erste
+# Einreichung (1.4.4, von Hand) noch nicht freigegeben ist, gibt sie nur einen Hinweis aus; danach eine
+# übersprungene Version über „Run workflow“ mit ihrem Tag nachreichen.
 name: winget
 
 on:
@@ -18,13 +20,25 @@ jobs:
     runs-on: windows-latest
     env:
       WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Ohne Token nichts tun
-        if: env.WINGET_TOKEN == ''
-        run: echo "::warning::Secret WINGET_TOKEN fehlt – die Version wird nicht an winget gemeldet."
+      - name: Voraussetzungen prüfen
+        id: check
+        shell: pwsh
+        run: |
+          if (-not $env:WINGET_TOKEN) {
+            "::warning::Secret WINGET_TOKEN fehlt – die Version wird nicht an winget gemeldet."
+            "ready=false" >> $env:GITHUB_OUTPUT; exit 0
+          }
+          gh api repos/microsoft/winget-pkgs/contents/manifests/x/Xardas1906/GlassBar --silent 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            "::warning::Xardas1906.GlassBar steht noch nicht in winget (erste Einreichung wartet auf Freigabe). Nach der Freigabe diesen Workflow mit dem Tag erneut starten."
+            "ready=false" >> $env:GITHUB_OUTPUT; exit 0
+          }
+          "ready=true" >> $env:GITHUB_OUTPUT
 
       - uses: vedantmgoyal9/winget-releaser@v2
-        if: env.WINGET_TOKEN != ''
+        if: steps.check.outputs.ready == 'true'
         with:
           identifier: Xardas1906.GlassBar
           installers-regex: 'GlassBar-Setup-.*\.exe$'
