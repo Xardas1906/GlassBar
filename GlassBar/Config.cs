@@ -152,8 +152,17 @@ public class Config
     /// <summary>Tempo und Stärke je Hintergrundeffekt in Prozent (100 = normal); fehlt ein Effekt, gilt 100.</summary>
     public Dictionary<string, double> EffectSpeed { get; set; } = new();
     public Dictionary<string, double> EffectIntensity { get; set; } = new();
-    public static double Percent(Dictionary<string, double>? d, string effect) =>
-        d != null && d.TryGetValue(effect, out var v) ? Math.Clamp(v, 25, 200) : 100;
+    public static double Percent(Dictionary<string, double>? d, string effect, double min = 25, double max = 200) =>
+        d != null && d.TryGetValue(effect, out var v) ? Math.Clamp(v, min, max) : 100;
+    /// <summary>Tempo eines Effekts in Prozent (0 = steht still, bis 300 %).</summary>
+    public double SpeedOf(string effect) => Percent(EffectSpeed, effect, 0, 300);
+    /// <summary>Stärke eines Effekts in Prozent (25–200 %).</summary>
+    public double IntensityOf(string effect) => Percent(EffectIntensity, effect);
+
+    /// <summary>Farben je Effekt: "Palette" oder "Natural" (natürliche Farben, siehe EffectColors). Fehlt ein Effekt, gilt dessen Standard.</summary>
+    public Dictionary<string, string> EffectColorSource { get; set; } = new();
+    /// <summary>Altes Still-Tempo („Tempo des Hintergrundlichts“) schon in das Tempo je Effekt übernommen?</summary>
+    public bool MotionMigrated { get; set; }
     /// <summary>Automatischer Wechsel der Effekte: "Off", "Interval" (alle WallpaperRotationMinutes reihum) oder "TimeOfDay".</summary>
     public string WallpaperRotation { get; set; } = "Off";
     public int WallpaperRotationMinutes { get; set; } = 30;
@@ -198,7 +207,7 @@ public class Config
     {
         var d = new Config();
         foreach (var p in typeof(Config).GetProperties())
-            if (p.CanWrite && !Attribute.IsDefined(p, typeof(System.Text.Json.Serialization.JsonIgnoreAttribute)) && p.Name is not (nameof(Pinned) or nameof(PinnedTrayIcons) or nameof(TrayPromotedImported) or nameof(TaskbarStateBeforeGlassBar) or nameof(TaskbarAutoHideAsked) or nameof(LastSeenVersion) or nameof(FolderGroups) or nameof(CollapsedRest) or nameof(WallpaperTasks) or nameof(WeatherCity)))
+            if (p.CanWrite && !Attribute.IsDefined(p, typeof(System.Text.Json.Serialization.JsonIgnoreAttribute)) && p.Name is not (nameof(Pinned) or nameof(PinnedTrayIcons) or nameof(TrayPromotedImported) or nameof(TaskbarStateBeforeGlassBar) or nameof(TaskbarAutoHideAsked) or nameof(LastSeenVersion) or nameof(MotionMigrated) or nameof(FolderGroups) or nameof(CollapsedRest) or nameof(WallpaperTasks) or nameof(WeatherCity)))
                 p.SetValue(this, p.GetValue(d));
         Normalize();
     }

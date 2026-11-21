@@ -44,6 +44,29 @@ public static class WallpaperRotation
         _ => "Aurora",
     };
 
+    /// <summary>
+    /// Einmalig beim Start: Früher gab es zusätzlich „Tempo des Hintergrundlichts“ (Still, Standard 400 %), das mit
+    /// dem Tempo je Effekt malgenommen wurde. Jetzt gibt es nur noch das Tempo je Effekt. Wer das alte Tempo verstellt
+    /// hatte, bekommt es hier in alle Effekte übernommen; danach steht das alte wieder auf Standard.
+    /// </summary>
+    public static void MigrateMotion(Config c)
+    {
+        if (c.MotionMigrated) return;
+        c.MotionMigrated = true;
+        NativeStillStore.Load();
+        double motion = NativeStillStore.Values.Num("motion");
+        const double Standard = 4.0;
+        if (Math.Abs(motion - Standard) > 0.001)
+        {
+            double factor = Math.Max(0, motion) / Standard;
+            foreach (var key in Effects)
+                (c.EffectSpeed ??= new())[key] = Math.Round(Math.Clamp(c.SpeedOf(key) * factor, 0, 300));
+            NativeStillStore.Set("motion", Standard);
+            Log.Info($"Tempo des Hintergrundlichts ({motion * 100:0} %) in das Tempo der Effekte übernommen.");
+        }
+        c.Save();
+    }
+
     /// <summary>Regelmäßig prüfen, ob ein anderer Effekt dran ist (billig: nur ein Vergleich).</summary>
     public static void Start()
     {

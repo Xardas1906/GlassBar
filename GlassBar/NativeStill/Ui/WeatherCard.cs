@@ -233,7 +233,7 @@ public sealed class WeatherCard : IOverlay, IDisposable
         if (!_show) { _openT = 0; _hover = false; _zone = _card = default; return; }
 
         EnsureFormats(c);
-        _still = s.Num("motion") == 0;
+        _still = StillRenderer.SpeedOf(StillRenderer.BackgroundMode) == 0;   // Hintergrund steht still → Karte auch
         var cc = StillPlace.Place?.Cc ?? "";
         string unit = s.Str("weatherUnit");
         _fahrenheit = unit == "auto" ? FCountries.Contains(cc) : unit == "f";

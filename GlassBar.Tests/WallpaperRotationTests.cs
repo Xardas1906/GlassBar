@@ -79,3 +79,27 @@ public class PrecipitationTests
         Assert.True(GlassBar.NativeStill.EffectWeather.FromPrecipitation(0, false) >= 0.12f); // regnet es laut Code, bleibt etwas sichtbar
     }
 }
+
+public class EffectColorsTests
+{
+    [Fact]
+    public void WetterTeichSterne_StandardmaessigNatuerlich()
+    {
+        var c = new Config();
+        Assert.True(GlassBar.NativeStill.EffectColors.UsesNatural(c, "Weather"));
+        Assert.True(GlassBar.NativeStill.EffectColors.UsesNatural(c, "Pond"));
+        Assert.True(GlassBar.NativeStill.EffectColors.UsesNatural(c, "Stars"));
+        Assert.False(GlassBar.NativeStill.EffectColors.UsesNatural(c, "Lava"));   // gibt es nicht natürlich
+        c.EffectColorSource["Weather"] = "Palette";
+        Assert.False(GlassBar.NativeStill.EffectColors.UsesNatural(c, "Weather"));
+    }
+
+    [Fact]
+    public void TempoBereich_NullBisDreihundert()
+    {
+        var c = new Config();
+        Assert.Equal(100, c.SpeedOf("Lava"));
+        c.EffectSpeed["Lava"] = 0; Assert.Equal(0, c.SpeedOf("Lava"));
+        c.EffectSpeed["Lava"] = 999; Assert.Equal(300, c.SpeedOf("Lava"));
+    }
+}

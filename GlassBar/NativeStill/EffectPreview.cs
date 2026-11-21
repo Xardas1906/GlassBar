@@ -39,7 +39,8 @@ public static class EffectPreview
             WxKind = wx.Kind, WxAmount = wx.Amount, WxCloud = wx.Cloud, WxNight = wx.Night,
             Bands = new Vector4(0.6f, 0.45f, 0.35f, 0.25f),
         };
-        Render(Shaders.Effects.Prepend(("Light", Shaders.Field)), p, Width, Height, result);
+        // jeder Effekt in seinen Farben (Palette oder natürlich), wie er auch auf dem Desktop aussieht
+        Render(Shaders.Effects.Prepend(("Light", Shaders.Field)), p, Width, Height, result, key => EffectColors.For(key, pal));
     }
 
     /// <summary>Einen Effekt in beliebiger Größe mit vorgegebenen Werten zeichnen (z. B. zum Prüfen der Wetterarten).</summary>
@@ -53,7 +54,7 @@ public static class EffectPreview
     }
 
     private static void Render(IEnumerable<(string Key, string Source)> effects, StillRenderer.FieldParams p, int w, int h,
-                               Dictionary<string, BitmapSource> result)
+                               Dictionary<string, BitmapSource> result, Func<string, EffectColors.Set>? colorsFor = null)
     {
         var levels = new[] { FeatureLevel.Level_11_1, FeatureLevel.Level_11_0, FeatureLevel.Level_10_0 };
         // Grafikkarte, sonst Software (WARP)
@@ -79,6 +80,12 @@ public static class EffectPreview
         {
             try
             {
+                if (colorsFor != null)
+                {
+                    var ec = colorsFor(name);
+                    p.Base = ec.Base; p.C0 = ec.C0; p.C1 = ec.C1; p.C2 = ec.C2; p.C3 = ec.C3;
+                    c.UpdateSubresource(in p, cb);
+                }
                 using var ps = dev.CreatePixelShader(StillRenderer.Compile(src, "ps_5_0").Span);
                 c.OMSetRenderTargets(rtv);
                 c.RSSetViewport(new Vortice.Mathematics.Viewport(0, 0, w, h));

@@ -88,6 +88,10 @@ public sealed class StillRenderer : IDisposable
     public static volatile string BackgroundMode = "Light";
     /// <summary>Tempo und Stärke je Effekt (1 = normal; aus Config.EffectSpeed/EffectIntensity).</summary>
     private static volatile Dictionary<string, (float Speed, float Gain)> _tune = new();
+    private const double BaseMotion = 4.0;
+
+    /// <summary>Tempo eines Effekts (1 = normal, 0 = steht still).</summary>
+    public static float SpeedOf(string mode) => _tune.TryGetValue(mode, out var t) ? t.Speed : 1f;
 
     /// <summary>
     /// Effekt samt Tempo und Stärke aus den Einstellungen übernehmen (gilt für alle Bildschirme). Beim automatischen
@@ -97,10 +101,11 @@ public sealed class StillRenderer : IDisposable
     {
         var tune = new Dictionary<string, (float, float)>();
         foreach (var m in WallpaperRotation.Effects)
-            tune[m] = ((float)(Config.Percent(c.EffectSpeed, m) / 100), (float)(Config.Percent(c.EffectIntensity, m) / 100));
+            tune[m] = ((float)(c.SpeedOf(m) / 100), (float)(c.IntensityOf(m) / 100));
         _tune = tune;
         BackgroundMode = WallpaperRotation.Current(c, DateTime.Now);
         EffectWeather.Preset = c.WeatherEffectPreview is null or "" or "Real" ? null : c.WeatherEffectPreview;
+        EffectColors.Apply(c);
     }
 
     // gerade gezeigter Effekt und Überblendung (1 = ganz sichtbar, 0 = nur Grundfarbe)
@@ -334,11 +339,14 @@ public sealed class StillRenderer : IDisposable
         float fade = (float)(_fade * _fade * (3 - 2 * _fade));
         var tune = _tune.TryGetValue(mode, out var tv) ? tv : (Speed: 1f, Gain: 1f);
 
-        _fieldTime += dt * s.Num("motion") * Palette.MoodSpeed * tune.Speed;
+        // Grundtempo fest (früher „Tempo des Hintergrundlichts“, Standard 400 %); eingestellt wird nur noch je Effekt
+        _fieldTime += dt * BaseMotion * Palette.MoodSpeed * tune.Speed;
         bool flowChanged = Flow.Step(dt, s);
 
         // Qualität: Breite des kleinen Felds
         int maxW = QualityWidth.TryGetValue(s.Str("quality"), out var q) ? q : 900;
+        // Lavalampe hat klare Kanten: klein gerechnet und hochgezogen wirkten sie verwaschen wie hinter Milchglas
+        if (mode == "Lava") maxW = Math.Max(maxW, 1920);
         double scale = Math.Min(1, (double)maxW / _width);
         int sw = Math.Max(2, (int)Math.Round(_width * scale)), sh = Math.Max(2, (int)Math.Round(_height * scale));
         if (sw != _smallW || sh != _smallH) CreateSmall(sw, sh);
@@ -360,6 +368,7 @@ public sealed class StillRenderer : IDisposable
 
         // 1) Lichtfeld klein
         var wx = EffectWeather.Effective();
+        var ec = EffectColors.For(mode, Palette);
         var p = new FieldParams
         {
             Res = new Vector2(_smallW, _smallH),
@@ -368,8 +377,9 @@ public sealed class StillRenderer : IDisposable
             Light = Palette.Light,
             FlowOn = Flow.Active && s.Bool("water") ? 1 : 0,
             FlowGlow = (float)(s.Num("waterShine") * 2.6),
-            Base = Palette.Base, C0 = Palette.C0, C1 = Palette.C1, C2 = Palette.C2, C3 = Palette.C3,
-            Shift = mode is "Bokeh" or "Stars" ? _parallax : Vector2.Zero,   // das Lichtfeld bleibt wie im Original
+            Base = ec.Base, C0 = ec.C0, C1 = ec.C1, C2 = ec.C2, C3 = ec.C3,   // Palette oder natürliche Farben (EffectColors)
+            // Maus-Parallaxe (Bokeh, Sterne) nach Einstellung; die Glühwürmchen folgen der Maus immer
+            Shift = mode is "Bokeh" or "Stars" && s.Bool("bgParallax") || mode == "Fireflies" ? _parallax : Vector2.Zero,
             WxKind = wx.Kind, WxAmount = wx.Amount, WxCloud = wx.Cloud, WxNight = wx.Night,
             Bands = new Vector4(_bands[0], _bands[1], _bands[2], _bands[3]),
             Misc = new Vector4((float)((DateTime.Now - _start).TotalSeconds % 3600.0), 0, 0, 0),
@@ -386,7 +396,7 @@ public sealed class StillRenderer : IDisposable
         ctx.Draw(3, 0);
 
         // 2) Auf volle Größe ziehen + Körnung
-        var u = new UpscaleParams { Grain = (float)(s.Num("grain") * (Palette.IsLightTheme ? 0.75 : 0.5)), Gain = tune.Gain * fade, Base = Palette.Base };
+        var u = new UpscaleParams { Grain = (float)(s.Num("grain") * (Palette.IsLightTheme ? 0.75 : 0.5)), Gain = tune.Gain * fade, Base = ec.Base };
         ctx.UpdateSubresource(in u, _upCb!);
         ctx.PSSetShaderResource(0, null!);
         ctx.OMSetRenderTargets(_fullRtv!);

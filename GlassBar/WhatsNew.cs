@@ -17,6 +17,19 @@ internal static class WhatsNew
     /// <summary>Neueste zuerst. Kurz halten: das, was man sonst nicht entdeckt.</summary>
     private static readonly Note[] Notes =
     {
+        new("1.5.2",
+            new[]
+            {
+                "Alles zum Hintergrund an einer Stelle: Palette, Albumcover-Färbung, Körnung, Qualität und die Maus-Einstellungen stehen jetzt unter Einstellungen › Hintergrund.",
+                "Natürliche Farben: Wetter, Teich und Sternenhimmel zeigen echte Himmels-, Wasser- und Nachtfarben (umschaltbar auf die Palette).",
+                "Nur noch ein Tempo-Regler je Effekt (0–300 %); die Vorschaubilder zeigen immer die aktuellen Farben. Lavalampe scharf und ruhig.",
+            },
+            new[]
+            {
+                "Everything about the background in one place: palette, album-cover tint, grain, quality and the mouse settings are now under Settings › Background.",
+                "Natural colors: weather, pond and starry sky show real sky, water and night colors (switchable to the palette).",
+                "Just one speed slider per effect (0–300 %); previews always show the current colors. Lava lamp sharp and calm.",
+            }),
         new("1.5.1",
             new[]
             {

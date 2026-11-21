@@ -116,7 +116,7 @@ public partial class SettingsWindow
         // Still: Kategorien und alle Einstellungen
         foreach (var tab in StillSettings.Tabs)
             list.Add(Entry(StillSettings.TabName(tab), "Still", $"{tab} hintergrund wallpaper", () => GoToStill(tab, null)));
-        foreach (var s in StillSettings.All)
+        foreach (var s in StillSettings.All.Where(x => x.Tab != "Hintergrund"))   // die stehen unter „Hintergrund“ und werden dort gefunden
         {
             // Angezeigt wird die Übersetzung; das Deutsche bleibt im Suchtext, damit beide Sprachen finden
             var opts = s.Options == null ? "" : string.Join(" ", s.Options.Select(o => o.Label == L.T(o.Label) ? o.Label : $"{o.Label} {L.T(o.Label)}"));

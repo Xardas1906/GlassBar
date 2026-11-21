@@ -9,7 +9,7 @@ public record StillSetting(string Tab, string Label, string Key, string Kind,
 public static class StillSettings
 {
     public static readonly string[] Tabs =
-        { "Aussehen", "Schrift", "Uhr", "Wecker", "Wetter", "Musik", "Trinken", "Pomodoro", "Training", "Effekte", "Gebet", "Mauszeiger" };
+        { "Aussehen", "Schrift", "Uhr", "Wecker", "Wetter", "Musik", "Trinken", "Pomodoro", "Training", "Effekte", "Gebet" };
 
     private static (object, string)[] O(params (object, string)[] o) => o;
     private static readonly (object, string)[] Tones = O(("glint", "Glint"), ("beacon", "Beacon"), ("dewdrop", "Dewdrop"), ("bamboo", "Bamboo"), ("off", "Aus"));
@@ -17,16 +17,15 @@ public static class StillSettings
     public static readonly StillSetting[] All =
     {
         // Aussehen
-        new("Aussehen", "Palette", "theme", "palette"),
-        new("Aussehen", "Mit Albumcover einfärben", "followAlbum", "toggle", Note: "Nimmt die Farben dessen an, was gerade läuft."),
-        new("Aussehen", "Stärke der Tönung", "tintStrength", "slider"),
-        new("Aussehen", "Körnung", "grain", "slider"),
-        new("Aussehen", "Tempo des Hintergrundlichts", "motion", "slider", 0, 4, Note: "Wie schnell das Licht hinter allem wandert. 0 % hält es still."),
-        new("Aussehen", "Musikleuchten", "audioGlow", "slider", Note: "Das Licht pulsiert mit dem Bass dessen, was auf diesem PC läuft."),
+        // Farben und Bild des Hintergrunds: stehen in GlassBar unter „Hintergrund“ (Tab „Hintergrund“ ist kein Still-Reiter)
+        new("Hintergrund", "Palette", "theme", "palette"),
+        new("Hintergrund", "Mit Albumcover einfärben", "followAlbum", "toggle", Note: "Nimmt die Farben dessen an, was gerade läuft."),
+        new("Hintergrund", "Stärke der Tönung", "tintStrength", "slider"),
+        new("Hintergrund", "Körnung", "grain", "slider"),
+        new("Hintergrund", "Musikleuchten", "audioGlow", "slider", Note: "Das Licht pulsiert mit dem Bass dessen, was auf diesem PC läuft."),
         new("Aussehen", "Kartenschatten", "cardShadow", "slider", 0, 1.5),
         new("Aussehen", "Farbige Karten", "cardColors", "toggle", Note: "Aus: Die Karten sind weiß und grau. Gebetszeiten behalten ihre Farben."),
-        new("Aussehen", "Maus-Parallaxe", "parallax", "toggle"),
-        new("Aussehen", "Qualität", "quality", "choice", Options: O(("low", "Niedrig"), ("balanced", "Ausgewogen"), ("high", "Hoch"))),
+        new("Hintergrund", "Qualität", "quality", "choice", Options: O(("low", "Niedrig"), ("balanced", "Ausgewogen"), ("high", "Hoch"))),
         // Schrift
         new("Schrift", "Schriftart", "font", "choice", Options: O(("dmsans", "DM Sans"), ("manrope", "Manrope"), ("poppins", "Poppins"), ("inter", "Inter"),
             ("geist", "Geist"), ("outfit", "Outfit"), ("serif", "Instrument"), ("system", "Segoe"))),
@@ -114,19 +113,21 @@ public static class StillSettings
         new("Gebet", "Bevor es endet", "prayerBefore", "slider", 0, 45, 5, "minOff"),
         new("Gebet", "Klang", "prayerSound", "choice", Options: Tones),
         // Mauszeiger
-        new("Mauszeiger", "Licht folgt dem Mauszeiger", "water", "toggle"),
-        new("Mauszeiger", "Drücken", "waterStrength", "slider"),
-        new("Mauszeiger", "Leuchten", "waterShine", "slider"),
-        new("Mauszeiger", "Größe", "waterSize", "slider"),
-        new("Mauszeiger", "Nachleuchten", "waterDecay", "slider"),
-        new("Mauszeiger", "Aufblühen beim Klick", "waterClick", "toggle"),
+        // Maus: wirkt auf den Hintergrund, steht darum unter GlassBar › Hintergrund (Abschnitt „Maus“)
+        new("Hintergrund", "Licht folgt dem Mauszeiger", "water", "toggle", Section: "Maus"),
+        new("Hintergrund", "Drücken", "waterStrength", "slider"),
+        new("Hintergrund", "Leuchten", "waterShine", "slider"),
+        new("Hintergrund", "Größe", "waterSize", "slider"),
+        new("Hintergrund", "Nachleuchten", "waterDecay", "slider"),
+        new("Hintergrund", "Aufblühen beim Klick", "waterClick", "toggle"),
+        new("Hintergrund", "Maus-Parallaxe", "bgParallax", "toggle", Note: "Bokeh-Lichter und Sternenhimmel weichen der Maus leicht aus."),
     };
 
     /// <summary>Standardwerte (aus „Still“).</summary>
     public static readonly Dictionary<string, object> Defaults = new()
     {
         ["theme"] = "ink", ["followAlbum"] = true, ["tintStrength"] = 0.8, ["grain"] = 0.15, ["motion"] = 4.0, ["audioGlow"] = 0.75,
-        ["parallax"] = false, ["quality"] = "high", ["font"] = "manrope", ["clockScale"] = 0.85, ["uiScale"] = 1.0, ["clockWeight"] = "bold",
+        ["bgParallax"] = true, ["quality"] = "high", ["font"] = "manrope", ["clockScale"] = 0.85, ["uiScale"] = 1.0, ["clockWeight"] = "bold",
         ["clockBlend"] = 0.59, ["clockX"] = 0.0, ["clockY"] = -0.12, ["showClock"] = true, ["clock24"] = true, ["seconds"] = "off",
         ["showDate"] = true, ["showFocus"] = true, ["celebrate"] = true, ["taskSound"] = true, ["showPill"] = true, ["pillStyle"] = "compact",
         ["hoverExpand"] = true, ["announce"] = true, ["visualizer"] = true, ["showControls"] = true, ["lyrics"] = "stage", ["lyricsSize"] = 0.74,

@@ -31,7 +31,7 @@ public sealed class StillValues
         ["grain"] = 0.15,
         ["motion"] = 4.0,
         ["audioGlow"] = 0.75,
-        ["parallax"] = false,
+        ["bgParallax"] = true,
         ["quality"] = "high",
         ["font"] = "manrope",
         ["clockScale"] = 0.85,

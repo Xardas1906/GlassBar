@@ -55,6 +55,7 @@ public partial class SettingsWindow : Window
         BuildStillNav();
         DataContext = App.Config;
         AutostartBox.IsChecked = Native.Autostart;
+        BuildBackgroundStillRows();
         RefreshEffectTuning();
         BuildFieldPreviews();
         AddHandler(ToggleButton.CheckedEvent, new RoutedEventHandler((_, e) =>
@@ -244,6 +245,43 @@ public partial class SettingsWindow : Window
     {
         _still![key] = value;
         NativeStill.NativeStillStore.Set(key, value);
+        // Farben geändert: Vorschaubilder neu malen (die Palette braucht einen Moment, bis sie überblendet ist)
+        if (key is "theme" or "followAlbum" or "tintStrength") SchedulePreviewRefresh(TimeSpan.FromSeconds(1.2));
+    }
+
+    /// <summary>
+    /// Einstellungen von „Still“, die zum Hintergrundbild gehören (Palette, Albumcover, Tönung, Körnung, Musikleuchten,
+    /// Qualität), stehen unter „Hintergrund“ – gebaut mit denselben Zeilen wie die Still-Seite (Reiter „Hintergrund“).
+    /// </summary>
+    private void BuildBackgroundStillRows()
+    {
+        if (_still == null) LoadNativeStill();
+        StillColorRows.Children.Clear();
+        StillLookRows.Children.Clear();
+        StillMouseRows.Children.Clear();
+        foreach (var s in StillSettings.All.Where(x => x.Tab == "Hintergrund"))
+        {
+            var target = s.Key is "theme" or "followAlbum" or "tintStrength" ? StillColorRows
+                       : s.Key.StartsWith("water") || s.Key == "bgParallax" ? StillMouseRows
+                       : StillLookRows;
+            if (s.Section != null)
+                target.Children.Add(new TextBlock { Text = L.T(s.Section), FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 16, 0, 2) });
+            else if (target.Children.Count > 0 || target == StillLookRows)
+                target.Children.Add(new Border { Style = (Style)FindResource("RowLine") });
+            target.Children.Add(BuildStillRow(s));
+        }
+    }
+
+    private bool _colorSourceLoad;
+
+    /// <summary>„Farben dieses Effekts“: natürlich oder Palette (nur für Effekte mit natürlichen Farben).</summary>
+    private void ColorSource_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_colorSourceLoad || !IsLoaded) return;
+        string m = App.Config.WallpaperField;
+        (App.Config.EffectColorSource ??= new())[m] = sender == ColorNatural ? "Natural" : "Palette";
+        NativeStill.EffectColors.Apply(App.Config);
+        SchedulePreviewRefresh(TimeSpan.Zero);
     }
 
     private readonly List<RadioButton> _stillNav = new();
@@ -432,31 +470,74 @@ public partial class SettingsWindow : Window
 
     private bool _tuningLoad = true; // bis RefreshEffectTuning: Werte beim Aufbau des Fensters nicht speichern
 
-    /// <summary>Vorschaubilder in die Knöpfe der Hintergrund-Auswahl setzen (im Hintergrund gezeichnet).</summary>
+    // ---------- Vorschaubilder der Hintergründe (live: aktuelle Palette, Albumcover, Farben je Effekt) ----------
+
+    private readonly Dictionary<string, Border> _previewPictures = new();
+    private readonly System.Windows.Threading.DispatcherTimer _previewTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+    private string? _previewSignature;
+    private bool _previewBusy;
+
+    /// <summary>Kacheln der Hintergrund-Auswahl mit Platz für ein Vorschaubild versehen und das erste Mal malen.</summary>
     private void BuildFieldPreviews()
     {
-        var radios = FieldChoices.Children.OfType<RadioButton>().ToList();
-        var palette = App.Instance.Bar?.NativePalette ?? new NativeStill.StillPalette();
+        foreach (var rb in FieldChoices.Children.OfType<RadioButton>())
+        {
+            // Schlüssel des Hintergrunds steht als ConverterParameter in der Bindung (z. B. „Aurora“)
+            string? key = BindingOperations.GetBinding(rb, ToggleButton.IsCheckedProperty)?.ConverterParameter as string;
+            if (key == null || rb.Content is not string text) continue;
+            var picture = new Border
+            {
+                Width = NativeStill.EffectPreview.Width * 0.8, Height = NativeStill.EffectPreview.Height * 0.8,
+                CornerRadius = new CornerRadius(4), Margin = new Thickness(0, 2, 0, 6), Background = new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF)),
+            };
+            var panel = new StackPanel { Width = 150 }; // alle Knöpfe gleich breit
+            panel.Children.Add(picture);
+            panel.Children.Add(new TextBlock { Text = text, HorizontalAlignment = HorizontalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+            System.Windows.Automation.AutomationProperties.SetName(rb, text); // für Suche und Bildschirmleser
+            rb.Content = panel;
+            _previewPictures[key] = picture;
+        }
+        RefreshPreviews();
+        // Ändern sich die Farben (anderes Lied mit „Mit Albumcover einfärben“, andere Palette), neu malen
+        _previewTimer.Tick += (_, _) => { if (IsVisible && PaletteSignature() != _previewSignature) RefreshPreviews(); };
+        _previewTimer.Start();
+        Closed += (_, _) => _previewTimer.Stop();
+    }
+
+    /// <summary>Kurz warten (Palette blendet über) und dann neu malen.</summary>
+    private void SchedulePreviewRefresh(TimeSpan delay)
+    {
+        if (delay <= TimeSpan.Zero) { RefreshPreviews(); return; }
+        var t = new System.Windows.Threading.DispatcherTimer { Interval = delay };
+        t.Tick += (_, _) => { t.Stop(); RefreshPreviews(); };
+        t.Start();
+    }
+
+    private static NativeStill.StillPalette CurrentPalette() => App.Instance.Bar?.NativePalette ?? new NativeStill.StillPalette();
+
+    /// <summary>Kennung der aktuellen Farben (gerundet) und der Farbquelle je Effekt: ändert sie sich, wird neu gemalt.</summary>
+    private static string PaletteSignature()
+    {
+        var p = CurrentPalette();
+        static string V(System.Numerics.Vector3 v) => $"{v.X:0.00},{v.Y:0.00},{v.Z:0.00}";
+        var natural = string.Join(",", NativeStill.EffectColors.WithNatural.Where(k => NativeStill.EffectColors.UsesNatural(App.Config, k)));
+        return $"{V(p.Base)}|{V(p.C0)}|{V(p.C1)}|{V(p.C2)}|{V(p.C3)}|{p.IsLightTheme}|{natural}";
+    }
+
+    /// <summary>Alle Vorschaubilder im Hintergrund neu zeichnen und einsetzen.</summary>
+    private void RefreshPreviews()
+    {
+        if (_previewBusy || _previewPictures.Count == 0) return;
+        _previewBusy = true;
+        _previewSignature = PaletteSignature();
+        var palette = CurrentPalette();
         Task.Run(() => NativeStill.EffectPreview.RenderAll(palette)).ContinueWith(t =>
         {
-            if (t.Result is not { } previews) return;
-            for (int i = 0; i < radios.Count; i++)
-            {
-                // Schlüssel des Hintergrunds steht als ConverterParameter in der Bindung (z. B. „Aurora“)
-                string? key = BindingOperations.GetBinding(radios[i], ToggleButton.IsCheckedProperty)?.ConverterParameter as string;
-                if (key == null || !previews.TryGetValue(key, out var img) || radios[i].Content is not string text) continue;
-                var picture = new Border
-                {
-                    Width = NativeStill.EffectPreview.Width * 0.8, Height = NativeStill.EffectPreview.Height * 0.8,
-                    CornerRadius = new CornerRadius(4), Margin = new Thickness(0, 2, 0, 6),
-                    Background = new ImageBrush(img) { Stretch = Stretch.UniformToFill },
-                };
-                var panel = new StackPanel { Width = 150 }; // alle Knöpfe gleich breit
-                panel.Children.Add(picture);
-                panel.Children.Add(new TextBlock { Text = text, HorizontalAlignment = HorizontalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
-                System.Windows.Automation.AutomationProperties.SetName(radios[i], text); // für Suche und Bildschirmleser
-                radios[i].Content = panel;
-            }
+            _previewBusy = false;
+            if (t.IsFaulted || t.Result is not { } previews) return;
+            foreach (var (key, picture) in _previewPictures)
+                if (previews.TryGetValue(key, out var img))
+                    picture.Background = new ImageBrush(img) { Stretch = Stretch.UniformToFill };
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
@@ -467,9 +548,13 @@ public partial class SettingsWindow : Window
         EffectTuning.Visibility = m is "Image" or "Solid" ? Visibility.Collapsed : Visibility.Visible;
         RotationMinutesRow.Visibility = App.Config.WallpaperRotation == "Interval" ? Visibility.Visible : Visibility.Collapsed;
         WeatherPresetRow.Visibility = m == "Weather" ? Visibility.Visible : Visibility.Collapsed;
+        ColorSourceRow.Visibility = NativeStill.EffectColors.HasNatural(m) ? Visibility.Visible : Visibility.Collapsed;
+        _colorSourceLoad = true;
+        if (NativeStill.EffectColors.UsesNatural(App.Config, m)) ColorNatural.IsChecked = true; else ColorPalette.IsChecked = true;
+        _colorSourceLoad = false;
         _tuningLoad = true;
-        EffectSpeedSlider.Value = Config.Percent(App.Config.EffectSpeed, m);
-        EffectGainSlider.Value = Config.Percent(App.Config.EffectIntensity, m);
+        EffectSpeedSlider.Value = App.Config.SpeedOf(m);
+        EffectGainSlider.Value = App.Config.IntensityOf(m);
         _tuningLoad = false;
         UpdateTuningText();
     }
@@ -710,6 +795,7 @@ public partial class SettingsWindow : Window
     {
         App.Config.ResetAppearanceAndBehavior();
         _still = null; // Darstellung kann sich geändert haben -> Werte neu lesen
+        BuildBackgroundStillRows();
         DataContext = null;
         DataContext = App.Config;
         RefreshEffectTuning();

@@ -458,11 +458,11 @@ internal static class Shaders
             {
                 float fi = (float)i;
                 float3 h = float3(hash(float2(fi, 1.3)), hash(float2(fi, 7.9)), hash(float2(fi, 4.1)));
-                // steigt langsam auf und taucht unten wieder auf; seitlich leichtes Schlingern
-                float y = frac(h.y + t * (0.010 + h.z * 0.012)) * 1.5 - 0.75;
+                // wie in einer echten Lavalampe: langsam aufsteigen, oben verweilen, wieder absinken (stetig, ohne Sprung)
+                float y = sin(t * (0.017 + h.z * 0.015) + h.y * 6.2831) * 0.5 + (h.x - 0.5) * 0.12;   // gemächlich wie echtes Wachs
                 // über die ganze Breite verteilt, jede Blase in ihrer eigenen Spalte
-                float x = ((fi + 0.5) / 10.0 - 0.5) * asp * 0.92 + (h.x - 0.5) * 0.12 + sin(t * (0.05 + h.z * 0.04) + fi * 2.1) * 0.06;
-                float r = (0.11 + h.z * 0.10) * (0.8 + 0.2 * sin(t * 0.07 + fi));   // ohne Musik-Zucken: das ließ Verbindungen flackern
+                float x = ((fi + 0.5) / 10.0 - 0.5) * asp * 0.92 + (h.x - 0.5) * 0.12 + sin(t * (0.025 + h.z * 0.02) + fi * 2.1) * 0.06;
+                float r = (0.08 + h.z * 0.07) * (0.85 + 0.15 * sin(t * 0.07 + fi));  // ohne Musik-Zucken: das ließ Verbindungen flackern
                 float2 d = p - float2(x, y);
                 float f = r * r / (dot(d, d) + r * r * 0.2);   // in der Mitte begrenzt (kein Lichtpunkt)
                 field += f;
@@ -495,9 +495,9 @@ internal static class Shaders
             float spec = pow(diff, 18.0);
 
             float3 col = lerp(u_base, lerp(u_base, u_c3, 0.35), saturate(1.0 - uv.y));
-            float inside = sstep(0.82, 1.18, field);   // weicher Übergang: Hälse zwischen Blasen erscheinen fließend
-            float halo = saturate((field - 0.25) * 0.5) * (1.0 - inside);      // sanfter Schein ums Wachs
-            col = glow(col, tint * 0.8, halo * 0.3);
+            // klare, aber geglättete Kante (eine Pixelbreite); Hälse zwischen Blasen bleiben fließend, weil das Feld stetig ist
+            float aa = max(fwidth(field) * 1.2, 0.015);
+            float inside = sstep(1.0 - aa, 1.0 + aa, field);
             float3 wax = tint * (0.45 + diff * 0.65) + spec * 0.35;
             col = lerp(col, lerp(wax, wax * 0.8 + 0.15, u_light * 0.4), inside);
             return float4(finish(col, uv, asp, fl, fc), 1.0);

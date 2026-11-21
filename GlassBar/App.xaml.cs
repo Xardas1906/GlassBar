@@ -104,6 +104,7 @@ public partial class App : Application
         StartTrace.Mark("Einstellungen");
         Theme.Apply(); // helles oder dunkles Design (auch für die Win32-Menüs)
         PackagedApps.MigrateConfig(Config); // vor dem ersten Dock: alte Pins von Store-Apps umstellen
+        NativeStill.WallpaperRotation.MigrateMotion(Config); // altes Still-Tempo in das Tempo je Effekt übernehmen
         StartTrace.Mark("Store-Apps");
 
         var cfg = ShellManager.DefaultShellConfig;
