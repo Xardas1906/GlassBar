@@ -15,9 +15,33 @@ public static class AppVolume
     /// Lautstärke ändern (<paramref name="delta"/> z. B. +0,04). Gibt die neue Lautstärke (0–1) zurück,
     /// oder null, wenn keine passende Audio-Sitzung läuft (dann bleibt alles unverändert).
     /// </summary>
-    public static float? Change(string sourceAumid, float delta)
+    public static float? Change(string sourceAumid, float delta) => WithSessions(sourceAumid, "Lautstärke des Programms", matches =>
     {
-        if (string.IsNullOrWhiteSpace(sourceAumid)) return null;
+        // Ein Browser hat oft mehrere Sitzungen: alle auf denselben Wert, ausgehend von der lautesten
+        float current = matches.Max(m => m.SimpleAudioVolume.Volume);
+        float next = Math.Clamp(MathF.Round((current + delta) * 50) / 50, 0f, 1f); // in 2-%-Schritten
+        foreach (var m in matches)
+        {
+            m.SimpleAudioVolume.Volume = next;
+            if (next > 0 && m.SimpleAudioVolume.Mute) m.SimpleAudioVolume.Mute = false;
+        }
+        return (float?)next;
+    });
+
+    /// <summary>
+    /// Programm stumm schalten bzw. wieder laut. Gibt (stumm, Lautstärke) zurück, oder null ohne passende Audio-Sitzung.
+    /// </summary>
+    public static (bool Muted, float Volume)? ToggleMute(string sourceAumid) => WithSessions(sourceAumid, "Programm stumm schalten", matches =>
+    {
+        bool mute = !matches.Any(m => m.SimpleAudioVolume.Mute); // eine Sitzung stumm → alle wieder laut
+        foreach (var m in matches) m.SimpleAudioVolume.Mute = mute;
+        return ((bool, float)?)(mute, matches.Max(m => m.SimpleAudioVolume.Volume));
+    });
+
+    /// <summary>Alle Audio-Sitzungen der Medienquelle suchen und <paramref name="act"/> darauf anwenden (null = keine gefunden).</summary>
+    private static T? WithSessions<T>(string sourceAumid, string what, Func<List<AudioSessionControl>, T?> act)
+    {
+        if (string.IsNullOrWhiteSpace(sourceAumid)) return default;
         try
         {
             using var enumerator = new MMDeviceEnumerator();
@@ -36,22 +60,12 @@ public static class AppVolume
                 var (name, aumid, family) = Identify(pid);
                 if (name != null && Matches(sourceAumid, name, aumid, family)) matches.Add(s);
             }
-            if (matches.Count == 0) return null;
-
-            // Ein Browser hat oft mehrere Sitzungen: alle auf denselben Wert, ausgehend von der lautesten
-            float current = matches.Max(m => m.SimpleAudioVolume.Volume);
-            float next = Math.Clamp(MathF.Round((current + delta) * 50) / 50, 0f, 1f); // in 2-%-Schritten
-            foreach (var m in matches)
-            {
-                m.SimpleAudioVolume.Volume = next;
-                if (next > 0 && m.SimpleAudioVolume.Mute) m.SimpleAudioVolume.Mute = false;
-            }
-            return next;
+            return matches.Count == 0 ? default : act(matches);
         }
         catch (Exception ex)
         {
-            Log.Error("Lautstärke des Programms", ex);
-            return null;
+            Log.Error(what, ex);
+            return default;
         }
     }
 

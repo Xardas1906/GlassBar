@@ -1389,19 +1389,35 @@ public partial class TaskbarWindow : Window
         if (!App.Config.WheelActions) return;
         e.Handled = true;
         int dir = Math.Sign(e.Delta);
-        if (ChangeMusicVolume(dir) is { } v)
+        var cv = ChangeMusicVolume(dir);
+        if (cv is { } v)
         {
-            // kurz statt des Interpreten: Balken mit Prozent (Balken gleitet zum neuen Wert)
-            MusicArtist.Visibility = Visibility.Hidden;
-            MusicVolume.Visibility = Visibility.Visible;
-            MusicVolumeText.Text = $"{Math.Round(v * 100)} %";
-            MusicVolumeScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty,
-                new System.Windows.Media.Animation.DoubleAnimation(v, TimeSpan.FromMilliseconds(120))
-                { EasingFunction = new System.Windows.Media.Animation.QuadraticEase() });
-            _volumeFlash.Stop();
-            _volumeFlash.Start();
+            ShowMusicVolume(v, $"{Math.Round(v * 100)} %");
         }
         else Volume_MouseWheel(s, e);
+    }
+
+    /// <summary>Mittelklick auf die Musik: das Musikprogramm stumm schalten bzw. wieder laut.</summary>
+    private void Music_MouseDown(object s, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Middle || _media is not { HasMedia: true } m) return;
+        e.Handled = true;
+        var tm = AppVolume.ToggleMute(m.App);
+        if (tm is { } r)
+            ShowMusicVolume(r.Muted ? 0 : r.Volume, r.Muted ? L.T("Stumm") : $"{Math.Round(r.Volume * 100)} %");
+    }
+
+    /// <summary>Kurz statt des Interpreten: Balken mit Prozent bzw. „Stumm“ (der Balken gleitet zum neuen Wert).</summary>
+    private void ShowMusicVolume(float fraction, string text)
+    {
+        MusicArtist.Visibility = Visibility.Hidden;
+        MusicVolume.Visibility = Visibility.Visible;
+        MusicVolumeText.Text = text;
+        MusicVolumeScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(fraction, TimeSpan.FromMilliseconds(120))
+            { EasingFunction = new System.Windows.Media.Animation.QuadraticEase() });
+        _volumeFlash.Stop();
+        _volumeFlash.Start();
     }
 
     private DispatcherTimer? _volumeFlashTimer;

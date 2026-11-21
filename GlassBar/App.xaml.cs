@@ -118,6 +118,9 @@ public partial class App : Application
         // Zustand der Windows-Taskleiste (automatisch ausblenden ja/nein) vor GlassBar dauerhaft merken.
         // Beim Ausblenden stellt GlassBar sie auf „automatisch ausblenden“. Endete GlassBar das letzte Mal nicht
         // sauber, steht sie noch so – dann gilt der gespeicherte Zustand, nicht der jetzige.
+        // Steht sie schon ohne gemerkten Wert auf „automatisch ausblenden“, kann das noch vom alten Fehler stammen
+        // (bis 1.3.5 blieb es nach einem Absturz hängen): einmal nachfragen, siehe AskAboutAutoHide.
+        bool askAutoHide = Config.TaskbarStateBeforeGlassBar == null && !Config.TaskbarAutoHideAsked && (Watchdog.GetTaskbarState() & 1) != 0;
         int taskbarState = Config.TaskbarStateBeforeGlassBar ?? Watchdog.GetTaskbarState();
         _taskbarState = taskbarState;
         if (Config.TaskbarStateBeforeGlassBar != taskbarState) { Config.TaskbarStateBeforeGlassBar = taskbarState; Config.Save(); }
@@ -144,6 +147,28 @@ public partial class App : Application
         Updater.StartBackgroundCheck();
         TrayRescue.Start(_shell); // Symbole von Programmen nachholen, die vor GlassBar gestartet sind
         StartTrace.Mark("Ende OnStartup");
+        if (askAutoHide) Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, AskAboutAutoHide);
+    }
+
+    /// <summary>
+    /// Einmalige Rückfrage: Die Windows-Taskleiste stand vor GlassBar auf „automatisch ausblenden“. Bis 1.3.5 konnte
+    /// das nach einem Absturz von GlassBar hängen bleiben. Bei „Nein“ stellt GlassBar sie beim Beenden auf normal.
+    /// </summary>
+    private void AskAboutAutoHide()
+    {
+        if (_cleanedUp) return;
+        Config.TaskbarAutoHideAsked = true;
+        var answer = MessageBox.Show(
+            L.T("Die Windows-Taskleiste ist auf „automatisch ausblenden“ eingestellt.") + "\n\n" +
+            L.T("Hast du das selbst so gewollt? Ältere GlassBar-Versionen konnten diese Einstellung nach einem Absturz versehentlich hinterlassen.") + "\n\n" +
+            L.T("Ja: so lassen.  Nein: beim Beenden von GlassBar wieder normal anzeigen."),
+            "GlassBar", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes);
+        if (answer == MessageBoxResult.No)
+        {
+            _taskbarState = 0; // normal (Windows 11 meldet 0; RestoreTaskbar setzt dann „immer oben“)
+            Config.TaskbarStateBeforeGlassBar = 0;
+        }
+        Config.Save();
     }
 
     /// <summary>

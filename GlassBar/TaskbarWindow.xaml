@@ -183,7 +183,7 @@
             <Rectangle x:Name="SepMusic" Style="{StaticResource DockSeparator}" Visibility="Collapsed"/>
             <Border x:Name="MusicPill" Visibility="Collapsed" CornerRadius="8" Margin="2,5" Padding="5,0,4,0"
                     Background="{DynamicResource PillBg}" BorderBrush="{DynamicResource PillBorder}" BorderThickness="1"
-                    MouseLeftButtonUp="Music_Click" MouseWheel="Music_MouseWheel">
+                    MouseLeftButtonUp="Music_Click" MouseWheel="Music_MouseWheel" MouseDown="Music_MouseDown">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Border x:Name="MusicCover" Width="30" Height="30" CornerRadius="5" Background="{DynamicResource Cover}">
                         <TextBlock x:Name="MusicNoCover" Text="&#xE8D6;" Style="{StaticResource Glyph}" FontSize="13" Opacity="0.7"/>

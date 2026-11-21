@@ -575,16 +575,19 @@ public sealed class MusicPill : Pill
         // ---- Fortschrittsring am Rand der Pille (übergibt beim Öffnen an den Balken) ----
         double dur = _duration;
         float pct = dur > 0 ? (float)Math.Clamp(_position / dur, 0, 1) : 0;
-        float ringA = dur > 0 ? 1 - Smooth(0, 0.3f, e) : 0;
-        if (ringA > 0.01f && pct > 0)
+        // Kurz nach dem Mausrad zeigt der Ring der zugeklappten Pille die Lautstärke (in Schriftfarbe statt Akzent)
+        bool volRing = DateTime.UtcNow < _volumeUntil;
+        float ringPct = volRing ? Math.Clamp(_volume, 0, 1) : pct;
+        float ringA = dur > 0 || volRing ? 1 - Smooth(0, 0.3f, e) : 0;
+        if (ringA > 0.01f && ringPct > 0)
         {
             float sw = Math.Max(1.25f, 1.5f * k), x = sw / 2;
             float rw = Math.Max(0, W - sw), rh = Math.Max(0, H - sw);
             float rr = Math.Max(0, Math.Min(Math.Min(R - x, rw / 2), rh / 2));
-            BuildRing(c, L + x, T + x, rw, rh, rr, pct);
+            BuildRing(c, L + x, T + x, rw, rh, rr, ringPct);
             if (_ring != null)
             {
-                var a = c.Accent;
+                var a = volRing ? fg : c.Accent;
                 brush.Color = new Color4(a.X, a.Y, a.Z, 0.22f * ringA);
                 ctx.DrawGeometry(_ring, brush, sw * 3, _round);
                 brush.Color = new Color4(a.X, a.Y, a.Z, 0.9f * ringA);
