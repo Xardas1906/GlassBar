@@ -466,6 +466,7 @@ public partial class SettingsWindow : Window
         string m = App.Config.WallpaperField;
         EffectTuning.Visibility = m is "Image" or "Solid" ? Visibility.Collapsed : Visibility.Visible;
         RotationMinutesRow.Visibility = App.Config.WallpaperRotation == "Interval" ? Visibility.Visible : Visibility.Collapsed;
+        WeatherPresetRow.Visibility = m == "Weather" ? Visibility.Visible : Visibility.Collapsed;
         _tuningLoad = true;
         EffectSpeedSlider.Value = Config.Percent(App.Config.EffectSpeed, m);
         EffectGainSlider.Value = Config.Percent(App.Config.EffectIntensity, m);

@@ -45,6 +45,7 @@ internal static class Shaders
             float3 u_c2;   float u_wxCloud;  // Bewölkung 0–1
             float3 u_c3;   float u_wxNight;  // 1 = Nacht
             float4 u_bands;                  // Musik: Bass, untere Mitten, obere Mitten, Höhen (0–1)
+            float4 u_misc;                   // x = echte Sekunden (unabhängig vom Tempo-Regler: Regen fällt immer gleich schnell)
         };
         Texture2D u_flow : register(t0);
         SamplerState lin : register(s0);
@@ -104,6 +105,34 @@ internal static class Shaders
         {
             i = fmod(i, 4.0);
             return i < 1.0 ? u_c0 : i < 2.0 ? u_c1 : i < 3.0 ? u_c2 : u_c3;
+        }
+
+        // Sternenfeld wie am echten Himmel: zufällig verteilt (kein Raster), drei Tiefen, die meisten Sterne ganz
+        // schwach und nur wenige hell, leicht unterschiedliche Farben, ruhiges Funkeln (rt = echte Sekunden).
+        // density 0–1 (z. B. dichter in der Milchstraße). Gibt Licht und Farbe zurück.
+        float3 starField(float2 p, float rt, float density)
+        {
+            float3 s = float3(0.0, 0.0, 0.0);
+            [unroll] for (int L = 0; L < 3; L++)
+            {
+                float fL = (float)L;
+                float sc = 30.0 + fL * 34.0;
+                float2 g = p * sc + fL * 17.3;
+                float2 id = floor(g);
+                float h = hash(id + fL * 3.7);
+                if (h > (0.30 + fL * 0.10) * density) continue;
+                float2 c = 0.12 + 0.76 * hash22(id + fL * 5.1);       // irgendwo in der Zelle
+                float d = length(frac(g) - c);
+                float mag = pow(hash(id + 9.7), 7.0);                  // fast alle schwach, ganz wenige hell
+                float r = 0.05 + mag * 0.13;
+                float core = exp(-d * d / (r * r));
+                float b = (0.22 + mag * 1.6) * (1.0 - fL * 0.22);
+                float tw = 0.8 + 0.2 * sin(rt * (0.3 + h * 0.8) + h * 40.0);
+                float t2 = hash(id + 2.2);
+                float3 tint = t2 < 0.33 ? float3(0.80, 0.88, 1.0) : t2 < 0.55 ? float3(1.0, 0.92, 0.80) : float3(1.0, 1.0, 1.0);
+                s += tint * core * b * tw;
+            }
+            return s;
         }
 
         // Rand abdunkeln, Leuchten unter der Maus, Dithering – für alle Effekte gleich
@@ -205,7 +234,7 @@ internal static class Shaders
             float sr = hash(sid);
             if (sr > 0.9965)
             {
-                float tw = 0.55 + 0.45 * sin(t * (0.6 + sr * 2.0) + sr * 40.0);
+                float tw = 0.7 + 0.3 * sin(u_misc.x * (0.25 + sr * 0.6) + sr * 40.0);   // ruhiges Funkeln, in echter Zeit
                 float d = length(frac(sg) - 0.5);
                 col += sstep(0.5, 0.0, d) * tw * 0.55 * (1.0 - u_light) * saturate(uv.y * 1.6 - 0.2);
             }
@@ -366,23 +395,8 @@ internal static class Shaders
             col = glow(col, u_c2 * 1.1, pow(n2, 2.6) * 0.7);
             col = glow(col, u_c0, pow(saturate(n1 * n2 * 1.8), 3.0) * 0.4 * (1.0 + e * 0.6));
 
-            // Sterne in drei Tiefen: vorne größer und mit mehr Parallaxe
-            [unroll] for (int L = 0; L < 3; L++)
-            {
-                float fL = (float)L;
-                float2 g = (p - u_shift * 0.025 * (3.0 - fL)) * (55.0 + fL * 50.0);
-                float2 id = floor(g);
-                float h = hash(id + fL * 11.7);
-                if (h > 0.90)
-                {
-                    float2 c = 0.25 + 0.5 * hash22(id + fL * 3.3);
-                    float d = length(frac(g) - c);
-                    float tw = 0.55 + 0.45 * sin(t * (0.8 + h * 3.0) + h * 50.0);
-                    float s = sstep(0.16 - fL * 0.03, 0.0, d) * tw * (1.0 - fL * 0.25);
-                    float3 sc = lerp(float3(1.0, 1.0, 1.0), paletteColor(floor(h * 40.0)) * 1.5 + 0.3, 0.3);
-                    col = glow(col, sc, s * lerp(0.9, 0.5, u_light));
-                }
-            }
+            // Sterne wie am echten Himmel (siehe starField), mit leichter Maus-Parallaxe; im Nebel etwas dichter
+            col = glow(col, starField(p - u_shift * 0.03, u_misc.x, 1.1 + n1 * 0.6), lerp(1.0, 0.5, u_light));
 
             // Sternschnuppe: etwa alle 9 Zeiteinheiten eine, kurz sichtbar
             float per = 9.0;
@@ -448,7 +462,7 @@ internal static class Shaders
                 float y = frac(h.y + t * (0.010 + h.z * 0.012)) * 1.5 - 0.75;
                 // über die ganze Breite verteilt, jede Blase in ihrer eigenen Spalte
                 float x = ((fi + 0.5) / 10.0 - 0.5) * asp * 0.92 + (h.x - 0.5) * 0.12 + sin(t * (0.05 + h.z * 0.04) + fi * 2.1) * 0.06;
-                float r = (0.11 + h.z * 0.10) * (1.0 + e * 0.08) * (0.8 + 0.2 * sin(t * 0.07 + fi));
+                float r = (0.11 + h.z * 0.10) * (0.8 + 0.2 * sin(t * 0.07 + fi));   // ohne Musik-Zucken: das ließ Verbindungen flackern
                 float2 d = p - float2(x, y);
                 float f = r * r / (dot(d, d) + r * r * 0.2);   // in der Mitte begrenzt (kein Lichtpunkt)
                 field += f;
@@ -468,19 +482,20 @@ internal static class Shaders
             float3 tint, tmp;
             float field = lavaField(p, t, e, asp, tint);
             // Licht von oben links: Neigung der „Oberfläche“ aus zwei Nachbarwerten
-            float eps = 0.004;
+            float eps = 0.006;
             float fx = lavaField(p + float2(eps, 0.0), t, e, asp, tmp) - field;
             float fy = lavaField(p + float2(0.0, eps), t, e, asp, tmp) - field;
             // Höhe als Kuppel (0 am Rand, 1 in der Mitte): daraus die Neigung, damit die Blasen rund wirken
-            float H = sqrt(saturate(1.0 - 1.0 / max(field, 1e-3)));
-            float Hx = sqrt(saturate(1.0 - 1.0 / max(field + fx, 1e-3))) - H;
-            float Hy = sqrt(saturate(1.0 - 1.0 / max(field + fy, 1e-3))) - H;
-            float3 n = normalize(float3(-Hx, -Hy, eps * 9.0));
+            // Höhe mit endlicher Steigung am Rand (sqrt wäre dort unendlich steil und springt beim Verschmelzen)
+            float H = 1.0 - exp(-max(field - 0.8, 0.0) * 1.6);
+            float Hx = 1.0 - exp(-max(field + fx - 0.8, 0.0) * 1.6) - H;
+            float Hy = 1.0 - exp(-max(field + fy - 0.8, 0.0) * 1.6) - H;
+            float3 n = normalize(float3(-Hx, -Hy, eps * 4.0));
             float diff = saturate(dot(n, normalize(float3(-0.45, 0.6, 0.65))));
             float spec = pow(diff, 18.0);
 
             float3 col = lerp(u_base, lerp(u_base, u_c3, 0.35), saturate(1.0 - uv.y));
-            float inside = sstep(0.92, 1.08, field);
+            float inside = sstep(0.82, 1.18, field);   // weicher Übergang: Hälse zwischen Blasen erscheinen fließend
             float halo = saturate((field - 0.25) * 0.5) * (1.0 - inside);      // sanfter Schein ums Wachs
             col = glow(col, tint * 0.8, halo * 0.3);
             float3 wax = tint * (0.45 + diff * 0.65) + spec * 0.35;
@@ -620,17 +635,21 @@ internal static class Shaders
             float3 sunCol = lerp(lerp(u_c0, float3(1.0, 0.92, 0.75), 0.5), float3(0.75, 0.82, 1.0), night);
             col = glow(col, sunCol, exp(-length(p - sun) * lerp(2.4, 4.0, night)) * lerp(0.35, 0.3, night) * (1.0 - cloud * 0.8));
 
-            // Sterne in klaren Nächten
-            if (night > 0.5)
+            // Sterne in klaren Nächten (bei Niederschlag und Nebel keine), mit zarter Milchstraße und Mondscheibe
+            if (night > 0.5 && !rain && !snow && !fog)
             {
-                float2 g = p * 55.0;
-                float h = hash(floor(g));
-                if (h > 0.88)
-                {
-                    float d = length(frac(g) - 0.5);
-                    float tw = 0.6 + 0.4 * sin(t * (1.0 + h * 3.0) + h * 40.0);
-                    col = glow(col, float3(1.0, 1.0, 1.0), sstep(0.2, 0.0, d) * tw * (1.0 - cloud * 0.8) * 1.2 * saturate(uv.y * 1.5 + 0.1));
-                }
+                float clear = saturate(1.0 - cloud * 1.3) * saturate(uv.y * 1.3 + 0.15);
+                float2 mw = float2(p.x * 0.94 + p.y * 0.34, -p.x * 0.34 + p.y * 0.94);   // schräger Streifen
+                float band = exp(-pow((mw.y - 0.08) / 0.16, 2.0)) * (0.55 + 0.45 * fbm(mw * 4.0 + 3.1));
+                col = glow(col, lerp(u_c2, float3(0.8, 0.82, 0.9), 0.5), band * 0.10 * clear);
+                float md = length(p - sun);
+                float moon = sstep(0.033, 0.029, md);                  // Mondscheibe (Sterne liegen dahinter)
+                col = glow(col, starField(p, u_misc.x, 1.0 + band * 1.2), 0.95 * clear * (1.0 - moon));
+                // Mond: zum Rand dunkler, mit leichten Flecken (Mare), nicht grell
+                float rim = saturate(md / 0.031);
+                float mare = fbm((p - sun) * 70.0 + 4.0);
+                float3 moonCol = float3(0.86, 0.88, 0.92) * (1.0 - rim * rim * 0.35) * (0.82 + 0.18 * sstep(0.62, 0.38, mare));
+                col = lerp(col, moonCol * lerp(0.9, 1.0, u_light), moon * (1.0 - cloud * 0.7));
             }
 
             // Wolken: zwei Schichten, die langsam ziehen
@@ -641,23 +660,45 @@ internal static class Shaders
             float3 cc = lerp(lerp(u_c1, float3(0.85, 0.87, 0.92), 0.65), lerp(u_base, u_c1, 0.6) + 0.04, night * 0.7);
             col = lerp(col, cc * lerp(0.6, 1.0, u_light), cover * (0.5 + cloud * 0.45) * saturate(uv.y * 1.4 + 0.2));
 
-            // Regen: schräge Schlieren in zwei Tiefen
+            // Regen: dünne, bewegungsunscharfe Tropfen in vier Tiefen (vorne wenige, lange und helle, hinten viele,
+            // kurze und blasse), leicht vom Wind geneigt, dazu ziehende Regenschleier. Läuft in echter Zeit –
+            // ein Regen in Zeitlupe wirkt nie echt.
             if (rain)
             {
-                [unroll] for (int L = 0; L < 2; L++)
+                float rt = u_misc.x;
+                // Schleier: senkrecht gestrecktes Rauschen, das schnell nach unten zieht – wie Regenvorhänge in der Ferne
+                float sheets = fbm(float2(p.x * 3.5 + p.y * 0.4, p.y * 0.35 + rt * 0.9));
+                col = lerp(col, grey * 1.12 + 0.03, (0.10 + sheets * 0.22) * amt);
+
+                [unroll] for (int L = 0; L < 4; L++)
                 {
                     float fL = (float)L;
-                    float2 rp = float2(p.x + p.y * 0.18, p.y) * float2(70.0 + fL * 50.0, 3.0 + fL * 2.0);
-                    rp.y += t * (9.0 + fL * 5.0);
-                    float2 id = floor(rp);
-                    float h = hash(id + fL * 9.0);
-                    float2 f = frac(rp);
-                    float streak = (h > 1.0 - amt * 0.55) ? sstep(0.12, 0.0, abs(f.x - 0.5)) * sstep(0.0, 0.3, f.y) * sstep(1.0, 0.6, f.y) : 0.0;
-                    col = glow(col, lerp(float3(0.75, 0.8, 0.9), u_c1 + 0.3, 0.3), streak * (0.35 - fL * 0.12) * (0.6 + amt * 0.6));
+                    float cols = 38.0 + fL * 55.0;                       // Spalten je Bildhöhe: hinten dichter
+                    float cellH = 0.42 - fL * 0.06;                      // Höhe einer Zelle (ein Tropfen je Zelle)
+                    float2 q = float2(p.x + p.y * (0.10 + fL * 0.015), p.y);   // Wind: leicht schräg
+                    float colId = floor(q.x * cols);
+                    float speed = (2.4 - fL * 0.35) * (0.85 + 0.3 * hash(float2(colId, fL * 7.0)));
+                    float y = q.y + rt * speed + hash(float2(colId, 3.0 + fL)) * 17.0;
+                    float2 id = float2(colId, floor(y / cellH));
+                    float fx = frac(q.x * cols);
+                    float fy = frac(y / cellH);
+                    float h = hash(id + fL * 13.1);
+                    if (h > (0.18 + fL * 0.12) * (0.15 + amt * 0.85)) continue;  // Anteil der Zellen mit Tropfen: hängt stark von der Menge ab
+                    float cx = 0.25 + 0.5 * hash(id + 5.3);
+                    float len = (0.25 + 0.45 * hash(id + 9.1)) * (1.0 - fL * 0.15);  // Länge in Zellen (Bewegungsunschärfe)
+                    float cy = hash(id + 2.7) * (1.0 - len);
+                    float d = (fy - cy) / len;                           // 0 = Kopf (unten), 1 = Ende der Schliere
+                    if (d < 0.0 || d > 1.0) continue;
+                    float wid = 0.16 + fL * 0.06;                        // hinten breiter in Zellen, aber Zellen schmaler
+                    float core = sstep(wid, 0.0, abs(fx - cx));
+                    // gleichmäßiger Strich mit weichen Enden (wie auf einem Foto mit Belichtungszeit), nicht als Komet
+                    float a = core * pow(sin(3.14159 * d), 0.6) * (0.5 + 0.5 * hash(id + 1.1));
+                    float bright = (0.42 - fL * 0.09) * (0.55 + amt * 0.6);
+                    col = glow(col, lerp(float3(0.78, 0.83, 0.92), u_c1 + 0.35, 0.2), a * bright);
                 }
             }
 
-            // Schnee: Flocken in drei Tiefen, langsam taumelnd
+            // Schnee: einzelne Flocken in drei Tiefen, langsam taumelnd (in echter Zeit, wie der Regen)
             if (snow)
             {
                 [unroll] for (int L = 0; L < 3; L++)
@@ -665,15 +706,16 @@ internal static class Shaders
                     float fL = (float)L;
                     float sc = 9.0 + fL * 7.0;
                     float2 sp = p * sc;
-                    sp.y += t * (0.6 + fL * 0.3) * 2.0;
-                    sp.x += sin(sp.y * 0.6 + t * 0.4 + fL) * 0.5;
+                    float st = u_misc.x;
+                    sp.y += st * sc * (0.06 + (2.0 - fL) * 0.015);       // vorne etwas schneller (näher)
+                    sp.x += sin(sp.y * 0.6 + st * 0.5 + fL) * 0.35;
                     float2 id = floor(sp);
                     float h = hash(id + fL * 4.4);
-                    if (h > 1.0 - amt * 0.7)
+                    if (h > 1.0 - amt * (0.22 - fL * 0.04))                // deutlich weniger Flocken
                     {
                         float2 c = 0.25 + 0.5 * hash22(id + 1.7);
                         float d = length(frac(sp) - c);
-                        col = glow(col, float3(1.0, 1.0, 1.0), sstep(0.16 - fL * 0.03, 0.02, d) * (0.75 - fL * 0.18));
+                        col = glow(col, float3(1.0, 1.0, 1.0), sstep(0.13 - fL * 0.03, 0.0, d) * (0.7 - fL * 0.2));
                     }
                 }
             }

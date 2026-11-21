@@ -17,6 +17,19 @@ internal static class WhatsNew
     /// <summary>Neueste zuerst. Kurz halten: das, was man sonst nicht entdeckt.</summary>
     private static readonly Note[] Notes =
     {
+        new("1.5.1",
+            new[]
+            {
+                "Regen neu: dünne Tropfen in mehreren Tiefen, so dicht wie es draußen gerade regnet – und Tropfen auf der Scheibe.",
+                "Wetter zum Ausprobieren: Einstellungen › Hintergrund › Wetter › „Wetter zeigen“ (Regen, Schnee, Nebel, Gewitter, Sternennacht).",
+                "Natürlicher Nachthimmel mit Milchstraße und Mond, ruhigeres Funkeln, weniger Schnee, Lavalampe ohne Ruckeln.",
+            },
+            new[]
+            {
+                "New rain: thin drops in several layers, as heavy as it is raining outside – plus drops on the glass.",
+                "Weather to try out: Settings › Background › Weather › “Show weather” (rain, snow, fog, thunderstorm, starry night).",
+                "Natural night sky with the Milky Way and moon, calmer twinkling, less snow, lava lamp without stutter.",
+            }),
         new("1.5.0",
             new[]
             {

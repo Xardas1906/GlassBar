@@ -1011,6 +1011,27 @@
                                             Minimum="25" Maximum="200" ValueChanged="EffectTuning_Changed"/>
                                     <TextBlock Text="Stärke des Effekts" Style="{StaticResource Label}"/>
                                 </DockPanel>
+                                <!-- Nur beim Hintergrund „Wetter“: echtes Wetter oder eine feste Vorführung -->
+                                <StackPanel x:Name="WeatherPresetRow" Margin="0,8,0,0">
+                                    <TextBlock Margin="0,0,0,8" TextWrapping="Wrap">
+                                        Wetter zeigen
+                                        <LineBreak/><Run Text="„Echtes Wetter“ braucht eine Stadt (Uhr, Musik &amp; Wetter). Die anderen zeigen das Wetter dauerhaft, z. B. zum Ausprobieren." Foreground="{StaticResource Sub}" FontSize="12"/>
+                                    </TextBlock>
+                                    <WrapPanel>
+                                        <RadioButton Style="{StaticResource Segment}" GroupName="WpWeather" Content="Echtes Wetter"
+                                                     IsChecked="{Binding WeatherEffectPreview, Converter={StaticResource Eq}, ConverterParameter=Real}"/>
+                                        <RadioButton Style="{StaticResource Segment}" GroupName="WpWeather" Content="Regen"
+                                                     IsChecked="{Binding WeatherEffectPreview, Converter={StaticResource Eq}, ConverterParameter=Rain}"/>
+                                        <RadioButton Style="{StaticResource Segment}" GroupName="WpWeather" Content="Schnee"
+                                                     IsChecked="{Binding WeatherEffectPreview, Converter={StaticResource Eq}, ConverterParameter=Snow}"/>
+                                        <RadioButton Style="{StaticResource Segment}" GroupName="WpWeather" Content="Nebel"
+                                                     IsChecked="{Binding WeatherEffectPreview, Converter={StaticResource Eq}, ConverterParameter=Fog}"/>
+                                        <RadioButton Style="{StaticResource Segment}" GroupName="WpWeather" Content="Gewitter"
+                                                     IsChecked="{Binding WeatherEffectPreview, Converter={StaticResource Eq}, ConverterParameter=Storm}"/>
+                                        <RadioButton Style="{StaticResource Segment}" GroupName="WpWeather" Content="Sternennacht"
+                                                     IsChecked="{Binding WeatherEffectPreview, Converter={StaticResource Eq}, ConverterParameter=ClearNight}"/>
+                                    </WrapPanel>
+                                </StackPanel>
                                 <TextBlock Margin="0,10,0,8" TextWrapping="Wrap">
                                     Effekte automatisch wechseln
                                     <LineBreak/><Run Text="Nach Tageszeit: morgens Nebel, vormittags Lichtfeld, mittags Kaustik, abends Bokeh-Lichter, nachts Polarlicht." Foreground="{StaticResource Sub}" FontSize="12"/>

@@ -21,6 +21,8 @@ public class WeatherService
     public int RainChance { get; private set; }
     public int Code { get; private set; }
     public bool IsDay { get; private set; } = true;
+    /// <summary>Niederschlag gerade in mm (je Stunde), −1 = unbekannt.</summary>
+    public double Precipitation { get; private set; } = -1;
     public bool HasData { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public string? Error { get; private set; }
@@ -70,7 +72,7 @@ public class WeatherService
 
             var inv = CultureInfo.InvariantCulture;
             var url = $"https://api.open-meteo.com/v1/forecast?latitude={_lat.ToString(inv)}&longitude={_lon.ToString(inv)}" +
-                      "&current=temperature_2m,apparent_temperature,weather_code,is_day" +
+                      "&current=temperature_2m,apparent_temperature,weather_code,is_day,precipitation" +
                       "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=1";
             using var doc = JsonDocument.Parse(await Http.GetStringAsync(url));
             var cur = doc.RootElement.GetProperty("current");
@@ -78,6 +80,7 @@ public class WeatherService
             FeelsLike = cur.GetProperty("apparent_temperature").GetDouble();
             Code = cur.GetProperty("weather_code").GetInt32();
             IsDay = cur.GetProperty("is_day").GetInt32() == 1;
+            Precipitation = cur.TryGetProperty("precipitation", out var pr) && pr.ValueKind == JsonValueKind.Number ? pr.GetDouble() : -1;
             var daily = doc.RootElement.GetProperty("daily");
             High = daily.GetProperty("temperature_2m_max")[0].GetDouble();
             Low = daily.GetProperty("temperature_2m_min")[0].GetDouble();

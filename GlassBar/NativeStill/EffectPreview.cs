@@ -29,13 +29,14 @@ public static class EffectPreview
 
     private static void RenderEffects(StillPalette pal, Dictionary<string, BitmapSource> result)
     {
+        var wx = EffectWeather.Effective();
         var p = new StillRenderer.FieldParams
         {
             Time = 140,   // ein Zeitpunkt, an dem alle Effekte typisch aussehen
             Light = pal.Light,
             Base = pal.Base, C0 = pal.C0, C1 = pal.C1, C2 = pal.C2, C3 = pal.C3,
             // Wetter: wie gerade draußen; Musik-Wellen: mittlere Lautstärke, damit man die Bänder sieht
-            WxKind = EffectWeather.Kind, WxAmount = EffectWeather.Amount, WxCloud = EffectWeather.Cloud, WxNight = EffectWeather.NightNow(),
+            WxKind = wx.Kind, WxAmount = wx.Amount, WxCloud = wx.Cloud, WxNight = wx.Night,
             Bands = new Vector4(0.6f, 0.45f, 0.35f, 0.25f),
         };
         Render(Shaders.Effects.Prepend(("Light", Shaders.Field)), p, Width, Height, result);

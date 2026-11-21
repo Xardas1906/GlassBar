@@ -159,9 +159,11 @@ public class Config
     public int WallpaperRotationMinutes { get; set; } = 30;
     /// <summary>Wann der Effekt zuletzt gewählt wurde – ab da läuft der Wechsel „nach Zeit“ reihum.</summary>
     public DateTime? WallpaperRotationSince { get; set; }
-    public string WallpaperField { get; set; } = "Light";
+    public string WallpaperField { get; set; } = "Light"; // oder ein anderer Schlüssel aus Shaders.Effects, "Image", "Solid"
     /// <summary>Effekt auf den Nebenbildschirmen: "Same" (wie Hauptbildschirm, auch beim Wechsel) oder ein eigener.</summary>
-    public string WallpaperSecondaryField { get; set; } = "Same"; // auch "Aurora", "Caustics", "Bokeh", "Smoke" (siehe StillRenderer.BackgroundMode)
+    public string WallpaperSecondaryField { get; set; } = "Same";
+    /// <summary>Hintergrund „Wetter“: "" = echtes Wetter, sonst feste Vorführung ("Rain", "Snow", "Fog", "Storm", "ClearNight"); "Real" = echtes Wetter.</summary>
+    public string WeatherEffectPreview { get; set; } = "Real";
 
     // ---------- Aufklapp-Fenster ----------
     public bool HoverOpensFolders { get; set; } = true;

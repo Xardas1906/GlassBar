@@ -30,6 +30,7 @@ public sealed class StillRenderer : IDisposable
         public Vector3 C2; public float WxCloud;
         public Vector3 C3; public float WxNight;
         public Vector4 Bands;
+        public Vector4 Misc;   // X = echte Sekunden (für Regen und Schnee, die nicht vom Tempo-Regler abhängen sollen)
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -99,6 +100,7 @@ public sealed class StillRenderer : IDisposable
             tune[m] = ((float)(Config.Percent(c.EffectSpeed, m) / 100), (float)(Config.Percent(c.EffectIntensity, m) / 100));
         _tune = tune;
         BackgroundMode = WallpaperRotation.Current(c, DateTime.Now);
+        EffectWeather.Preset = c.WeatherEffectPreview is null or "" or "Real" ? null : c.WeatherEffectPreview;
     }
 
     // gerade gezeigter Effekt und Überblendung (1 = ganz sichtbar, 0 = nur Grundfarbe)
@@ -357,6 +359,7 @@ public sealed class StillRenderer : IDisposable
         _parallax += (target - _parallax) * (float)(1 - Math.Exp(-dt * 2.5));
 
         // 1) Lichtfeld klein
+        var wx = EffectWeather.Effective();
         var p = new FieldParams
         {
             Res = new Vector2(_smallW, _smallH),
@@ -367,8 +370,9 @@ public sealed class StillRenderer : IDisposable
             FlowGlow = (float)(s.Num("waterShine") * 2.6),
             Base = Palette.Base, C0 = Palette.C0, C1 = Palette.C1, C2 = Palette.C2, C3 = Palette.C3,
             Shift = mode is "Bokeh" or "Stars" ? _parallax : Vector2.Zero,   // das Lichtfeld bleibt wie im Original
-            WxKind = EffectWeather.Kind, WxAmount = EffectWeather.Amount, WxCloud = EffectWeather.Cloud, WxNight = EffectWeather.NightNow(),
+            WxKind = wx.Kind, WxAmount = wx.Amount, WxCloud = wx.Cloud, WxNight = wx.Night,
             Bands = new Vector4(_bands[0], _bands[1], _bands[2], _bands[3]),
+            Misc = new Vector4((float)((DateTime.Now - _start).TotalSeconds % 3600.0), 0, 0, 0),
         };
         ctx.UpdateSubresource(in p, _fieldCb!);
         ctx.OMSetRenderTargets(_smallRtv!);
@@ -399,7 +403,10 @@ public sealed class StillRenderer : IDisposable
         if (_rain != null)
         {
             _rain.LightTheme = Palette.IsLightTheme;
-            _rain.Update(dt, Audio.Soundscape.IsPlaying("rain") && s.Bool("rainGlass"), s, Audio.Soundscape.RainSurge, _width, _height);
+            // Hintergrund „Wetter“ mit Regen oder Gewitter: Tropfen auch auf der Scheibe
+            var rwx = EffectWeather.Effective();
+            double weatherRain = _shownMode == "Weather" && rwx.Kind is EffectWeather.Rain or EffectWeather.Storm ? rwx.Amount : 0;
+            _rain.Update(dt, Audio.Soundscape.IsPlaying("rain") && s.Bool("rainGlass"), s, Audio.Soundscape.RainSurge, _width, _height, weatherRain);
             if (_rain.Active)
             {
                 _rain.Render(ctx, _fullSrv!, _wetRtv!, _width, _height);

@@ -323,15 +323,18 @@ public sealed class RainGlass : IDisposable
 
     // ---------- Fortschreiben ----------
 
-    /// <summary>Jedes Bild auf dem Render-Thread vor <see cref="Render"/>. on = Regenklang spielt und Einstellung rainGlass.</summary>
-    public void Update(double dt, bool on, StillValues settings, double surge, int width, int height)
+    /// <summary>
+    /// Jedes Bild auf dem Render-Thread vor <see cref="Render"/>. on = Regenklang spielt und Einstellung rainGlass;
+    /// weatherRain (0–1) = der Hintergrund „Wetter“ zeigt gerade Regen – dann regnet es auch auf die Scheibe.
+    /// </summary>
+    public void Update(double dt, bool on, StillValues settings, double surge, int width, int height, double weatherRain = 0)
     {
         // Wie stark es regnet, aus dem Klang: Intensität und Wogen, und wie viel davon man auf der Scheibe will.
-        _wanted = on && settings.Bool("soundFx") && settings.Bool("rainGlass");
+        _wanted = (on || weatherRain > 0) && settings.Bool("soundFx") && settings.Bool("rainGlass");
         _more = settings.Num("glassAmount");
         _look = settings.Num("glassLook");
         double g = _wanted
-            ? Math.Min(2.5, (0.12 + 0.88 * settings.Num("rainIntensity")) * TRain * _more * Math.Max(0.35, 1 + 0.6 * surge))
+            ? Math.Min(2.5, (0.12 + 0.88 * (on ? settings.Num("rainIntensity") : weatherRain)) * TRain * _more * (on ? Math.Max(0.35, 1 + 0.6 * surge) : 1))
             : 0;
         if (!_on && g > 0) _on = true;
         if (!_on) return;

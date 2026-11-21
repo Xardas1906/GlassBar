@@ -34,11 +34,37 @@ public static class EffectWeather
         _ => (Clouds, 0, 0.5f),
     };
 
-    public static void Set(int wmoCode, bool isDay)
+    /// <summary>
+    /// Stärke aus der gemessenen Niederschlagsmenge (mm je Stunde): 0,1 mm Niesel ≈ 0,1, 1 mm ≈ 0,35, 2 mm ≈ 0,5,
+    /// 4 mm (starker Regen) ≈ 0,7, ab 8 mm voll. Schnee zählt als Wasser, schon 1 mm ist viel Schnee.
+    /// </summary>
+    public static float FromPrecipitation(double mm, bool snow) =>
+        (float)Math.Clamp(Math.Sqrt(Math.Max(0, mm) / (snow ? 3.0 : 8.0)), 0.12, 1.0);
+
+    public static void Set(int wmoCode, bool isDay, double precipitationMm = -1)
     {
         var (k, a, c) = FromWmo(wmoCode);
+        // Gemessene Menge, wenn vorhanden: so regnet es auf dem Bildschirm so stark wie draußen
+        if (precipitationMm >= 0 && k is Rain or Snow or Storm) a = FromPrecipitation(precipitationMm, k == Snow);
         Kind = k; Amount = a; Cloud = c; Night = isDay ? 0 : 1;
     }
+
+    /// <summary>
+    /// Feste Vorführung statt des echten Wetters (Einstellung „Wetter zeigen“): null/leer = echtes Wetter,
+    /// sonst "Rain", "Snow", "Fog", "Storm", "ClearNight".
+    /// </summary>
+    public static volatile string? Preset;
+
+    /// <summary>Was der Effekt gerade zeigen soll (echtes Wetter oder die gewählte Vorführung).</summary>
+    public static (float Kind, float Amount, float Cloud, float Night) Effective() => Preset switch
+    {
+        "Rain" => (Rain, 0.4f, 0.9f, NightNow()),           // normaler Regen (etwa 1–2 mm je Stunde)
+        "Snow" => (Snow, 0.6f, 0.9f, NightNow()),
+        "Fog" => (Fog, 0.85f, 0.7f, NightNow()),
+        "Storm" => (Storm, 0.8f, 1f, NightNow()),
+        "ClearNight" => (Clear, 0f, 0f, 1f),
+        _ => (Kind, Amount, Cloud, NightNow()),
+    };
 
     /// <summary>Nacht für den Shader: vom Wetterdienst, sonst nach Uhrzeit (20–6 Uhr).</summary>
     public static float NightNow() => Night >= 0 ? Night : DateTime.Now.Hour is >= 20 or < 6 ? 1 : 0;

@@ -65,3 +65,17 @@ public class EffectWeatherTests
     public void FromWmo_StarkerRegenStaerkerAlsNiesel() =>
         Assert.True(GlassBar.NativeStill.EffectWeather.FromWmo(65).Amount > GlassBar.NativeStill.EffectWeather.FromWmo(51).Amount);
 }
+
+public class PrecipitationTests
+{
+    [Fact]
+    public void MehrRegenMehrTropfen()
+    {
+        float niesel = GlassBar.NativeStill.EffectWeather.FromPrecipitation(0.1, false);
+        float regen = GlassBar.NativeStill.EffectWeather.FromPrecipitation(1.5, false);
+        float stark = GlassBar.NativeStill.EffectWeather.FromPrecipitation(8, false);
+        Assert.True(niesel < regen && regen < stark);
+        Assert.Equal(1f, stark, 3);
+        Assert.True(GlassBar.NativeStill.EffectWeather.FromPrecipitation(0, false) >= 0.12f); // regnet es laut Code, bleibt etwas sichtbar
+    }
+}
