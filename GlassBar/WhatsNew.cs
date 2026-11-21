@@ -17,6 +17,19 @@ internal static class WhatsNew
     /// <summary>Neueste zuerst. Kurz halten: das, was man sonst nicht entdeckt.</summary>
     private static readonly Note[] Notes =
     {
+        new("1.5.0",
+            new[]
+            {
+                "Acht neue Hintergründe: Sternenhimmel, Seide, Lavalampe, Teich, Glühwürmchen, Höhenlinien, Musik-Wellen und Wetter.",
+                "„Wetter“ zeigt das echte Wetter der Wetter-Pille: Wolken, Regen, Schnee, Nebel, Gewitter, nachts Sterne.",
+                "„Musik-Wellen“ tanzen mit Bass, Mitten und Höhen der Musik, die gerade läuft.",
+            },
+            new[]
+            {
+                "Eight new backgrounds: starry sky, silk, lava lamp, pond, fireflies, contour lines, music waves and weather.",
+                "“Weather” shows the real weather from the weather pill: clouds, rain, snow, fog, thunderstorms, stars at night.",
+                "“Music waves” move with the bass, mids and highs of whatever is playing.",
+            }),
         new("1.4.5",
             new[]
             {

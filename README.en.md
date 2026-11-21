@@ -35,7 +35,9 @@
 - Customizable start icon: tile, glass, logo only or your own image, with colors and logo styles
 
 **Wallpaper “Still” (native, no browser)**
-- Light field, aurora, caustics, bokeh lights or mist (Direct3D, in the palette colors, reacting to music and the mouse) – or your Windows wallpaper / a solid color behind clock and pills
+- 13 animated backgrounds (Direct3D, in the palette colors, reacting to music and the mouse): light field, aurora,
+  caustics, bokeh lights, mist, starry sky, silk, lava lamp, pond, fireflies, contour lines, music waves and weather
+  (shows the real weather) – or your Windows wallpaper / a solid color behind clock and pills
 - Speed and strength per effect, automatic change by interval or time of day, preview images in the settings
 - Clock with rolling digits, date and weather (Direct2D)
 - Music with lyrics, water, Pomodoro, alarms/timers, tasks, workouts, prayer times, soundscapes, weather card

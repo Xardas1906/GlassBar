@@ -18,7 +18,10 @@ public class WallpaperRotationTests
         var c = new Config { WallpaperField = "Aurora", WallpaperRotation = "Interval", WallpaperRotationMinutes = 30, WallpaperRotationSince = since };
         Assert.Equal("Aurora", WallpaperRotation.Current(c, since.AddMinutes(29)));
         Assert.Equal("Caustics", WallpaperRotation.Current(c, since.AddMinutes(31)));
-        Assert.Equal("Light", WallpaperRotation.Current(c, since.AddMinutes(30 * 4 + 1))); // Smoke -> Light
+        // nach vier weiteren Wechseln: vier Plätze weiter in der Liste (am Ende geht es vorne weiter)
+        var effects = WallpaperRotation.Effects;
+        Assert.Equal(effects[(Array.IndexOf(effects, "Aurora") + 4) % effects.Length], WallpaperRotation.Current(c, since.AddMinutes(30 * 4 + 1)));
+        Assert.Equal(effects[(Array.IndexOf(effects, "Aurora") + effects.Length) % effects.Length], WallpaperRotation.Current(c, since.AddMinutes(30 * effects.Length + 1)));
     }
 
     [Theory]
@@ -45,4 +48,20 @@ public class WallpaperRotationTests
         Assert.Equal(200, Config.Percent(new() { ["Light"] = 999 }, "Light"));
         Assert.Equal(50, Config.Percent(new() { ["Light"] = 50 }, "Light"));
     }
+}
+
+public class EffectWeatherTests
+{
+    [Theory]
+    [InlineData(0, 0f)]   // klar
+    [InlineData(3, 1f)]   // bedeckt
+    [InlineData(45, 2f)]  // Nebel
+    [InlineData(63, 3f)]  // Regen
+    [InlineData(73, 4f)]  // Schnee
+    [InlineData(95, 5f)]  // Gewitter
+    public void FromWmo_Art(int code, float kind) => Assert.Equal(kind, GlassBar.NativeStill.EffectWeather.FromWmo(code).Kind);
+
+    [Fact]
+    public void FromWmo_StarkerRegenStaerkerAlsNiesel() =>
+        Assert.True(GlassBar.NativeStill.EffectWeather.FromWmo(65).Amount > GlassBar.NativeStill.EffectWeather.FromWmo(51).Amount);
 }

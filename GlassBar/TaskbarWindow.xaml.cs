@@ -1040,7 +1040,7 @@ public partial class TaskbarWindow : Window
     {
         if (!IsPrimary) return;
         bool show = App.Config.ShowWeather && App.Config.WeatherPlacement != "Dock" && _weather.HasData;
-        if (_weather.HasData) NativeStill.StillModules.SetWeatherCode(_weather.Code);
+        if (_weather.HasData) { NativeStill.StillModules.SetWeatherCode(_weather.Code); NativeStill.EffectWeather.Set(_weather.Code, _weather.IsDay); }
         var mood = show && NativeStill.NativeStillStore.Values.Bool("weatherMood")
             ? NativeStill.StillPalette.MoodForWeather(_weather.Code, _weather.IsDay) : null;
         foreach (var r in AllNativeRenderers())

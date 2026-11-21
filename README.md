@@ -35,7 +35,9 @@
 - Start-Symbol personalisierbar: Kachel, Glas, nur Logo oder eigenes Bild, mit eigener Farbe und Logo-Stil
 
 **Hintergrund „Still“ (nativ, ohne Browser)**
-- Lichtfeld, Polarlicht, Kaustik, Bokeh-Lichter oder Nebel (Direct3D, in den Farben der Palette, reagieren auf Musik und Maus) – oder das Windows-Hintergrundbild / einfarbig
+- 13 animierte Hintergründe (Direct3D, in den Farben der Palette, reagieren auf Musik und Maus): Lichtfeld, Polarlicht,
+  Kaustik, Bokeh-Lichter, Nebel, Sternenhimmel, Seide, Lavalampe, Teich, Glühwürmchen, Höhenlinien, Musik-Wellen und Wetter
+  (zeigt das echte Wetter) – oder das Windows-Hintergrundbild / einfarbig
 - Tempo und Stärke je Effekt, automatischer Wechsel nach Zeit oder Tageszeit, Vorschaubilder in den Einstellungen
 - Uhr mit rollenden Ziffern, Datum und Wetter (Direct2D)
 - Musik mit Liedtexten, Wasser, Pomodoro, Wecker/Timer, Aufgaben, Training, Gebetszeiten, Klanglandschaften, Wetterkarte

@@ -435,15 +435,16 @@ public partial class SettingsWindow : Window
     /// <summary>Vorschaubilder in die Knöpfe der Hintergrund-Auswahl setzen (im Hintergrund gezeichnet).</summary>
     private void BuildFieldPreviews()
     {
-        string[] keys = { "Light", "Aurora", "Caustics", "Bokeh", "Smoke", "Image", "Solid" };
         var radios = FieldChoices.Children.OfType<RadioButton>().ToList();
         var palette = App.Instance.Bar?.NativePalette ?? new NativeStill.StillPalette();
         Task.Run(() => NativeStill.EffectPreview.RenderAll(palette)).ContinueWith(t =>
         {
             if (t.Result is not { } previews) return;
-            for (int i = 0; i < radios.Count && i < keys.Length; i++)
+            for (int i = 0; i < radios.Count; i++)
             {
-                if (!previews.TryGetValue(keys[i], out var img) || radios[i].Content is not string text) continue;
+                // Schlüssel des Hintergrunds steht als ConverterParameter in der Bindung (z. B. „Aurora“)
+                string? key = BindingOperations.GetBinding(radios[i], ToggleButton.IsCheckedProperty)?.ConverterParameter as string;
+                if (key == null || !previews.TryGetValue(key, out var img) || radios[i].Content is not string text) continue;
                 var picture = new Border
                 {
                     Width = NativeStill.EffectPreview.Width * 0.8, Height = NativeStill.EffectPreview.Height * 0.8,

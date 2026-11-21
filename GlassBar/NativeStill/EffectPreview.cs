@@ -29,6 +29,31 @@ public static class EffectPreview
 
     private static void RenderEffects(StillPalette pal, Dictionary<string, BitmapSource> result)
     {
+        var p = new StillRenderer.FieldParams
+        {
+            Time = 140,   // ein Zeitpunkt, an dem alle Effekte typisch aussehen
+            Light = pal.Light,
+            Base = pal.Base, C0 = pal.C0, C1 = pal.C1, C2 = pal.C2, C3 = pal.C3,
+            // Wetter: wie gerade draußen; Musik-Wellen: mittlere Lautstärke, damit man die Bänder sieht
+            WxKind = EffectWeather.Kind, WxAmount = EffectWeather.Amount, WxCloud = EffectWeather.Cloud, WxNight = EffectWeather.NightNow(),
+            Bands = new Vector4(0.6f, 0.45f, 0.35f, 0.25f),
+        };
+        Render(Shaders.Effects.Prepend(("Light", Shaders.Field)), p, Width, Height, result);
+    }
+
+    /// <summary>Einen Effekt in beliebiger Größe mit vorgegebenen Werten zeichnen (z. B. zum Prüfen der Wetterarten).</summary>
+    internal static BitmapSource? RenderOne(string key, StillRenderer.FieldParams p, int width, int height)
+    {
+        var src = key == "Light" ? Shaders.Field : Array.Find(Shaders.Effects, x => x.Key == key).Source;
+        if (src == null) return null;
+        var result = new Dictionary<string, BitmapSource>();
+        Render(new[] { (key, src) }, p, width, height, result);
+        return result.GetValueOrDefault(key);
+    }
+
+    private static void Render(IEnumerable<(string Key, string Source)> effects, StillRenderer.FieldParams p, int w, int h,
+                               Dictionary<string, BitmapSource> result)
+    {
         var levels = new[] { FeatureLevel.Level_11_1, FeatureLevel.Level_11_0, FeatureLevel.Level_10_0 };
         // Grafikkarte, sonst Software (WARP)
         ID3D11Device device;
@@ -41,28 +66,21 @@ public static class EffectPreview
         using var vs = dev.CreateVertexShader(StillRenderer.Compile(Shaders.Vertex, "vs_5_0").Span);
         using var cb = dev.CreateBuffer(new BufferDescription((uint)Marshal.SizeOf<StillRenderer.FieldParams>(), BindFlags.ConstantBuffer));
         using var sampler = dev.CreateSamplerState(new SamplerDescription(Filter.MinMagMipLinear, TextureAddressMode.Clamp));
-        using var target = dev.CreateTexture2D(new Texture2DDescription(Format.B8G8R8A8_UNorm, Width, Height, 1, 1, BindFlags.RenderTarget));
+        using var target = dev.CreateTexture2D(new Texture2DDescription(Format.B8G8R8A8_UNorm, (uint)w, (uint)h, 1, 1, BindFlags.RenderTarget));
         using var rtv = dev.CreateRenderTargetView(target);
-        using var staging = dev.CreateTexture2D(new Texture2DDescription(Format.B8G8R8A8_UNorm, Width, Height, 1, 1,
+        using var staging = dev.CreateTexture2D(new Texture2DDescription(Format.B8G8R8A8_UNorm, (uint)w, (uint)h, 1, 1,
             BindFlags.None, ResourceUsage.Staging, CpuAccessFlags.Read));
 
-        var p = new StillRenderer.FieldParams
-        {
-            Res = new Vector2(Width, Height),
-            Time = 140,   // ein Zeitpunkt, an dem alle Effekte typisch aussehen
-            Light = pal.Light,
-            Base = pal.Base, C0 = pal.C0, C1 = pal.C1, C2 = pal.C2, C3 = pal.C3,
-        };
+        p.Res = new Vector2(w, h);
         c.UpdateSubresource(in p, cb);
 
-        foreach (var (name, src) in new[] { ("Light", Shaders.Field), ("Aurora", Shaders.Aurora), ("Caustics", Shaders.Caustics),
-                                             ("Bokeh", Shaders.Bokeh), ("Smoke", Shaders.Smoke) })
+        foreach (var (name, src) in effects)
         {
             try
             {
                 using var ps = dev.CreatePixelShader(StillRenderer.Compile(src, "ps_5_0").Span);
                 c.OMSetRenderTargets(rtv);
-                c.RSSetViewport(new Vortice.Mathematics.Viewport(0, 0, Width, Height));
+                c.RSSetViewport(new Vortice.Mathematics.Viewport(0, 0, w, h));
                 c.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
                 c.VSSetShader(vs);
                 c.PSSetShader(ps);
@@ -74,11 +92,11 @@ public static class EffectPreview
                 var map = c.Map(staging, 0, MapMode.Read);
                 try
                 {
-                    var pixels = new byte[Width * Height * 4];
-                    for (int y = 0; y < Height; y++)
-                        Marshal.Copy(map.DataPointer + (nint)(y * map.RowPitch), pixels, y * Width * 4, Width * 4);
+                    var pixels = new byte[w * h * 4];
+                    for (int y = 0; y < h; y++)
+                        Marshal.Copy(map.DataPointer + (nint)(y * map.RowPitch), pixels, y * w * 4, w * 4);
                     for (int i = 3; i < pixels.Length; i += 4) pixels[i] = 255;
-                    var bmp = BitmapSource.Create(Width, Height, 96, 96, PixelFormats.Bgra32, null, pixels, Width * 4);
+                    var bmp = BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgra32, null, pixels, w * 4);
                     bmp.Freeze();
                     result[name] = bmp;
                 }

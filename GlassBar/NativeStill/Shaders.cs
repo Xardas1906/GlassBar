@@ -20,8 +20,19 @@ internal static class Shaders
         """;
 
     /// <summary>
+    /// Alle Effekte außer dem Lichtfeld (das hat seinen eigenen Shader <see cref="Field"/>), Schlüssel wie in
+    /// Config.WallpaperField. Renderer, Vorschaubilder und Tests nehmen diese Liste.
+    /// </summary>
+    public static readonly (string Key, string Source)[] Effects =
+    {
+        ("Aurora", Aurora), ("Caustics", Caustics), ("Bokeh", Bokeh), ("Smoke", Smoke),
+        ("Stars", Stars), ("Silk", Silk), ("Lava", Lava), ("Pond", Pond),
+        ("Fireflies", Fireflies), ("Contours", Contours), ("Weather", Weather), ("Waves", Waves),
+    };
+
+    /// <summary>
     /// Gemeinsamer Teil aller Hintergrund-Effekte: Eingänge (Palette, Zeit, Musik-Energie, Maus-Strömung) und
-    /// Rauschfunktionen. Lichtfeld, Polarlicht, Kaustik, Bokeh und Nebel hängen ihre eigene main() daran.
+    /// Rauschfunktionen. Jeder Effekt hängt seine eigene main() daran.
     /// </summary>
     public const string Common = """
         cbuffer P : register(b0)
@@ -29,10 +40,11 @@ internal static class Shaders
             float2 u_res;  float u_time;  float u_energy;
             float u_light; float2 u_shift; float u_fOn;
             float3 u_base; float u_fGlow;
-            float3 u_c0;   float _p0;
-            float3 u_c1;   float _p1;
-            float3 u_c2;   float _p2;
-            float3 u_c3;   float _p3;
+            float3 u_c0;   float u_wxKind;   // Wetter: 0 klar, 1 Wolken, 2 Nebel, 3 Regen, 4 Schnee, 5 Gewitter
+            float3 u_c1;   float u_wxAmt;    // Stärke von Regen/Schnee/Nebel 0–1
+            float3 u_c2;   float u_wxCloud;  // Bewölkung 0–1
+            float3 u_c3;   float u_wxNight;  // 1 = Nacht
+            float4 u_bands;                  // Musik: Bass, untere Mitten, obere Mitten, Höhen (0–1)
         };
         Texture2D u_flow : register(t0);
         SamplerState lin : register(s0);
@@ -331,6 +343,391 @@ internal static class Shaders
             float hi = sstep(0.55, 0.85, f);
             col = glow(col, u_c2, hi * (0.18 + e * 0.25));
             col *= lerp(0.75 + f * 0.5, 1.0, u_light);
+            return float4(finish(col, uv, asp, fl, fc), 1.0);
+        }
+        """;
+
+    /// <summary>Sternenhimmel: driftender Nebel in den Palettenfarben, funkelnde Sterne in drei Tiefen, ab und zu eine Sternschnuppe.</summary>
+    public const string Stars = Common + """
+
+        float4 main(float4 pos : SV_Position, float2 uvIn : TEXCOORD0) : SV_Target
+        {
+            float2 fc, uv; float asp; float3 fl;
+            setup(pos, fc, uv, asp, fl);
+            float t = u_time, e = u_energy;
+            float2 p = (uv - 0.5) * float2(asp, 1.0);
+
+            // Nebel: zwei verschachtelte Rauschschichten, langsam driftend, mit etwas Maus-Parallaxe
+            float2 q = p * 1.2 - u_shift * 0.03 - float2(fl.r, -fl.g) * 0.3 + float2(t * 0.004, t * 0.002);
+            float n1 = fbm(q * 1.5 + fbm(q * 0.8 + t * 0.01) * 1.5);
+            float n2 = fbm(q * 2.3 + float2(3.1, 7.7) - t * 0.006);
+            float3 col = u_base * lerp(0.8, 1.0, u_light);
+            col = glow(col, u_c1 * 1.1, pow(n1, 2.0) * 0.85);
+            col = glow(col, u_c2 * 1.1, pow(n2, 2.6) * 0.7);
+            col = glow(col, u_c0, pow(saturate(n1 * n2 * 1.8), 3.0) * 0.4 * (1.0 + e * 0.6));
+
+            // Sterne in drei Tiefen: vorne größer und mit mehr Parallaxe
+            [unroll] for (int L = 0; L < 3; L++)
+            {
+                float fL = (float)L;
+                float2 g = (p - u_shift * 0.025 * (3.0 - fL)) * (55.0 + fL * 50.0);
+                float2 id = floor(g);
+                float h = hash(id + fL * 11.7);
+                if (h > 0.90)
+                {
+                    float2 c = 0.25 + 0.5 * hash22(id + fL * 3.3);
+                    float d = length(frac(g) - c);
+                    float tw = 0.55 + 0.45 * sin(t * (0.8 + h * 3.0) + h * 50.0);
+                    float s = sstep(0.16 - fL * 0.03, 0.0, d) * tw * (1.0 - fL * 0.25);
+                    float3 sc = lerp(float3(1.0, 1.0, 1.0), paletteColor(floor(h * 40.0)) * 1.5 + 0.3, 0.3);
+                    col = glow(col, sc, s * lerp(0.9, 0.5, u_light));
+                }
+            }
+
+            // Sternschnuppe: etwa alle 9 Zeiteinheiten eine, kurz sichtbar
+            float per = 9.0;
+            float k = floor(t / per), ph = frac(t / per) * per;
+            if (ph < 1.4)
+            {
+                float2 s0 = (hash22(float2(k, 3.7)) - 0.5) * float2(asp * 0.9, 0.6) + float2(0.0, 0.25);
+                float2 dir = normalize(float2(-0.8, -0.45));
+                float2 head = s0 + dir * ph * 0.55;
+                float2 rel = p - head;
+                float along = dot(rel, -dir);                       // hinter dem Kopf
+                float across = abs(rel.x * dir.y - rel.y * dir.x);
+                float tail = sstep(0.0, 0.02, along) * sstep(0.35, 0.0, along) * sstep(0.006, 0.0, across);
+                float fade = sstep(0.0, 0.2, ph) * sstep(1.4, 0.9, ph);
+                col = glow(col, float3(1.0, 1.0, 1.0), tail * fade * 0.9);
+            }
+            return float4(finish(col, uv, asp, fl, fc), 1.0);
+        }
+        """;
+
+    /// <summary>Seide: breite, fließende Farbbahnen wie wehende Tücher, mit sanftem Glanz.</summary>
+    public const string Silk = Common + """
+
+        float4 main(float4 pos : SV_Position, float2 uvIn : TEXCOORD0) : SV_Target
+        {
+            float2 fc, uv; float asp; float3 fl;
+            setup(pos, fc, uv, asp, fl);
+            float t = u_time, e = u_energy;
+            float2 p = (uv - 0.5 - float2(fl.r, -fl.g) * 0.8) * float2(asp, 1.0);
+
+            float3 col = lerp(u_base, lerp(u_base, u_c3, 0.25), saturate(uv.y));
+            [unroll] for (int i = 0; i < 4; i++)
+            {
+                float fi = (float)i;
+                // Mittellinie der Bahn: große, langsame Welle plus etwas Rauschen
+                float y = p.y - (fi - 1.5) * 0.17
+                        + sin(p.x * (1.0 + fi * 0.25) + t * (0.06 + fi * 0.015) + fi * 1.7) * 0.16
+                        + (fbm(float2(p.x * 0.7 + fi * 3.0, t * 0.025 + fi)) - 0.5) * 0.30;
+                float w = 0.075 + 0.035 * sin(p.x * 1.7 + t * 0.04 + fi * 2.3);  // Breite wechselt
+                float band = exp(-(y * y) / (w * w));
+                // Glanz: schräg über die Bahn laufende Lichtfalten
+                float sheen = pow(saturate(0.5 + 0.5 * sin(p.x * 2.6 - y * 26.0 + t * 0.18 + fi * 1.3)), 5.0);
+                float a = band * (0.38 + sheen * 0.55) * (0.9 + e * 0.35);
+                col = glow(col, lerp(paletteColor(fi), paletteColor(fi + 1.0), sheen * 0.5) * 1.1, a);
+            }
+            return float4(finish(col, uv, asp, fl, fc), 1.0);
+        }
+        """;
+
+    /// <summary>Lavalampe: große, weiche Blasen steigen langsam auf, verschmelzen und trennen sich; die Musik lässt sie pulsieren.</summary>
+    public const string Lava = Common + """
+
+        // Summe der Blasen (Metaballs): > 1 heißt „im Wachs“; tint = gewichtete Farbe der beteiligten Blasen
+        float lavaField(float2 p, float t, float e, float asp, out float3 tint)
+        {
+            float field = 0.0;
+            tint = float3(0.0, 0.0, 0.0);
+            [unroll] for (int i = 0; i < 10; i++)
+            {
+                float fi = (float)i;
+                float3 h = float3(hash(float2(fi, 1.3)), hash(float2(fi, 7.9)), hash(float2(fi, 4.1)));
+                // steigt langsam auf und taucht unten wieder auf; seitlich leichtes Schlingern
+                float y = frac(h.y + t * (0.010 + h.z * 0.012)) * 1.5 - 0.75;
+                // über die ganze Breite verteilt, jede Blase in ihrer eigenen Spalte
+                float x = ((fi + 0.5) / 10.0 - 0.5) * asp * 0.92 + (h.x - 0.5) * 0.12 + sin(t * (0.05 + h.z * 0.04) + fi * 2.1) * 0.06;
+                float r = (0.11 + h.z * 0.10) * (1.0 + e * 0.08) * (0.8 + 0.2 * sin(t * 0.07 + fi));
+                float2 d = p - float2(x, y);
+                float f = r * r / (dot(d, d) + r * r * 0.2);   // in der Mitte begrenzt (kein Lichtpunkt)
+                field += f;
+                tint += paletteColor(fi) * f;
+            }
+            tint /= max(field, 1e-4);
+            return field;
+        }
+
+        float4 main(float4 pos : SV_Position, float2 uvIn : TEXCOORD0) : SV_Target
+        {
+            float2 fc, uv; float asp; float3 fl;
+            setup(pos, fc, uv, asp, fl);
+            float t = u_time, e = u_energy;
+            float2 p = (uv - 0.5 - float2(fl.r, -fl.g) * 0.6) * float2(asp, 1.0);
+
+            float3 tint, tmp;
+            float field = lavaField(p, t, e, asp, tint);
+            // Licht von oben links: Neigung der „Oberfläche“ aus zwei Nachbarwerten
+            float eps = 0.004;
+            float fx = lavaField(p + float2(eps, 0.0), t, e, asp, tmp) - field;
+            float fy = lavaField(p + float2(0.0, eps), t, e, asp, tmp) - field;
+            // Höhe als Kuppel (0 am Rand, 1 in der Mitte): daraus die Neigung, damit die Blasen rund wirken
+            float H = sqrt(saturate(1.0 - 1.0 / max(field, 1e-3)));
+            float Hx = sqrt(saturate(1.0 - 1.0 / max(field + fx, 1e-3))) - H;
+            float Hy = sqrt(saturate(1.0 - 1.0 / max(field + fy, 1e-3))) - H;
+            float3 n = normalize(float3(-Hx, -Hy, eps * 9.0));
+            float diff = saturate(dot(n, normalize(float3(-0.45, 0.6, 0.65))));
+            float spec = pow(diff, 18.0);
+
+            float3 col = lerp(u_base, lerp(u_base, u_c3, 0.35), saturate(1.0 - uv.y));
+            float inside = sstep(0.92, 1.08, field);
+            float halo = saturate((field - 0.25) * 0.5) * (1.0 - inside);      // sanfter Schein ums Wachs
+            col = glow(col, tint * 0.8, halo * 0.3);
+            float3 wax = tint * (0.45 + diff * 0.65) + spec * 0.35;
+            col = lerp(col, lerp(wax, wax * 0.8 + 0.15, u_light * 0.4), inside);
+            return float4(finish(col, uv, asp, fl, fc), 1.0);
+        }
+        """;
+
+    /// <summary>Teich: Regentropfen auf einer Wasseroberfläche, Ringe breiten sich aus; Bässe lassen sie stärker leuchten.</summary>
+    public const string Pond = Common + """
+
+        float4 main(float4 pos : SV_Position, float2 uvIn : TEXCOORD0) : SV_Target
+        {
+            float2 fc, uv; float asp; float3 fl;
+            setup(pos, fc, uv, asp, fl);
+            float t = u_time, e = u_energy;
+            float2 p = (uv - 0.5 - float2(fl.r, -fl.g) * 1.2) * float2(asp, 1.0);
+
+            // Wasser mit leichtem Schimmer
+            float3 col = lerp(lerp(u_base, u_c3, 0.35), u_base, saturate(uv.y));
+            col = glow(col, u_c2, fbm(p * 2.0 + float2(t * 0.02, -t * 0.015)) * 0.12);
+
+            float ring = 0.0;
+            [unroll] for (int i = 0; i < 9; i++)
+            {
+                float fi = (float)i;
+                float per = 5.0 + hash(float2(fi, 2.2)) * 4.0;
+                float lt = t * 0.9 + fi * per / 9.0 * 3.1;
+                float k = floor(lt / per);
+                float age = frac(lt / per) * per;                   // Zeit seit dem Tropfen
+                float2 c = (hash22(float2(k * 1.7 + fi, fi * 3.3)) - 0.5) * float2(asp * 0.95, 0.95);
+                float d = length(p - c);
+                float r = age * 0.11;
+                float amp = exp(-age * 0.55);
+                // zwei, drei Wellenkämme hintereinander
+                float w = sin((d - r) * 70.0) * exp(-pow((d - r) * 14.0, 2.0)) ;
+                ring += max(w, 0.0) * amp + exp(-pow((d - r) * 30.0, 2.0)) * amp * 0.5;
+            }
+            float3 rc = lerp(u_c0, u_c1, saturate(fbm(p * 0.6 + t * 0.01)));
+            col = glow(col, rc * 1.2, ring * (0.45 + e * 0.45));
+            return float4(finish(col, uv, asp, fl, fc), 1.0);
+        }
+        """;
+
+    /// <summary>Glühwürmchen: kleine Lichtpunkte schwirren umher und sammeln sich sanft dort, wo die Maus ist.</summary>
+    public const string Fireflies = Common + """
+
+        float4 main(float4 pos : SV_Position, float2 uvIn : TEXCOORD0) : SV_Target
+        {
+            float2 fc, uv; float asp; float3 fl;
+            setup(pos, fc, uv, asp, fl);
+            float t = u_time, e = u_energy;
+            float2 p = (uv - 0.5) * float2(asp, 1.0);
+            float2 mouse = u_shift * float2(asp, 1.0);              // geglättete Mausposition (Mitte = 0)
+
+            float3 col = lerp(u_base, lerp(u_base, u_c3, 0.4), saturate(1.0 - uv.y * 1.2));
+            col = glow(col, u_c2, fbm(p * 1.2 + t * 0.008) * 0.08);
+
+            [unroll] for (int L = 0; L < 2; L++)
+            {
+                float fL = (float)L;
+                float sc = 5.0 + fL * 3.0;
+                float2 g = p * sc;
+                float2 id = floor(g);
+                [unroll] for (int y = -1; y <= 1; y++)
+                [unroll] for (int x = -1; x <= 1; x++)
+                {
+                    float2 cell = id + float2(x, y);
+                    float h = hash(cell + fL * 5.1);
+                    if (h < 0.72) continue;                              // nur wenige Zellen haben eins
+                    // umherschwirren
+                    float2 wob = float2(sin(t * (0.21 + h * 0.3) + h * 20.0), cos(t * (0.17 + h * 0.25) + h * 31.0)) * 0.45;
+                    float2 c = (cell + 0.5 + wob) / sc;
+                    // zur Maus hingezogen, je näher, desto stärker
+                    float2 toM = mouse - c;
+                    c += toM * 0.22 * exp(-dot(toM, toM) * 3.0);
+                    float d = length(p - c) * sc;
+                    float blink = 0.35 + 0.65 * pow(0.5 + 0.5 * sin(t * (0.9 + h * 1.5) + h * 60.0), 3.0);
+                    float a = exp(-d * d * 180.0) * 1.2 + exp(-d * d * 14.0) * 0.16; // heller Kern, weicher Schein
+                    float3 fcol = lerp(lerp(u_c0, u_c1, h) * 1.4 + 0.12, float3(0.95, 1.0, 0.55), 0.35);   // leicht warm wie echte
+                    col = glow(col, fcol, a * blink * (1.0 - fL * 0.35) * (0.85 + e * 0.4));
+                }
+            }
+            return float4(finish(col, uv, asp, fl, fc), 1.0);
+        }
+        """;
+
+    /// <summary>Höhenlinien: langsam wandernde Linien wie auf einer Landkarte, jede fünfte etwas kräftiger.</summary>
+    public const string Contours = Common + """
+
+        float4 main(float4 pos : SV_Position, float2 uvIn : TEXCOORD0) : SV_Target
+        {
+            float2 fc, uv; float asp; float3 fl;
+            setup(pos, fc, uv, asp, fl);
+            float t = u_time, e = u_energy;
+            float2 p = (uv - 0.5 - float2(fl.r, -fl.g) * 0.7) * float2(asp, 1.0);
+
+            float h = fbm(p * 1.3 + float2(t * 0.010, -t * 0.007)) + 0.35 * fbm(p * 3.1 - t * 0.012);
+            float v = h * 16.0;
+            float dv = max(fwidth(v), 1e-3);
+            float f = frac(v);
+            float isoLine = 1.0 - sstep(0.0, dv * 1.3, min(f, 1.0 - f));
+            float major = fmod(floor(v + 0.5), 5.0) < 0.5 ? 1.0 : 0.0;
+
+            float3 col = u_base;
+            col = lerp(col, lerp(u_base, u_c3, 0.45), saturate(h * 1.1 - 0.2));   // leichte Schummerung nach Höhe
+            float3 lc = lerp(u_c0, u_c2, saturate(h * 1.2 - 0.1));
+            col = glow(col, lc * 1.2, isoLine * lerp(0.32, 0.7, major) * (0.9 + e * 0.4));
+            return float4(finish(col, uv, asp, fl, fc), 1.0);
+        }
+        """;
+
+    /// <summary>
+    /// Wetter: zeigt das echte Wetter der Wetter-Pille – Wolken, Regen, Schnee, Nebel, Gewitter mit Wetterleuchten,
+    /// in klaren Nächten Sterne. Ohne Wetterdaten ein klarer Himmel (Tag/Nacht nach Uhrzeit).
+    /// </summary>
+    public const string Weather = Common + """
+
+        float4 main(float4 pos : SV_Position, float2 uvIn : TEXCOORD0) : SV_Target
+        {
+            float2 fc, uv; float asp; float3 fl;
+            setup(pos, fc, uv, asp, fl);
+            float t = u_time, e = u_energy;
+            float2 p = (uv - 0.5 - float2(fl.r, -fl.g) * 0.5) * float2(asp, 1.0);
+            float kind = u_wxKind, amt = u_wxAmt, cloud = u_wxCloud, night = u_wxNight;
+            bool rain = kind > 2.5 && kind < 3.5 || kind > 4.5, snow = kind > 3.5 && kind < 4.5, fog = kind > 1.5 && kind < 2.5;
+
+            // Himmel: Verlauf aus den Palettenfarben, nachts dunkler, bei dichten Wolken grauer
+            float3 top = lerp(lerp(u_base, u_c0, 0.45), u_base * 0.6, night);
+            float3 bottom = lerp(lerp(u_base, u_c2, 0.35), lerp(u_base, u_c3, 0.3), night);
+            float3 col = lerp(bottom, top, saturate(uv.y));
+            float3 grey = dot(col, float3(0.3, 0.5, 0.2)).xxx;
+            col = lerp(col, grey * 1.05, cloud * 0.45);
+
+            // tagsüber sanfter Sonnenschein oben rechts, nachts ein Mondschein; bei Wolken schwächer
+            float2 sun = float2(asp * 0.32, 0.38);
+            float3 sunCol = lerp(lerp(u_c0, float3(1.0, 0.92, 0.75), 0.5), float3(0.75, 0.82, 1.0), night);
+            col = glow(col, sunCol, exp(-length(p - sun) * lerp(2.4, 4.0, night)) * lerp(0.35, 0.3, night) * (1.0 - cloud * 0.8));
+
+            // Sterne in klaren Nächten
+            if (night > 0.5)
+            {
+                float2 g = p * 55.0;
+                float h = hash(floor(g));
+                if (h > 0.88)
+                {
+                    float d = length(frac(g) - 0.5);
+                    float tw = 0.6 + 0.4 * sin(t * (1.0 + h * 3.0) + h * 40.0);
+                    col = glow(col, float3(1.0, 1.0, 1.0), sstep(0.2, 0.0, d) * tw * (1.0 - cloud * 0.8) * 1.2 * saturate(uv.y * 1.5 + 0.1));
+                }
+            }
+
+            // Wolken: zwei Schichten, die langsam ziehen
+            float2 cq = p * float2(1.2, 2.2) + float2(t * 0.02, 0.0);
+            float c1 = fbm(cq + fbm(cq * 0.7 + t * 0.005));
+            float c2 = fbm(cq * 1.9 + float2(5.0, 2.0) + float2(t * 0.035, 0.0));
+            float cover = sstep(0.62 - cloud * 0.4, 0.95 - cloud * 0.3, c1 * 0.7 + c2 * 0.45);
+            float3 cc = lerp(lerp(u_c1, float3(0.85, 0.87, 0.92), 0.65), lerp(u_base, u_c1, 0.6) + 0.04, night * 0.7);
+            col = lerp(col, cc * lerp(0.6, 1.0, u_light), cover * (0.5 + cloud * 0.45) * saturate(uv.y * 1.4 + 0.2));
+
+            // Regen: schräge Schlieren in zwei Tiefen
+            if (rain)
+            {
+                [unroll] for (int L = 0; L < 2; L++)
+                {
+                    float fL = (float)L;
+                    float2 rp = float2(p.x + p.y * 0.18, p.y) * float2(70.0 + fL * 50.0, 3.0 + fL * 2.0);
+                    rp.y += t * (9.0 + fL * 5.0);
+                    float2 id = floor(rp);
+                    float h = hash(id + fL * 9.0);
+                    float2 f = frac(rp);
+                    float streak = (h > 1.0 - amt * 0.55) ? sstep(0.12, 0.0, abs(f.x - 0.5)) * sstep(0.0, 0.3, f.y) * sstep(1.0, 0.6, f.y) : 0.0;
+                    col = glow(col, lerp(float3(0.75, 0.8, 0.9), u_c1 + 0.3, 0.3), streak * (0.35 - fL * 0.12) * (0.6 + amt * 0.6));
+                }
+            }
+
+            // Schnee: Flocken in drei Tiefen, langsam taumelnd
+            if (snow)
+            {
+                [unroll] for (int L = 0; L < 3; L++)
+                {
+                    float fL = (float)L;
+                    float sc = 9.0 + fL * 7.0;
+                    float2 sp = p * sc;
+                    sp.y += t * (0.6 + fL * 0.3) * 2.0;
+                    sp.x += sin(sp.y * 0.6 + t * 0.4 + fL) * 0.5;
+                    float2 id = floor(sp);
+                    float h = hash(id + fL * 4.4);
+                    if (h > 1.0 - amt * 0.7)
+                    {
+                        float2 c = 0.25 + 0.5 * hash22(id + 1.7);
+                        float d = length(frac(sp) - c);
+                        col = glow(col, float3(1.0, 1.0, 1.0), sstep(0.16 - fL * 0.03, 0.02, d) * (0.75 - fL * 0.18));
+                    }
+                }
+            }
+
+            // Nebel: dichter Dunst, unten stärker
+            if (fog)
+            {
+                float m = fbm(p * float2(1.5, 3.0) + float2(t * 0.02, 0.0));
+                float haze = saturate((1.1 - uv.y) * (0.5 + m * 0.8)) * amt;
+                col = lerp(col, lerp(grey * 1.3 + 0.12, u_c2 * 0.6 + 0.3, 0.3), saturate(haze * 1.1));
+            }
+
+            // Gewitter: ab und zu ein Wetterleuchten in den Wolken
+            if (kind > 4.5)
+            {
+                float k = floor(t * 0.35);
+                float ph = frac(t * 0.35);
+                float hit = step(0.72, hash(float2(k, 9.1)));
+                float flash = hit * exp(-ph * 9.0) * (0.6 + 0.4 * sin(ph * 60.0));
+                float2 at = (hash22(float2(k, 2.2)) - 0.5) * float2(asp, 0.6) + float2(0.0, 0.2);
+                float near = exp(-dot(p - at, p - at) * 2.5);
+                col = glow(col, float3(0.85, 0.88, 1.0), flash * (0.25 + near * 0.6) * saturate(uv.y + 0.3));
+            }
+            col *= 1.0 + e * 0.05;
+            return float4(finish(col, uv, asp, fl, fc), 1.0);
+        }
+        """;
+
+    /// <summary>Musik-Wellen: vier weiche Lichtbänder, je eines für Bass, Mitten und Höhen; ohne Musik ruhig.</summary>
+    public const string Waves = Common + """
+
+        float4 main(float4 pos : SV_Position, float2 uvIn : TEXCOORD0) : SV_Target
+        {
+            float2 fc, uv; float asp; float3 fl;
+            setup(pos, fc, uv, asp, fl);
+            float t = u_time, e = u_energy;
+            float2 p = (uv - 0.5 - float2(fl.r, -fl.g) * 0.6) * float2(asp, 1.0);
+
+            float3 col = lerp(u_base, lerp(u_base, u_c3, 0.3), saturate(1.0 - abs(p.y) * 1.6));
+            float bands[4] = { u_bands.x, u_bands.y, u_bands.z, u_bands.w };
+            [unroll] for (int i = 0; i < 4; i++)
+            {
+                float fi = (float)i;
+                float b = bands[i];
+                float freq = 1.4 + fi * 1.1;                        // tiefe Töne: lange Wellen, hohe: kurze
+                float amp = 0.035 + b * (0.20 - fi * 0.03);
+                float y = (fi - 1.5) * 0.055
+                        + sin(p.x * freq + t * (0.25 + fi * 0.12) + fi * 1.9) * amp
+                        + sin(p.x * freq * 2.3 - t * (0.18 + fi * 0.07)) * amp * 0.35;
+                float d = abs(p.y - y);
+                float core = exp(-d * (110.0 - b * 40.0));
+                float soft = exp(-d * 14.0) * (0.10 + b * 0.25);
+                col = glow(col, paletteColor(fi) * 1.25, (core * 0.75 + soft) * (0.7 + b * 0.8));
+            }
             return float4(finish(col, uv, asp, fl, fc), 1.0);
         }
         """;

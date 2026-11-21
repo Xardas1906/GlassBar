@@ -14,6 +14,14 @@ public class ShaderTests
         { "Kaustik", Shaders.Caustics, "ps_5_0" },
         { "Bokeh", Shaders.Bokeh, "ps_5_0" },
         { "Nebel", Shaders.Smoke, "ps_5_0" },
+        { "Sternenhimmel", Shaders.Stars, "ps_5_0" },
+        { "Seide", Shaders.Silk, "ps_5_0" },
+        { "Lavalampe", Shaders.Lava, "ps_5_0" },
+        { "Teich", Shaders.Pond, "ps_5_0" },
+        { "Glühwürmchen", Shaders.Fireflies, "ps_5_0" },
+        { "Höhenlinien", Shaders.Contours, "ps_5_0" },
+        { "Wetter", Shaders.Weather, "ps_5_0" },
+        { "Musik-Wellen", Shaders.Waves, "ps_5_0" },
         { "Hochziehen", Shaders.Upscale, "ps_5_0" },
     };
 

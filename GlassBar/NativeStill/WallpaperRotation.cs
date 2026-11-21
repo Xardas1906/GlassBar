@@ -9,7 +9,7 @@ namespace GlassBar.NativeStill;
 public static class WallpaperRotation
 {
     /// <summary>Die animierten Effekte in der Reihenfolge des Wechsels.</summary>
-    public static readonly string[] Effects = { "Light", "Aurora", "Caustics", "Bokeh", "Smoke" };
+    public static readonly string[] Effects = Shaders.Effects.Select(e => e.Key).Prepend("Light").ToArray();
 
     private static DispatcherTimer? _timer;
 

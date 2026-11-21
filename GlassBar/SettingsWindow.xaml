@@ -866,6 +866,22 @@
                                              IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Bokeh}"/>
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Nebel"
                                              IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Smoke}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Sternenhimmel"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Stars}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Seide"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Silk}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Lavalampe"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Lava}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Teich"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Pond}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Glühwürmchen"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Fireflies}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Höhenlinien"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Contours}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Wetter"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Weather}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Musik-Wellen"
+                                             IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Waves}"/>
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Einfarbig"
                                              IsChecked="{Binding WallpaperSecondaryField, Converter={StaticResource Eq}, ConverterParameter=Solid}"/>
                             </WrapPanel>
@@ -958,6 +974,22 @@
                                              IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Bokeh}"/>
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Nebel"
                                              IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Smoke}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Sternenhimmel"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Stars}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Seide"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Silk}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Lavalampe"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Lava}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Teich"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Pond}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Glühwürmchen"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Fireflies}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Höhenlinien"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Contours}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Wetter"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Weather}"/>
+                                <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Musik-Wellen"
+                                             IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Waves}"/>
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Windows-Hintergrundbild"
                                              IsChecked="{Binding WallpaperField, Converter={StaticResource Eq}, ConverterParameter=Image}"/>
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpField" Content="Einfarbig"
