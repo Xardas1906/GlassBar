@@ -247,6 +247,7 @@ public partial class SettingsWindow : Window
         NativeStill.NativeStillStore.Set(key, value);
         // Farben geändert: Vorschaubilder neu malen (die Palette braucht einen Moment, bis sie überblendet ist)
         if (key is "theme" or "followAlbum" or "tintStrength") SchedulePreviewRefresh(TimeSpan.FromSeconds(1.2));
+        if (key is "lyrics" or "lyricsTiming") UpdateLyricsTimingRow();
     }
 
     /// <summary>
@@ -275,7 +276,80 @@ public partial class SettingsWindow : Window
             var row = BuildStillRow(s);
             _inlineRows[s.Key] = row;
             target.Children.Add(row);
+            if (s.Key == "lyricsTiming") target.Children.Add(BuildLyricsTimingRow());
         }
+        UpdateLyricsTimingRow();
+    }
+
+    // ---------- Timing des Liedtexts („Timing-Tasten: In den Einstellungen“) ----------
+    private DockPanel? _lyricsTimingRow;
+    private TextBlock? _lyricsTimingValue;
+    private double _lyricsShiftShown;
+    private DateTime _lyricsShiftShownAt;
+    private System.Windows.Threading.DispatcherTimer? _lyricsTimingTimer;
+
+    /// <summary>Zeile mit − / Wert / + für das laufende Lied; sichtbar, wenn die Tasten in den Einstellungen stehen.</summary>
+    private FrameworkElement BuildLyricsTimingRow()
+    {
+        _lyricsTimingValue = new TextBlock { Width = 110, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        Button Btn(string text, double delta)
+        {
+            var b = new Button { Content = text, Style = (Style)FindResource("Button"), VerticalAlignment = VerticalAlignment.Center };
+            b.Click += (_, _) =>
+            {
+                if (App.Instance.Bar?.WallpaperLyrics is not { } ly || !ly.HasSynced) return;
+                // vom zuletzt angezeigten Wert aus rechnen: schnelle Klicks gehen nicht verloren, auch wenn der
+                // Hintergrund den vorigen Wert noch nicht übernommen hat
+                _lyricsShiftShown = delta == 0 ? 0 : Math.Clamp(Math.Round((_lyricsShiftShown + delta) * 2) / 2, -15, 15);
+                ly.RequestShift(_lyricsShiftShown);
+                _lyricsShiftShownAt = DateTime.UtcNow;
+                _lyricsTimingValue!.Text = TimingText(_lyricsShiftShown);
+            };
+            return b;
+        }
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        buttons.Children.Add(Btn("−", -0.5));
+        buttons.Children.Add(_lyricsTimingValue);
+        buttons.Children.Add(Btn("+", 0.5));
+        var reset = Btn(L.T("Zurücksetzen"), 0);
+        buttons.Children.Add(reset);
+        DockPanel.SetDock(buttons, Dock.Right);
+
+        var label = new TextBlock { Style = (Style)FindResource("Label") };
+        label.Inlines.Add(new System.Windows.Documents.Run(L.T("Timing für dieses Lied")));
+        label.Inlines.Add(new System.Windows.Documents.LineBreak());
+        label.Inlines.Add(new System.Windows.Documents.Run { Foreground = (Brush)FindResource("Sub"), FontSize = 12 });
+        _lyricsTimingRow = new DockPanel { Style = (Style)FindResource("Row") };
+        _lyricsTimingRow.Children.Add(buttons);
+        _lyricsTimingRow.Children.Add(label);
+
+        // Lied und Wert laufend nachführen, solange das Fenster offen ist
+        _lyricsTimingTimer ??= new System.Windows.Threading.DispatcherTimer(TimeSpan.FromSeconds(1),
+            System.Windows.Threading.DispatcherPriority.Background, (_, _) => UpdateLyricsTimingRow(), Dispatcher);
+        return _lyricsTimingRow;
+    }
+
+    private static string TimingText(double v) => v == 0
+        ? L.T("Pünktlich")
+        : L.F(v < 0 ? "{0} s früher" : "{0} s später", Math.Abs(v).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture));
+
+    private void UpdateLyricsTimingRow()
+    {
+        if (_lyricsTimingRow == null || _still == null) return;
+        bool wanted = _still.TryGetValue("lyricsTiming", out var t) && t as string == "settings"
+                      && !(_still.TryGetValue("lyrics", out var m) && m as string == "off");
+        _lyricsTimingRow.Visibility = wanted ? Visibility.Visible : Visibility.Collapsed;
+        if (!wanted) return;
+        var ly = App.Instance.Bar?.WallpaperLyrics;
+        bool synced = ly?.HasSynced == true;
+        _lyricsTimingRow.IsEnabled = synced;
+        // kurz nach einem Klick gilt der angezeigte Wert, danach der des Hintergrunds (z. B. nach Liedwechsel)
+        if (synced && (DateTime.UtcNow - _lyricsShiftShownAt).TotalSeconds > 1.5) _lyricsShiftShown = ly!.Shift;
+        if (_lyricsTimingValue != null) _lyricsTimingValue.Text = synced ? TimingText(_lyricsShiftShown) : "–";
+        var label = (TextBlock)_lyricsTimingRow.Children[1];
+        if (label.Inlines.LastInline is System.Windows.Documents.Run note)
+            note.Text = synced ? L.F("Gerade: {0}. Wird je Lied gemerkt.", ly!.SongTitle)
+                               : L.T("Spielt gerade ein Lied mit getaktetem Liedtext, lässt er sich hier früher oder später stellen.");
     }
 
     /// <summary>Eingebaute Zeilen nach Schlüssel (für die Suche).</summary>
@@ -525,7 +599,7 @@ public partial class SettingsWindow : Window
         // Ändern sich die Farben (anderes Lied mit „Mit Albumcover einfärben“, andere Palette), neu malen
         _previewTimer.Tick += (_, _) => { if (IsVisible && PaletteSignature() != _previewSignature) RefreshPreviews(); };
         _previewTimer.Start();
-        Closed += (_, _) => _previewTimer.Stop();
+        Closed += (_, _) => { _previewTimer.Stop(); _lyricsTimingTimer?.Stop(); };
     }
 
     /// <summary>Kurz warten (Palette blendet über) und dann neu malen.</summary>

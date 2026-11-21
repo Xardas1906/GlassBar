@@ -32,6 +32,7 @@ public static class StillModules
         u.Add(new SoundPill());
 
         var lyrics = new LyricsOverlay();
+        music.Lyrics = lyrics;   // Einstellung „Liedtext: Karte“ – die Musikkarte zeigt ihn
         var alarms = new AlarmsOverlay();
         var edit = new EditOverlay();
         u.Add(new Glue(u, lyrics));
@@ -64,6 +65,9 @@ public static class StillModules
 
     /// <summary>Wetter für die Klanglandschaft „passend zum Wetter“ (WMO-Code).</summary>
     public static void SetWeatherCode(int wmo) => Soundscape.WeatherKind = () => Soundscape.KindFromWmo(wmo);
+
+    /// <summary>Der Liedtext des Hauptbildschirms (für die Timing-Tasten in den Einstellungen).</summary>
+    public static LyricsOverlay? Lyrics(StillRenderer? r) => r != null && Registered.TryGetValue(r, out var p) ? p.Lyrics : null;
 
     /// <summary>Anordnen-Modus öffnen.</summary>
     public static void EditLayout(StillRenderer? r)

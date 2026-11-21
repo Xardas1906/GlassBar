@@ -123,10 +123,23 @@ public sealed class LyricsOverlay : IOverlay, IDisposable
 
     // ---------- Update ----------
 
+    /// <summary>Titel des Lieds, zu dem der Liedtext gehört (für die Einstellungen).</summary>
+    public string SongTitle => _title;
+
+    /// <summary>Hat das laufende Lied getakteten Liedtext?</summary>
+    public bool HasSynced => Service.Status == LyricsStatus.Synced && Service.Key == _key && _key.Length > 0;
+
+    // Verschieben aus den Einstellungen (UI-Thread): wird im nächsten Update auf dem Zeichen-Thread übernommen
+    private volatile object? _requestedShift;
+
+    /// <summary>Verschiebung für das laufende Lied anfordern (aus einem anderen Thread, z. B. den Einstellungen).</summary>
+    public void RequestShift(double seconds) => _requestedShift = seconds;
+
     public void Update(UiContext c, double dt)
     {
         _now = c.Time;
         _k = c.K;
+        if (Interlocked.Exchange(ref _requestedShift, null) is double req) SetShift(req);
         var s = c.Settings;
         string mode = s.Str("lyrics");
         string timing = s.Str("lyricsTiming");

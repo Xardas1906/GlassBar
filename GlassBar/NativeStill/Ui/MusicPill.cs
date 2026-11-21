@@ -34,6 +34,11 @@ public sealed class MusicPill : Pill
 
     public MusicPill() { }
 
+    /// <summary>Liedtext (nur Hauptbildschirm): steht er „in der Karte“, bekommt die Karte unter dem Fortschritt Platz dafür.</summary>
+    public LyricsOverlay? Lyrics { get; set; }
+
+    private const float LyricsGap = 10;
+
     // ---------- Zustand ----------
 
     private double _lastActive = double.NegativeInfinity;
@@ -148,11 +153,21 @@ public sealed class MusicPill : Pill
 
     public override Vector2 CardSize(UiContext c) => new Vector2(XW, CardLayout(c, out _)) * c.K;
 
-    /// <summary>Höhe der Karte und Lage der Knopfzeile (cardLayout im Original, ohne Liedtext in der Karte).</summary>
-    private float CardLayout(UiContext c, out float ctlY)
+    /// <summary>Höhe der Karte und Lage der Knopfzeile (cardLayout im Original); mit Liedtext in der Karte steht
+    /// dieser zwischen Fortschritt und Knöpfen.</summary>
+    private float CardLayout(UiContext c, out float ctlY) => CardLayout(c, out ctlY, out _, out _);
+
+    private float CardLayout(UiContext c, out float ctlY, out float lyTop, out float lyH)
     {
         bool prog = Duration(c) > 0, ctl = Controls(c);
         float y = prog ? XProgY + XProgH : XPad + XArt;
+        lyTop = lyH = 0;
+        if (Lyrics is { } ly && ly.InCard(c))
+        {
+            lyTop = y + LyricsGap;
+            lyH = ly.CardLyricsHeight(c) / c.K;
+            y = lyTop + lyH + ly.CardNudgeRoom(c) / c.K;
+        }
         ctlY = 0;
         if (ctl) { ctlY = y + (prog ? 8 : 10); y = ctlY + XCtlH; }
         return y + (ctl ? 12 : XPad);
@@ -393,6 +408,8 @@ public sealed class MusicPill : Pill
 
     public override bool OnPointer(UiContext c, PointerEvent e)
     {
+        // Timing-Kapsel des Liedtexts in der Karte: liegt in der Karte, gehört aber dem Liedtext
+        if (Lyrics is { } ly && (ly.HitTest(c, e.Pos) || e.Kind == PointerKind.Up) && ly.OnPointer(c, e)) return true;
         switch (e.Kind)
         {
             case PointerKind.Leave:
@@ -679,6 +696,15 @@ public sealed class MusicPill : Pill
                 brush.Color = new Color4(fg.X, fg.Y, fg.Z, _op);
                 ctx.FillEllipse(new Ellipse(new Vector2(tx0 + fw, cy), knob, knob), brush);
             }
+        }
+
+        // ---- Liedtext in der Karte (Einstellung „Liedtext anzeigen: Karte“) ----
+        if (Lyrics is { } ly)
+        {
+            CardLayout(c, out _, out float lyTop, out float lyH);
+            if (lyH > 0 && _oi > 0.01f)
+                ly.DrawInCard(ctx, c, new Vortice.Mathematics.Rect(L + XPad * k, T + lyTop * k, RowW * k, lyH * k), _oi);
+            ctx.Transform = prev;
         }
 
         // ---- Knöpfe ----

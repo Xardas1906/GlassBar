@@ -95,6 +95,13 @@ public static partial class Strings
         ["Timer und Wecker"] = "Timer and alarm",
         ["Pillen"] = "Pills",
         ["Regen auf dem Bildschirm"] = "Rain on the screen",
+        ["Mit der Maus verschieben"] = "Move with the mouse",
+        ["Uhr und Pillen anordnen"] = "Arrange clock and pills",
+        ["Timing für dieses Lied"] = "Timing for this song",
+        ["Zurücksetzen"] = "Reset",
+        ["Gerade: {0}. Wird je Lied gemerkt."] = "Now: {0}. Remembered per song.",
+        ["Spielt gerade ein Lied mit getaktetem Liedtext, lässt er sich hier früher oder später stellen."] =
+            "While a song with synced lyrics is playing, you can shift them earlier or later here.",
         ["Die kleinen Werkzeuge unten auf dem Desktop. Änderungen sieht man sofort."] = "The little tools at the bottom of the desktop. Changes show up right away.",
         ["Uhr, Pillen und Karten auf dem Desktop."] = "Clock, pills and cards on the desktop.",
         ["Auf dem Desktop nur, wenn der Hintergrund von GlassBar eingeschaltet ist."] = "On the desktop only when GlassBar's wallpaper is on.",

@@ -264,7 +264,6 @@ public static partial class Strings
         ["Aus: In Spielen (auch Fenster-Vollbild) und Videos kommt das Dock nur über die Windows-Taste."] = "Off: in games (including borderless full screen) and videos, only the Windows key brings up the dock.",
         ["Windows-Taste: 1. Druck zeigt nur das Dock, 2. Druck das Startmenü"] = "Windows key: 1st press shows only the dock, 2nd press opens Start",
         ["Nur wenn das Dock gerade ausgeblendet ist."] = "Only while the dock is hidden.",
-        ["Startmenü, Suche und Infocenter über das Dock schieben"] = "Move Start, Search and notification center above the dock",
         ["Dock nach unten aus dem Bild fahren und wieder hereinfahren"] = "Slide the dock down out of view and back in",
         ["Aus: Das Dock verschwindet und erscheint ohne Animation."] = "Off: the dock disappears and appears without animation.",
         ["Dauer der Animation"] = "Animation duration",

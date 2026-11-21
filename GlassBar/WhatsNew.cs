@@ -17,6 +17,19 @@ internal static class WhatsNew
     /// <summary>Neueste zuerst. Kurz halten: das, was man sonst nicht entdeckt.</summary>
     private static readonly Note[] Notes =
     {
+        new("1.6.1",
+            new[]
+            {
+                "Liedtext in der Musikkarte: Mit „Liedtext anzeigen: Karte“ stehen die Zeilen jetzt wirklich in der Karte.",
+                "Timing in den Einstellungen: Unter Musik lässt sich der Liedtext des laufenden Lieds früher oder später stellen.",
+                "Uhr & Wecker: Knopf zum Anordnen von Uhr und Pillen. Die wirkungslose Einstellung zum Startmenü ist entfernt.",
+            },
+            new[]
+            {
+                "Lyrics in the music card: with “Show lyrics: Card” the lines now really appear in the card.",
+                "Timing in settings: under Music you can shift the lyrics of the current song earlier or later.",
+                "Clock & alarm: button to arrange the clock and pills. The Start menu setting that had no effect is gone.",
+            }),
         new("1.6.0",
             new[]
             {

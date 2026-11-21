@@ -80,15 +80,13 @@ public partial class TaskbarWindow : Window
 
         if (IsPrimary)
         {
-            // Startmenü/Suche/Infocenter sofort beim Öffnen über das Dock schieben (die liegen auf dem Hauptbildschirm)
+            // Wechsel des Vordergrundfensters beobachten
             _winEventProc = (_, _, hwnd, _, _, _, _) => Dispatcher.BeginInvoke(() =>
             {
                 var h = new WindowInteropHelper(this).Handle;
                 if (h == IntPtr.Zero) return;
                 // Ein anderes Programm ist nach vorne gekommen: offenes Dock-Menü (z. B. Sprungliste) schließen
                 if (GetWindowThreadProcessId(hwnd, out uint fgPid) != 0 && fgPid != OwnPid) Ui.CloseOpenMenu();
-                GetWindowRect(h, out var d);
-                LiftShellFlyout(hwnd, d);
             });
             _winEventHook = SetWinEventHook(0x0003 /* EVENT_SYSTEM_FOREGROUND */, 0x0003, IntPtr.Zero, _winEventProc, 0, 0, 0);
             Closed += (_, _) => UnhookWinEvent(_winEventHook);
@@ -254,70 +252,13 @@ public partial class TaskbarWindow : Window
         _peekUntil = DateTime.Now.AddSeconds(3);
     }
 
-    // ---------- Startmenü über das Dock schieben ----------
+    // ---------- Vordergrund-Wechsel beobachten (offene Dock-Menüs schließen) ----------
     private delegate void WinEventDelegate(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern IntPtr SetWinEventHook(uint min, uint max, IntPtr mod, WinEventDelegate proc, uint pid, uint tid, uint flags);
     [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool UnhookWinEvent(IntPtr hook);
     private WinEventDelegate? _winEventProc;   // Referenz halten (GC)
     private IntPtr _winEventHook;
-
-    private static readonly string[] ShellFlyoutHosts = { "startmenuexperiencehost", "searchhost", "shellexperiencehost" };
-
-    /// <summary>
-    /// Windows legt Startmenü, Suche, Kalender usw. an die (versteckte) Windows-Taskleiste – also unter unser Dock.
-    /// Ist das Dock sichtbar, rücken wir sie ein Stück nach oben, damit sie direkt über dem Dock sitzen.
-    /// </summary>
-    private HashSet<uint> _shellPids = new();
-    private DateTime _shellPidsAt;
-
-    /// <summary>Prozess-IDs von Startmenü, Suche und Infocenter (alle paar Sekunden neu ermittelt).</summary>
-    private HashSet<uint> ShellPids()
-    {
-        if ((DateTime.Now - _shellPidsAt).TotalSeconds > 5)
-        {
-            _shellPidsAt = DateTime.Now;
-            _shellPids = ShellFlyoutHosts
-                .SelectMany(n => System.Diagnostics.Process.GetProcessesByName(n))
-                .Select(p => (uint)p.Id).ToHashSet();
-        }
-        return _shellPids;
-    }
-
-    private void LiftShellFlyout(IntPtr fg, Native.RECT dock)
-    {
-        // Ältere Windows-Versionen: Startmenü-Fenster direkt verschieben (bei neueren legt Windows die Position selbst fest)
-        if (Visibility != Visibility.Visible || !App.Config.LiftStartMenu) return;
-        try
-        {
-            // Nur wenn gerade eines davon im Vordergrund ist (Startmenü/Suche/Infocenter offen)
-            GetWindowThreadProcessId(fg, out var fgPid);
-            var pids = ShellPids();
-            if (!pids.Contains(fgPid)) return;
-
-            var screen = System.Windows.Forms.Screen.PrimaryScreen!.Bounds;
-            int gap = (int)Math.Round(App.Config.ShellFlyoutGap * System.Windows.Media.VisualTreeHelper.GetDpi(this).DpiScaleY);
-            int wantedBottom = dock.Top - gap;
-
-            // Das Startmenü besteht bei neueren Windows-Versionen aus mehreren Fenstern -> alle sichtbaren verschieben
-            EnumWindows((h, _) =>
-            {
-                GetWindowThreadProcessId(h, out var pid);
-                if (!pids.Contains(pid) || !IsWindowVisible(h)) return true;
-                if (DwmGetWindowAttribute(h, 14, out var cloaked, 4) == 0 && cloaked != 0) return true;
-
-                GetWindowRect(h, out var r);
-                int height = r.Bottom - r.Top;
-                if (height <= 0 || height > screen.Height - 60) return true;          // Vollbild-Shellfenster nicht anfassen
-                if (r.Right <= screen.Left || r.Left >= screen.Right) return true;     // anderer Bildschirm
-                if (r.Bottom <= wantedBottom || r.Top > dock.Bottom) return true;      // liegt schon darüber / gar nicht dort
-                // nur verschieben, nicht skalieren
-                SetWindowPos(h, IntPtr.Zero, r.Left, r.Top - (r.Bottom - wantedBottom), 0, 0, 0x0001 | 0x0004 | 0x0010);
-                return true;
-            }, IntPtr.Zero);
-        }
-        catch { }
-    }
 
     private void AutoHideTick()
     {
@@ -336,7 +277,6 @@ public partial class TaskbarWindow : Window
             "FullScreen" => top != IntPtr.Zero && IsFullScreen(top, ScreenPx),
             _ => top != IntPtr.Zero,
         };
-        if (IsPrimary) LiftShellFlyout(GetForegroundWindow(), dock);
         // Hintergrund pausieren, wenn man ihn nicht sieht: maximiert, Vollbild oder fast bildschirmfüllend
         {
             // pro Bildschirm: dieses Dock prüft seinen eigenen Bildschirm
@@ -1053,6 +993,9 @@ public partial class TaskbarWindow : Window
 
     /// <summary>Anordnen-Modus von „Still“ öffnen (Pillen und Uhr verschieben).</summary>
     public void EditWallpaperLayout() => NativeStill.StillModules.EditLayout(_native?.Renderer);
+
+    /// <summary>Liedtext auf dem Desktop (für die Timing-Tasten in den Einstellungen); null ohne Hintergrund.</summary>
+    public NativeStill.Ui.LyricsOverlay? WallpaperLyrics => NativeStill.StillModules.Lyrics(_native?.Renderer);
 
     private void Music_Click(object s, MouseButtonEventArgs e) => _media?.PlayPause();
     private void MusicPlay_Click(object s, MouseButtonEventArgs e) { e.Handled = true; _media?.PlayPause(); }

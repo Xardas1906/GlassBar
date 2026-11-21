@@ -77,8 +77,6 @@ public class Config
     public bool WinKeyShowsDockFirst { get; set; } = true;
     /// <summary>Windows-Taste: zuerst Docks zeigen, wenn irgendein Dock ausgeblendet ist (sonst nur, wenn das Hauptdock ausgeblendet ist).</summary>
     public bool WinKeyAllDocks { get; set; } = true;
-    /// <summary>Startmenü, Suche usw. über das Dock schieben.</summary>
-    public bool LiftStartMenu { get; set; } = true;
     /// <summary>Dock fährt beim Aus- und Einblenden nach unten aus dem Bild bzw. wieder herein.</summary>
     public bool SlideAnimation { get; set; } = true;
     /// <summary>Auf jedem Bildschirm ein Dock (sonst nur auf dem Hauptbildschirm).</summary>
@@ -87,8 +85,6 @@ public class Config
     public bool AppsOnOwnScreen { get; set; } = true;
     /// <summary>Dauer der Animation beim Hereinfahren (ms); Rausfahren ist etwas schneller.</summary>
     public double SlideDurationMs { get; set; } = 280;
-    /// <summary>Abstand von Startmenü, Suche, Infocenter zum Dock (px).</summary>
-    public double ShellFlyoutGap { get; set; } = 10;
     /// <summary>Abstand von Desktop-Fenster, Vorschau usw. zum Dock (px).</summary>
     public double FlyoutGap { get; set; } = 10;
 

@@ -692,6 +692,15 @@
                         <StackPanel x:Name="StillClockRows" IsEnabled="{Binding ShowWallpaper}"/>
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding ShowWallpaper}">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource Button}" Content="Uhr und Pillen anordnen"
+                                    VerticalAlignment="Center" Click="StillEditLayout_Click"/>
+                            <TextBlock Style="{StaticResource Label}">
+                                Mit der Maus verschieben
+                                <LineBreak/><Run Text="Öffnet auf dem Desktop den Anordnen-Modus. Fertig: auf eine freie Stelle klicken." Foreground="{StaticResource Sub}" FontSize="12"/>
+                            </TextBlock>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource Row}" IsEnabled="{Binding ShowWallpaper}">
                             <Grid DockPanel.Dock="Right" Width="320" VerticalAlignment="Center">
                                 <Border CornerRadius="6" Background="#18FFFFFF" BorderBrush="#26FFFFFF" BorderThickness="1"/>
                                 <TextBox x:Name="TasksBox" Text="{Binding WallpaperTasks, UpdateSourceTrigger=LostFocus}"
@@ -815,11 +824,6 @@
                                 Windows-Taste: 1. Druck zeigt nur das Dock, 2. Druck das Startmenü
                                 <LineBreak/><Run Text="Nur wenn das Dock gerade ausgeblendet ist." Foreground="{StaticResource Sub}" FontSize="12"/>
                             </TextBlock>
-                        </DockPanel>
-                        <Border Style="{StaticResource RowLine}"/>
-                        <DockPanel Style="{StaticResource Row}">
-                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding LiftStartMenu}"/>
-                            <TextBlock Text="Startmenü, Suche und Infocenter über das Dock schieben" Style="{StaticResource Label}"/>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource Row}">
