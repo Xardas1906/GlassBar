@@ -1066,6 +1066,7 @@
                             <TextBlock Style="{StaticResource Label}">
                                 <Run Text="Updates"/>
                                 <LineBreak/><Run x:Name="UpdateStatus" Foreground="{StaticResource Sub}" FontSize="12"/>
+                                <Run Text=" · " Foreground="{StaticResource Sub}" FontSize="12"/><Hyperlink Click="WhatsNew_Click" Foreground="{StaticResource Accent}" FontSize="12">Was ist neu?</Hyperlink>
                             </TextBlock>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>

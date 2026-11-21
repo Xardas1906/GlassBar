@@ -133,7 +133,8 @@ internal sealed class DesktopMouseHook : IDisposable
                 _desktopChanged(false);
                 return (IntPtr)1;
             }
-            if (_swallowUiClicks && over && (msg is 0x0201 or 0x0202 && _clickToPage || msg == 0x020A && _overUi()))
+            // Mausrad und mittlere Taste (z. B. Musik stumm) über der Oberfläche gehören ihr
+            if (_swallowUiClicks && over && (msg is 0x0201 or 0x0202 && _clickToPage || msg is 0x020A or 0x0207 or 0x0208 && _overUi()))
             {
                 _forward(msg, m.X, m.Y, msg == 0x020A ? (short)(m.MouseData >> 16) : 0);
                 if (msg == 0x0202) _leftDown = false;

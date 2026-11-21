@@ -95,7 +95,9 @@ public partial class SettingsWindow
                 if (el is TextBlock tb && !BindingOperations.IsDataBound(tb, TextBlock.TextProperty)
                     && (tb.Style == labelStyle || tb.Style == null && tb.Foreground != sub))
                     text = tb.Text;
-                else if (el is RadioButton { Content: string option } rb && rb.Style == FindResource("Segment"))
+                // Auswahl mit Vorschaubild: der Text steht dann im Automationsnamen
+                else if (el is RadioButton rb && rb.Style == FindResource("Segment")
+                         && (rb.Content as string ?? System.Windows.Automation.AutomationProperties.GetName(rb)) is { Length: > 0 } option)
                 {
                     // Auswahl-Option: unter dem Titel der Zeile finden
                     extra = option;
@@ -151,6 +153,15 @@ public partial class SettingsWindow
         ("Bildrate","fps leistung performance ruckeln lag cpu grafikkarte"),
         ("aus dem Bild fahren", "animation rausfahren reinfahren gleiten"),
         ("Dauer der Animation", "geschwindigkeit schnell langsam"),
+        ("Tempo des Effekts", "geschwindigkeit speed schnell langsam hintergrund"),
+        ("Stärke des Effekts", "intensität helligkeit kräftig dezent hintergrund"),
+        ("automatisch wechseln", "rotation wechsel tageszeit abwechselnd hintergrund effekt"),
+        ("Akzentfarbe", "accent farbe punkte fortschritt laufend"),
+        ("exportieren", "sichern backup übertragen neuer pc datei"),
+        ("importieren", "wiederherstellen backup übertragen neuer pc datei"),
+        ("Protokoll", "log fehler error absturz bug"),
+        ("Pillen auch auf", "nebenbildschirm monitor musik wetter gebet zweiter bildschirm"),
+        ("Effekt auf Nebenbildschirmen", "monitor zweiter bildschirm hintergrund"),
     };
 
     private static SearchEntry Entry(string title, string where, string extra, Action go)

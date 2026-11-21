@@ -956,6 +956,10 @@ public partial class TaskbarWindow : Window
                     Previous = () => Dispatcher.BeginInvoke(() => _media?.Previous()),
                     Seek = s => Dispatcher.BeginInvoke(() => _media?.Seek(s)),
                     Volume = (dir, shown) => Dispatcher.BeginInvoke(() => { if (ChangeMusicVolume(dir) is { } v) shown(v); }),
+                    ToggleMute = shown => Dispatcher.BeginInvoke(() =>
+                    {
+                        if (_media is { HasMedia: true } m && AppVolume.ToggleMute(m.App) is { } r) shown(r.Muted, r.Volume);
+                    }),
                 };
                 NativeStill.StillModules.Register(r, Dispatcher);
                 PushMediaToNative();

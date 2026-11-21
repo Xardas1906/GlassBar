@@ -52,11 +52,13 @@ public sealed class MediaControls
     public Action<double> Seek { get; init; } = _ => { };
     /// <summary>Lautstärke des abspielenden Programms ändern (+1/-1 Raste); der Rückruf bekommt die neue Lautstärke (0–1).</summary>
     public Action<int, Action<float>> Volume { get; init; } = (_, _) => { };
+    /// <summary>Abspielendes Programm stumm schalten bzw. wieder laut; der Rückruf bekommt (stumm, Lautstärke).</summary>
+    public Action<Action<bool, float>> ToggleMute { get; init; } = _ => { };
 }
 
 public enum PointerKind { Move, Down, Up, Wheel, Leave }
 
-/// <summary>Maus: Pos in Pixeln, Button 0 = links, 1 = rechts; Wheel in Rasten (±120 = eine Raste).</summary>
+/// <summary>Maus: Pos in Pixeln, Button 0 = links, 1 = rechts, 2 = Mitte; Wheel in Rasten (±120 = eine Raste).</summary>
 public readonly record struct PointerEvent(PointerKind Kind, Vector2 Pos, int Button = 0, int Wheel = 0);
 
 /// <summary>Alles, was Pillen und Überlagerungen pro Bild brauchen. Wird vom Renderer jedes Bild aktualisiert.</summary>

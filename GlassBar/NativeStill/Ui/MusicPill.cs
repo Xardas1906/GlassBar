@@ -406,6 +406,12 @@ public sealed class MusicPill : Pill
             case PointerKind.Down:
                 // Noch am Ziehen? Dann ging das Loslassen verloren: abbrechen, nicht springen.
                 if (_seekDrag) { _seekDrag = false; return true; }
+                if (e.Button == 2)
+                {
+                    // Mittelklick: Musikprogramm stumm bzw. wieder laut (wie im Dock); kurz den Stand zeigen
+                    c.Controls.ToggleMute((muted, vol) => { _volume = muted ? 0 : vol; _volumeUntil = DateTime.UtcNow.AddSeconds(1.6); });
+                    return true;
+                }
                 _hoverBtn = HitButton(c, e.Pos);
                 if (e.Button != 0) return false;
                 if (_hoverBtn < 0)

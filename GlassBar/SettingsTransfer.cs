@@ -18,7 +18,7 @@ public static class SettingsTransfer
     private static readonly string[] Files = { "config.json", "still.json", "still-state.json" };
 
     /// <summary>Werte, die zu diesem PC gehören und beim Import erhalten bleiben.</summary>
-    private static readonly string[] LocalOnly = { nameof(Config.TaskbarStateBeforeGlassBar), nameof(Config.TrayPromotedImported) };
+    private static readonly string[] LocalOnly = { nameof(Config.TaskbarStateBeforeGlassBar), nameof(Config.TrayPromotedImported), nameof(Config.TaskbarAutoHideAsked), nameof(Config.LastSeenVersion) };
 
     private static string PendingPath => Path.Combine(Config.Folder, "import.zip");
 

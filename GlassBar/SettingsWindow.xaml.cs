@@ -453,6 +453,7 @@ public partial class SettingsWindow : Window
                 var panel = new StackPanel { Width = 150 }; // alle Knöpfe gleich breit
                 panel.Children.Add(picture);
                 panel.Children.Add(new TextBlock { Text = text, HorizontalAlignment = HorizontalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+                System.Windows.Automation.AutomationProperties.SetName(radios[i], text); // für Suche und Bildschirmleser
                 radios[i].Content = panel;
             }
         }, TaskScheduler.FromCurrentSynchronizationContext());
@@ -718,6 +719,8 @@ public partial class SettingsWindow : Window
         Native.Launch("explorer.exe", $"\"{Config.Folder}\"");
 
     private void Quit_Click(object sender, RoutedEventArgs e) => App.Instance.Quit();
+
+    private void WhatsNew_Click(object sender, RoutedEventArgs e) => WhatsNew.ShowRecent();
 
     /// <summary>Fehlerprotokoll im Editor öffnen (für Fehlermeldungen auf GitHub); gibt es keins, den Ordner zeigen.</summary>
     private void OpenLog_Click(object sender, RoutedEventArgs e)

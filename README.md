@@ -27,16 +27,23 @@
 - Im Spiel: Der erste Druck auf die Windows-Taste holt das Dock und gibt die Maus frei
 - Auf Wunsch ein Dock pro Bildschirm
 - Fortschrittsbalken (z. B. Downloads) und Badges (z. B. ungelesene Nachrichten) auf den Programmsymbolen
-- Win+1 … 9 öffnet das Programm an dieser Stelle im Dock; Mausrad über Musik/Schnelleinstellungen ändert die Lautstärke
-- Design: dunkel, hell oder wie Windows
+- Win+1 … 9 öffnet das Programm an dieser Stelle im Dock
+- Musik: Mausrad regelt die Lautstärke des Musikprogramms (z. B. Spotify) mit Balken, Mittelklick schaltet es stumm;
+  über den Schnelleinstellungen regelt das Mausrad die Systemlautstärke
+- Infobereich-Symbole per Ziehen sortieren oder aus den ausgeblendeten Symbolen ins Dock ziehen
+- Design: dunkel, hell oder wie Windows – Deckkraft getrennt je Design, Laufpunkte auf Wunsch in der Windows-Akzentfarbe
 - Start-Symbol personalisierbar: Kachel, Glas, nur Logo oder eigenes Bild, mit eigener Farbe und Logo-Stil
 
 **Hintergrund „Still“ (nativ, ohne Browser)**
 - Lichtfeld, Polarlicht, Kaustik, Bokeh-Lichter oder Nebel (Direct3D, in den Farben der Palette, reagieren auf Musik und Maus) – oder das Windows-Hintergrundbild / einfarbig
+- Tempo und Stärke je Effekt, automatischer Wechsel nach Zeit oder Tageszeit, Vorschaubilder in den Einstellungen
 - Uhr mit rollenden Ziffern, Datum und Wetter (Direct2D)
 - Musik mit Liedtexten, Wasser, Pomodoro, Wecker/Timer, Aufgaben, Training, Gebetszeiten, Klanglandschaften, Wetterkarte
-- Regen auf der Scheibe, Strömung und Leuchten unter der Maus – auf allen Bildschirmen
+- Regen auf der Scheibe, Strömung und Leuchten unter der Maus – auf allen Bildschirmen; dort auf Wunsch ein eigener Effekt
+  sowie Musik, Gebetszeiten und Wetter
 - Schläft, sobald er verdeckt ist
+
+![Auswahl der Hintergründe mit Vorschaubildern](docs/backgrounds.png)
 
 **Einstellungen**
 
@@ -47,6 +54,7 @@
 - Updates mit einem Klick: Einstellungen › System › Updates (geprüft per SHA-256; GlassBar sucht einmal am Tag selbst)
 - Stürzt GlassBar ab, holt ein kleiner Wächter-Prozess die Windows-Taskleiste zurück und startet GlassBar neu
 - Sprache: automatisch (wie Windows), Deutsch oder Englisch
+- Einstellungen als Datei exportieren und importieren (z. B. für einen neuen PC); nach Updates zeigt GlassBar kurz, was neu ist
 
 ## Installation
 
@@ -55,6 +63,12 @@
    und lädt die [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) von Microsoft nach, falls sie fehlt.
 2. GlassBar startet danach automatisch. Die Windows-Taskleiste wird ausgeblendet, solange GlassBar läuft.
 3. Rechtsklick auf eine freie Stelle im Dock › **Einstellungen …**
+
+Mit winget (wird gerade ins Windows-Paketverzeichnis aufgenommen):
+
+```
+winget install Xardas1906.GlassBar
+```
 
 Ohne Installer: das Zip `GlassBar-vX.Y.Z-win-x64.zip` in einen festen Ordner entpacken und `GlassBar.exe` starten
 (dafür muss die .NET 10 Desktop Runtime installiert sein).
@@ -73,6 +87,7 @@ Wenn Wallpaper Engine läuft, dort den Hintergrund beenden, bevor du „Still“
 ## Fehler und Ideen
 
 Gerne über [Issues](https://github.com/Xardas1906/GlassBar/issues/new/choose) – es gibt Vorlagen für Fehlerberichte und Ideen.
+Bei Fehlern hilft das Protokoll: Einstellungen › System › *Protokoll öffnen*.
 
 ## Selbst bauen
 
@@ -89,7 +104,7 @@ dotnet test GlassBar.Tests/GlassBar.Tests.csproj
 ```
 
 GitHub Actions baut und testet jeden Push. Ein Versions-Tag (z. B. `v1.3.0`, passend zu `<Version>` in `GlassBar.csproj`)
-legt automatisch einen Release-Entwurf mit Zip und Installer an.
+legt automatisch einen Release-Entwurf mit Zip und Installer an; jedes veröffentlichte Release wird automatisch bei winget eingereicht.
 
 Release mit Zip und Installer (braucht [Inno Setup 6](https://jrsoftware.org/isinfo.php), z. B. `winget install JRSoftware.InnoSetup`):
 

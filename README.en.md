@@ -27,16 +27,23 @@
 - In games: the first press of the Windows key brings up the dock and releases the mouse
 - Optionally one dock per monitor, each can be pinned to stay visible
 - Progress bars (e.g. downloads) and badges (e.g. unread messages) on app icons
-- Win+1 … 9 opens the app at that position in the dock; the mouse wheel over music/quick settings changes the volume
-- Theme: dark, light or like Windows
+- Win+1 … 9 opens the app at that position in the dock
+- Music: the mouse wheel changes the music app's volume (e.g. Spotify) with a bar, middle-click mutes it;
+  over quick settings the mouse wheel changes the system volume
+- Sort notification icons by dragging, or drag hidden icons into the dock
+- Theme: dark, light or like Windows – separate opacity per theme, running dots optionally in the Windows accent color
 - Customizable start icon: tile, glass, logo only or your own image, with colors and logo styles
 
 **Wallpaper “Still” (native, no browser)**
 - Light field, aurora, caustics, bokeh lights or mist (Direct3D, in the palette colors, reacting to music and the mouse) – or your Windows wallpaper / a solid color behind clock and pills
+- Speed and strength per effect, automatic change by interval or time of day, preview images in the settings
 - Clock with rolling digits, date and weather (Direct2D)
 - Music with lyrics, water, Pomodoro, alarms/timers, tasks, workouts, prayer times, soundscapes, weather card
-- Rain on the glass, flow and glow under the mouse – on all monitors
+- Rain on the glass, flow and glow under the mouse – on all monitors; there optionally with its own effect
+  plus music, prayer times and weather
 - Sleeps whenever it is covered
+
+![Background picker with preview images](docs/backgrounds.png)
 
 **Settings**
 - Everything applies immediately, with search; values next to sliders can be typed in
@@ -44,6 +51,7 @@
 - One-click updates: Settings › System › Updates (verified with SHA-256; GlassBar checks once a day by itself)
 - If GlassBar crashes, a small watchdog process brings back the Windows taskbar and restarts GlassBar
 - Language: automatic (like Windows), German or English
+- Export and import settings as a file (e.g. for a new PC); after updates GlassBar briefly shows what is new
 
 ## Installation
 
@@ -52,6 +60,12 @@
    and downloads the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) from Microsoft if it is missing.
 2. GlassBar starts automatically. The Windows taskbar is hidden while GlassBar is running.
 3. Right-click an empty spot on the dock › **Settings…**
+
+With winget (currently being added to the Windows package catalog):
+
+```
+winget install Xardas1906.GlassBar
+```
 
 Without the installer: unzip `GlassBar-vX.Y.Z-win-x64.zip` into a permanent folder and run `GlassBar.exe`
 (requires the .NET 10 Desktop Runtime).
@@ -69,7 +83,7 @@ If Wallpaper Engine is running, stop its wallpaper before turning on “Still”
 ## Bugs and ideas
 
 Please use [Issues](https://github.com/Xardas1906/GlassBar/issues/new/choose) – there are templates for bug reports and ideas
-(English is fine).
+(English is fine). For bugs, the log helps: Settings › System › *Open log*.
 
 ## Building
 
@@ -86,7 +100,7 @@ dotnet test GlassBar.Tests/GlassBar.Tests.csproj
 ```
 
 GitHub Actions builds and tests every push. A version tag (e.g. `v1.3.0`, matching `<Version>` in `GlassBar.csproj`)
-automatically creates a draft release with the zip and the installer.
+automatically creates a draft release with the zip and the installer; every published release is submitted to winget automatically.
 
 Release with zip and installer (requires [Inno Setup 6](https://jrsoftware.org/isinfo.php), e.g. `winget install JRSoftware.InnoSetup`):
 

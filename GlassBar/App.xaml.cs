@@ -97,6 +97,7 @@ public partial class App : Application
 
         // Höhere Priorität: Dock und Hintergrund sollen gleich nach der Anmeldung stehen und nie stocken
         try { System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.AboveNormal; } catch { }
+        bool configExisted = File.Exists(Path.Combine(Config.Folder, "config.json")); // für „Was ist neu“ (Neuinstallation?)
         SettingsTransfer.ApplyPending(); // vorgemerkten Import übernehmen, bevor die Einstellungen geladen werden
         Config = Config.Load();
         L.Init(Config.Language);
@@ -148,6 +149,7 @@ public partial class App : Application
         TrayRescue.Start(_shell); // Symbole von Programmen nachholen, die vor GlassBar gestartet sind
         StartTrace.Mark("Ende OnStartup");
         if (askAutoHide) Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, AskAboutAutoHide);
+        Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () => { if (!_cleanedUp) WhatsNew.ShowIfUpdated(configExisted); });
     }
 
     /// <summary>

@@ -203,6 +203,8 @@ public sealed class NativeStillWindow : IDisposable
                 break;
             case 0x0202: r.PostPointer(new Ui.PointerEvent(Ui.PointerKind.Up, pos)); break;
             case 0x020A: r.PostPointer(new Ui.PointerEvent(Ui.PointerKind.Wheel, pos, 0, wheel)); break;
+            case 0x0207: r.PostPointer(new Ui.PointerEvent(Ui.PointerKind.Down, pos, 2)); break; // mittlere Taste
+            case 0x0208: r.PostPointer(new Ui.PointerEvent(Ui.PointerKind.Up, pos, 2)); break;
         }
     }
 
