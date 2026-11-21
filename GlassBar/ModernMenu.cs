@@ -82,7 +82,7 @@ public class ModernMenu : Window
 
         WindowChrome.SetWindowChrome(this, new WindowChrome
         {
-            GlassFrameThickness = new Thickness(-1), CaptionHeight = 0,
+            GlassFrameThickness = new Thickness(Native.GlassAvailable ? -1 : 0), CaptionHeight = 0,
             ResizeBorderThickness = new Thickness(0), CornerRadius = new CornerRadius(0), UseAeroCaptionButtons = false,
         });
         SourceInitialized += (_, _) =>
@@ -93,6 +93,7 @@ public class ModernMenu : Window
             Theme.ApplyGlass(this, h, App.Config.MenuOpacity);
         };
         SizeChanged += (_, _) => Place();
+        Native.KeepRounded(this, () => 8);
         _subTimer.Tick += (_, _) => _subTimer.Stop();
 
         var root = new StackPanel { Margin = new Thickness(4), MinWidth = 260 };

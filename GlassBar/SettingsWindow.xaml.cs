@@ -51,6 +51,7 @@ public partial class SettingsWindow : Window
     {
         InitializeComponent();
         L.Apply(this);
+        Native.KeepRounded(this, () => 8); // ohne Acryl rundet Windows die Ecken nicht selbst
         BuildStillNav();
         DataContext = App.Config;
         AutostartBox.IsChecked = Native.Autostart;
@@ -102,10 +103,11 @@ public partial class SettingsWindow : Window
         if (h == IntPtr.Zero) return;
         // Ohne Glaseffekt: fast deckend und ohne Unschärfe – spart auf schwächeren Grafikkarten viel Arbeit,
         // weil Windows den animierten Hintergrund dann nicht bei jedem Bild neu weichzeichnen muss.
-        bool blur = App.Config.SettingsGlass;
+        bool blur = App.Config.SettingsGlass && Native.GlassAvailable;
         uint tint = App.Config.Tint(blur ? Math.Max(App.Config.DockOpacity, 55) : 100);
         if (_glass == (tint, blur)) return;
         _glass = (tint, blur);
+        if (!Native.GlassAvailable) System.Windows.Shell.WindowChrome.GetWindowChrome(this).GlassFrameThickness = new Thickness(0);
         Native.ApplyGlass(h, tint, blur);
 
         // Ohne Glas: ganz deckend (Glasfarbe, etwas aufgehellt, damit Karten und Text wie gewohnt wirken)

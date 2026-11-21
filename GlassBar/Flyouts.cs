@@ -50,7 +50,7 @@ public class FlyoutBase : Window
 
         WindowChrome.SetWindowChrome(this, new WindowChrome
         {
-            GlassFrameThickness = new Thickness(-1),
+            GlassFrameThickness = new Thickness(Native.GlassAvailable ? -1 : 0),
             CaptionHeight = 0,
             ResizeBorderThickness = new Thickness(0),
             CornerRadius = new CornerRadius(0),
@@ -66,6 +66,8 @@ public class FlyoutBase : Window
         };
 
         SizeChanged += (_, _) => Reposition();
+        // Ohne Acryl rundet Windows die Ecken nicht: dann das Fenster selbst zuschneiden (Rundung wie die Fenster, 8 DIP)
+        Native.KeepRounded(this, () => 8);
         MouseEnter += (_, _) => _closeTimer.Stop();
         MouseLeave += (_, _) => { if (!Sticky) _closeTimer.Start(); };
         Activated += (_, _) => { Sticky = true; _closeTimer.Stop(); };

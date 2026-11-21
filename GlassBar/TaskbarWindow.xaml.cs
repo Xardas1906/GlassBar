@@ -63,11 +63,13 @@ public partial class TaskbarWindow : Window
         // Eigenes, schwebendes Fenster mit echtem Windows-Acryl – nur so groß wie das Dock.
         System.Windows.Shell.WindowChrome.SetWindowChrome(this, new System.Windows.Shell.WindowChrome
         {
-            GlassFrameThickness = new Thickness(-1), CaptionHeight = 0,
+            GlassFrameThickness = new Thickness(Native.GlassAvailable ? -1 : 0), CaptionHeight = 0,
             ResizeBorderThickness = new Thickness(0), CornerRadius = new CornerRadius(0),
             UseAeroCaptionButtons = false,
         });
         SizeChanged += (_, _) => PlaceDock();
+        // Ohne Acryl rundet Windows die Ecken nicht: dann das Fenster selbst zuschneiden
+        Native.KeepRounded(this, () => Root.CornerRadius.TopLeft);
         SystemParameters.StaticPropertyChanged += (_, e) => { if (e.PropertyName == nameof(SystemParameters.WorkArea)) PlaceDock(); };
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += (_, _) => Dispatcher.BeginInvoke(PlaceDock);
 
@@ -710,27 +712,8 @@ public partial class TaskbarWindow : Window
         ApplySlide();
     }
 
-    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
-    private static extern IntPtr CreateRoundRectRgn(int x1, int y1, int x2, int y2, int w, int h);
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern int SetWindowRgn(IntPtr hwnd, IntPtr rgn, bool redraw);
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern bool GetWindowRect(IntPtr hwnd, out Native.RECT rect);
-
-    /// <summary>
-    /// Schneidet das Fenster auf die abgerundete Leiste zu. Dadurch liegt die Unschärfe nur hinter
-    /// dem Glas, und der Rand rundherum ist wirklich durchsichtig (und durchklickbar).
-    /// </summary>
-    private void ApplyGlassShape()
-    {
-        var hwnd = new WindowInteropHelper(this).Handle;
-        if (hwnd == IntPtr.Zero || ActualWidth <= 0) return;
-        double s = System.Windows.Media.VisualTreeHelper.GetDpi(this).DpiScaleX;
-        GetWindowRect(hwnd, out var wr);   // echte Pixelgröße des Fensters
-        int w = wr.Right - wr.Left, h = wr.Bottom - wr.Top;
-        int d = (int)Math.Round(Root.CornerRadius.TopLeft * 2 * s);
-        SetWindowRgn(hwnd, CreateRoundRectRgn(0, 0, w + 1, h + 1, d, d), true);
-    }
 
     // ---------- Vergrößerung beim Drüberfahren (Mac-Dock) ----------
     private const double MaxScale = 1.25, Spread = 60;

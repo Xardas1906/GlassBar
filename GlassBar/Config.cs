@@ -16,6 +16,8 @@ public class Config
     // ---------- Inhalte (werden nicht im Einstellungsfenster geändert) ----------
     public List<string> Pinned { get; set; } = new();
     public string[]? PinnedTrayIcons { get; set; }
+    /// <summary>Windows-Auswahl „immer in der Taskleiste“ wurde einmal übernommen (siehe TrayRescue).</summary>
+    public bool TrayPromotedImported { get; set; }
 
     /// <summary>Gruppen je Ordner ("&lt;desktop&gt;" oder Ordnerpfad).</summary>
     public Dictionary<string, List<FolderGroup>> FolderGroups { get; set; } = new();
@@ -156,7 +158,7 @@ public class Config
     {
         var d = new Config();
         foreach (var p in typeof(Config).GetProperties())
-            if (p.CanWrite && p.Name is not (nameof(Pinned) or nameof(PinnedTrayIcons) or nameof(FolderGroups) or nameof(CollapsedRest) or nameof(WallpaperTasks) or nameof(WeatherCity)))
+            if (p.CanWrite && p.Name is not (nameof(Pinned) or nameof(PinnedTrayIcons) or nameof(TrayPromotedImported) or nameof(FolderGroups) or nameof(CollapsedRest) or nameof(WallpaperTasks) or nameof(WeatherCity)))
                 p.SetValue(this, p.GetValue(d));
         Normalize();
     }

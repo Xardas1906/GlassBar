@@ -102,7 +102,8 @@ internal static class Theme
     {
         uint tint = Tint(App.Config, opacityPercent);
         if (hwnd != IntPtr.Zero) Native.ApplyGlass(hwnd, tint, plainBlur: IsLight);
-        w.Background = IsLight ? Brush(tint) : Brushes.Transparent;
+        // Ohne Acryl (VM, Remotedesktop …): deckend in der Glasfarbe, sonst bliebe die Fläche schwarz
+        w.Background = !Native.GlassAvailable ? Brush(tint | 0xFF000000) : IsLight ? Brush(tint) : Brushes.Transparent;
     }
 
     /// <summary>Pinsel aus den Design-Ressourcen (für Elemente, die im Code entstehen).</summary>

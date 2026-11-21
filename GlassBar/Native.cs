@@ -119,6 +119,9 @@ internal static class Native
         DwmSetWindowAttribute(hwnd, 20, ref dark, 4);   // dunkler Modus
         DwmSetWindowAttribute(hwnd, 33, ref round, 4);  // runde Ecken
         DwmSetWindowAttribute(hwnd, 38, ref none, 4);   // kein System-Backdrop (wir machen es selbst)
+        // Ohne Acryl (virtuelle Maschine, Remotedesktop, einfache Grafik): kein Glasrahmen und keine Tönung von
+        // Windows – die Fläche bliebe sonst schwarz. Das Fenster malt seinen Hintergrund dann selbst (siehe Theme).
+        if (!GlassAvailable) return;
         var m = new MARGINS { Left = -1, Right = -1, Top = -1, Bottom = -1 };
         DwmExtendFrameIntoClientArea(hwnd, ref m);
 
@@ -165,6 +168,96 @@ internal static class Native
             FlushMenuThemes();
         }
         catch { }
+    }
+
+    // ---------- Runde Ecken ohne Windows-Hilfe ----------
+    [DllImport("gdi32.dll")] private static extern IntPtr CreateRoundRectRgn(int x1, int y1, int x2, int y2, int w, int h);
+    [DllImport("user32.dll")] private static extern int SetWindowRgn(IntPtr hwnd, IntPtr rgn, bool redraw);
+    [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
+
+    /// <summary>
+    /// Fenster auf ein Rechteck mit runden Ecken zuschneiden (Radius in DIP). Ohne Acryl rundet Windows die Ecken
+    /// nicht selbst; die Ecken außerhalb der Rundung zeigten sonst den Fensterhintergrund.
+    /// </summary>
+    public static void RoundCorners(IntPtr hwnd, double radiusDip, double dpiScale)
+    {
+        if (hwnd == IntPtr.Zero) return;
+        GetWindowRect(hwnd, out var r);
+        int w = r.Right - r.Left, h = r.Bottom - r.Top;
+        if (w <= 0 || h <= 0) return;
+        int d = (int)Math.Round(radiusDip * 2 * dpiScale);
+        SetWindowRgn(hwnd, CreateRoundRectRgn(0, 0, w + 1, h + 1, d, d), true); // Windows übernimmt die Region
+    }
+
+    /// <summary>
+    /// Ohne Acryl: Fenster dauerhaft rund zuschneiden. WPF (WindowChrome) setzt die Fensterregion bei Größen- und
+    /// Positionsänderungen selbst wieder auf ein Rechteck – darum nach jeder Änderung neu anwenden, und zwar erst,
+    /// wenn WPF damit fertig ist (BeginInvoke).
+    /// </summary>
+    public static void KeepRounded(System.Windows.Window w, Func<double> radiusDip)
+    {
+        if (GlassAvailable) return;
+        void Apply() => w.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, () =>
+        {
+            var h = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+            if (h != IntPtr.Zero) RoundCorners(h, radiusDip(), System.Windows.Media.VisualTreeHelper.GetDpi(w).DpiScaleX);
+        });
+        w.SourceInitialized += (_, _) => Apply();
+        w.SizeChanged += (_, _) => Apply();
+        w.LocationChanged += (_, _) => Apply();
+        w.IsVisibleChanged += (_, _) => { if (w.IsVisible) Apply(); };
+        w.DpiChanged += (_, _) => Apply();
+    }
+
+    // ---------- Gibt es Acryl? ----------
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct DISPLAY_DEVICE
+    {
+        public int cb;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string DeviceName;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string DeviceString;
+        public int StateFlags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string DeviceID;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string DeviceKey;
+    }
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern bool EnumDisplayDevices(string? device, uint index, ref DISPLAY_DEVICE dd, uint flags);
+    [DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
+
+    private static bool? _glassAvailable;
+
+    /// <summary>
+    /// Kann Windows hier Acryl (Unschärfe mit Tönung) zeichnen? Nicht in einer virtuellen Maschine, über Remotedesktop
+    /// oder mit dem einfachen Anzeigetreiber – und nicht, wenn Transparenz in Windows ausgeschaltet ist. Dort zeichnet
+    /// Windows die Glasfläche schwarz; GlassBar malt dann einen deckenden Hintergrund selbst.
+    /// </summary>
+    public static bool GlassAvailable
+    {
+        get
+        {
+            if (_glassAvailable is bool known) return known;
+            bool ok = true;
+            try
+            {
+                if (GetSystemMetrics(0x1000 /* SM_REMOTESESSION */) != 0) ok = false;
+                using var k = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+                if (k?.GetValue("EnableTransparency") is int t && t == 0) ok = false;
+                var dd = new DISPLAY_DEVICE { cb = Marshal.SizeOf<DISPLAY_DEVICE>() };
+                for (uint i = 0; ok && EnumDisplayDevices(null, i, ref dd, 0); i++)
+                {
+                    if ((dd.StateFlags & 0x4 /* PRIMARY_DEVICE */) == 0) continue;
+                    string name = dd.DeviceString ?? "";
+                    if (name.Contains("Hyper-V", StringComparison.OrdinalIgnoreCase) || name.Contains("Basic", StringComparison.OrdinalIgnoreCase)
+                        || name.Contains("Remote Display", StringComparison.OrdinalIgnoreCase) || name.Contains("VMware", StringComparison.OrdinalIgnoreCase)
+                        || name.Contains("VirtualBox", StringComparison.OrdinalIgnoreCase))
+                        ok = false;
+                    break;
+                }
+            }
+            catch (Exception ex) { Log.Error("Acryl prüfen", ex); }
+            if (!ok) Log.Info("Kein Acryl verfügbar (virtuelle Maschine, Remotedesktop, einfache Grafik oder Transparenz aus): deckender Hintergrund.");
+            _glassAvailable = ok;
+            return ok;
+        }
     }
 
     // ---------- Desktop-Fenster ----------
