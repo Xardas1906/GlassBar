@@ -49,6 +49,19 @@ public static class StillModules
         Registered.AddOrUpdate(r, new Parts { Edit = edit, Alarms = alarms, Lyrics = lyrics });
     }
 
+    /// <summary>
+    /// Pillen für einen Nebenbildschirm: nur die, deren Zustand allen gemeinsam gehört (Musik, Gebetszeiten, Wetter).
+    /// Wasser, Pomodoro, Workout, Klang und Wecker führen je Pille einen eigenen Stand und bleiben auf dem
+    /// Hauptbildschirm – zwei Exemplare würden sich gegenseitig überschreiben (und Wecker doppelt klingeln).
+    /// </summary>
+    public static void RegisterSecondary(StillRenderer r)
+    {
+        var u = r.Ui;
+        u.Add(new MusicPill());
+        u.Add(new PrayerPill());
+        u.Add(new WeatherCard());
+    }
+
     /// <summary>Wetter für die Klanglandschaft „passend zum Wetter“ (WMO-Code).</summary>
     public static void SetWeatherCode(int wmo) => Soundscape.WeatherKind = () => Soundscape.KindFromWmo(wmo);
 

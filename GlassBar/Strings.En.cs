@@ -279,6 +279,7 @@ public static partial class Strings
         ["das Dock auf dem Hauptbildschirm ausgeblendet ist"] = "the dock on the main monitor is hidden",
         ["Hintergrund „Still“ auf Nebenbildschirmen"] = "“Still” wallpaper on secondary monitors",
         ["Pillen und Karten gibt es nur auf dem Hauptbildschirm; ein Dock dort ist nicht nötig."] = "Pills and cards only exist on the main monitor; no dock is needed there.",
+        ["Ein Dock dort ist nicht nötig."] = "No dock is needed there.",
         ["Nur Licht"] = "Light only",
         ["Licht mit Uhr und Datum"] = "Light with clock and date",
 

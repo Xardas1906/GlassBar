@@ -50,6 +50,8 @@ public sealed class MediaControls
     public Action Previous { get; init; } = () => { };
     /// <summary>Im Lied springen (Sekunden ab Liedanfang).</summary>
     public Action<double> Seek { get; init; } = _ => { };
+    /// <summary>Lautstärke des abspielenden Programms ändern (+1/-1 Raste); der Rückruf bekommt die neue Lautstärke (0–1).</summary>
+    public Action<int, Action<float>> Volume { get; init; } = (_, _) => { };
 }
 
 public enum PointerKind { Move, Down, Up, Wheel, Leave }

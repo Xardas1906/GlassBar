@@ -42,6 +42,11 @@ public sealed class NativeStillWindow : IDisposable
     private StillRenderer? _renderer;
 
     public StillRenderer? Renderer => _renderer;
+
+    /// <summary>Ist die Maus über der Oberfläche (Pillen, Karten) irgendeines Hintergrunds? Für den Desktop-Hook.</summary>
+    public static bool AnyOverUi { get { lock (All) return All.Any(w => w._renderer?.OverUi == true); } }
+    /// <summary>Hält irgendeine Oberfläche die Maus fest (z. B. beim Ziehen)?</summary>
+    public static bool AnyCaptured { get { lock (All) return All.Any(w => w._renderer?.PointerCaptured == true); } }
     public IntPtr Handle => _hwnd;
 
     private readonly string _screenName;

@@ -142,6 +142,8 @@ public class Config
     public string StartLogoColor { get; set; } = "White";
     /// <summary>Nativer Hintergrund auf Nebenbildschirmen: "Off", "Light" (nur Licht) oder "Clock" (Licht mit Uhr und Datum).</summary>
     public string WallpaperSecondary { get; set; } = "Clock";
+    /// <summary>Pillen (Musik, Gebetszeiten, Wetter) auch auf den Nebenbildschirmen zeigen.</summary>
+    public bool WallpaperSecondaryPills { get; set; }
     /// <summary>Was hinter Uhr und Pillen liegt: "Light" (Lichtfeld), "Image" (Windows-Hintergrundbild) oder "Solid" (einfarbig).</summary>
     /// <summary>Tempo und Stärke je Hintergrundeffekt in Prozent (100 = normal); fehlt ein Effekt, gilt 100.</summary>
     public Dictionary<string, double> EffectSpeed { get; set; } = new();

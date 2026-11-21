@@ -158,6 +158,8 @@ public sealed class StillRenderer : IDisposable
     public bool ShowText { get; set; } = true;
     /// <summary>Eigener Effekt für diesen Bildschirm (Nebenbildschirme); null = BackgroundMode wie der Hauptbildschirm.</summary>
     public string? ModeOverride { get; set; }
+    /// <summary>Pillen und Karten zeigen (Nebenbildschirme: nach Einstellung, ohne den Hintergrund neu aufzubauen).</summary>
+    public volatile bool ShowUi = true;
 
     /// <summary>Bilder pro Sekunde (WallpaperFps aus den GlassBar-Einstellungen).</summary>
     public int Fps { get; set; } = 30;
@@ -472,6 +474,15 @@ public sealed class StillRenderer : IDisposable
         c.Bloom = (x, y, k) => Flow.Bloom(x, y, k);
         c.Toast = Toast;
         c.StageBusy = 0;
+
+        if (!ShowUi)
+        {
+            // Oberfläche ausgeblendet (Nebenbildschirm ohne Pillen): Maus nur mitzählen, nichts zeichnen
+            while (_pointer.TryDequeue(out var e)) _pointerInside = e.Kind != PointerKind.Leave;
+            OverUi = false;
+            PointerCaptured = false;
+            return;
+        }
 
         while (_pointer.TryDequeue(out var e))
         {

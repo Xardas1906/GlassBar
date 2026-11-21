@@ -5,8 +5,9 @@ namespace GlassBar.NativeStill;
 
 /// <summary>
 /// Der native Hintergrund auf den Nebenbildschirmen – unabhängig davon, ob dort ein Dock ist.
-/// Je nach Einstellung „Hintergrund auf Nebenbildschirmen“: aus, nur das Licht, oder Licht mit Uhr und Datum.
-/// Pillen und Karten gibt es nur auf dem Hauptbildschirm. Jeder Bildschirm schläft einzeln, wenn ein Fenster
+/// Je nach Einstellung „Hintergrund auf Nebenbildschirmen“: aus, nur das Licht, oder Licht mit Uhr und Datum;
+/// dazu wahlweise die Pillen Musik, Gebetszeiten und Wetter (siehe StillModules.RegisterSecondary).
+/// Die übrigen Pillen gibt es nur auf dem Hauptbildschirm. Jeder Bildschirm schläft einzeln, wenn ein Fenster
 /// ihn verdeckt (maximiert, Vollbild oder fast bildschirmfüllend).
 /// </summary>
 public static class SecondaryWallpapers
@@ -20,7 +21,7 @@ public static class SecondaryWallpapers
         Windows.Values.Select(w => w.Renderer).Where(r => r != null).Cast<StillRenderer>().ToList();
 
     /// <summary>Gewünschten Stand herstellen (beim Start, nach Einstellungen, bei geänderten Bildschirmen).</summary>
-    public static void Update(bool nativeActive, Func<float[]?>? audio)
+    public static void Update(bool nativeActive, Func<float[]?>? audio, Ui.MediaControls? controls = null)
     {
         _audio = audio;
         string mode = App.Config.WallpaperSecondary;
@@ -29,6 +30,10 @@ public static class SecondaryWallpapers
             ? System.Windows.Forms.Screen.AllScreens.Where(s => !s.Primary).ToDictionary(s => s.DeviceName)
             : new Dictionary<string, System.Windows.Forms.Screen>();
 
+        // Pillen (Musik, Gebetszeiten, Wetter) nur, wenn eingestellt und mit Uhr – im Modus „Nur Licht“ bleibt es ruhig
+        bool pills = App.Config.WallpaperSecondaryPills && mode != "Light";
+
+        // Nicht mehr gewünschte Bildschirme schließen
         foreach (var name in Windows.Keys.Where(n => !screens.ContainsKey(n)).ToList())
         {
             Windows[name].Dispose();
@@ -42,6 +47,9 @@ public static class SecondaryWallpapers
                 var w = new NativeStillWindow(screen);
                 w.Renderer?.Bind(NativeStillStore.Values);
                 if (_audio != null) w.Renderer?.SetAudioSource(_audio);
+                // Pillen immer anmelden, aber nur bei eingeschalteter Einstellung zeigen: so bleibt der Hintergrund beim
+                // Umschalten stehen (Neuaufbau ließe ihn kurz verschwinden)
+                if (w.Renderer is { } pr) StillModules.RegisterSecondary(pr);
                 Windows[name] = w;
             }
             catch (Exception ex) { TaskbarWindow.Debug("Still nativ (Nebenbildschirm): " + ex.Message); }
@@ -49,6 +57,8 @@ public static class SecondaryWallpapers
         foreach (var w in Windows.Values)
         {
             if (w.Renderer is not { } r) continue;
+            if (controls != null) r.Controls = controls; // Musik-Knöpfe, Springen, Lautstärke wie auf dem Hauptbildschirm
+            r.ShowUi = pills;
             r.ShowText = mode != "Light";
             r.ModeOverride = App.Config.WallpaperSecondaryField is { Length: > 0 } f && f != "Same" ? f : null;
             r.Fps = (int)Math.Clamp(App.Config.WallpaperFps, 10, 60);

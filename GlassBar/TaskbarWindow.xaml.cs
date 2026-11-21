@@ -943,18 +943,19 @@ public partial class TaskbarWindow : Window
             {
                 // Maus an den Hintergrund: Bewegung immer (Strömung, Hover), Klicks nur über Pillen/Karten –
                 // die gehören dann dem Hintergrund und nicht dem Desktop.
-                // Ein Hook für alle Bildschirme: Strömung und Leuchten überall, die Oberfläche nur hier
+                // Ein Hook für alle Bildschirme: Strömung und Leuchten überall, Pillen auf Nebenbildschirmen je nach Einstellung
                 _mouseHook = new DesktopMouseHook(NativeStill.NativeStillWindow.Route,
-                    () => false, () => r.OverUi, () => r.OverUi,
+                    () => false, () => NativeStill.NativeStillWindow.AnyOverUi, () => NativeStill.NativeStillWindow.AnyOverUi,
                     (x, y) => Dispatcher.BeginInvoke(() => DesktopShell.ShowDesktopMenu(x, y)),
                     on => { if (!on) NativeStill.NativeStillWindow.RouteLeave(); }, swallowUiClicks: true, allScreens: true,
-                    captured: () => r.PointerCaptured);
+                    captured: () => NativeStill.NativeStillWindow.AnyCaptured);
                 r.Controls = new NativeStill.Ui.MediaControls
                 {
                     PlayPause = () => Dispatcher.BeginInvoke(() => _media?.PlayPause()),
                     Next = () => Dispatcher.BeginInvoke(() => _media?.Next()),
                     Previous = () => Dispatcher.BeginInvoke(() => _media?.Previous()),
                     Seek = s => Dispatcher.BeginInvoke(() => _media?.Seek(s)),
+                    Volume = (dir, shown) => Dispatcher.BeginInvoke(() => { if (ChangeMusicVolume(dir) is { } v) shown(v); }),
                 };
                 NativeStill.StillModules.Register(r, Dispatcher);
                 PushMediaToNative();
@@ -967,7 +968,7 @@ public partial class TaskbarWindow : Window
         }
         if (!want) { _nativeAudio?.Dispose(); _nativeAudio = null; }
         var shared = _nativeAudio;
-        NativeStill.SecondaryWallpapers.Update(want, shared != null ? () => shared.Read() : null);
+        NativeStill.SecondaryWallpapers.Update(want, shared != null ? () => shared.Read() : null, _native?.Renderer?.Controls);
         PushMediaToNative();
         if (_native?.Renderer is { } rr)
         {
@@ -1378,6 +1379,38 @@ public partial class TaskbarWindow : Window
         WinKeyHook.Send(key, up: false);
         WinKeyHook.Send(key, up: true);
     }
+
+    /// <summary>
+    /// Mausrad über der Musik: Lautstärke des Programms, das gerade spielt (wie im Lautstärkemixer).
+    /// Lässt sich keine Audio-Sitzung dazu finden, wie bisher die Systemlautstärke.
+    /// </summary>
+    private void Music_MouseWheel(object s, MouseWheelEventArgs e)
+    {
+        if (!App.Config.WheelActions) return;
+        e.Handled = true;
+        int dir = Math.Sign(e.Delta);
+        if (ChangeMusicVolume(dir) is { } v)
+        {
+            // kurz statt des Interpreten anzeigen
+            MusicArtist.Text = L.F("Lautstärke {0} %", Math.Round(v * 100));
+            _volumeFlash.Stop();
+            _volumeFlash.Start();
+        }
+        else Volume_MouseWheel(s, e);
+    }
+
+    private DispatcherTimer? _volumeFlashTimer;
+    private DispatcherTimer _volumeFlash => _volumeFlashTimer ??= CreateVolumeFlash();
+    private DispatcherTimer CreateVolumeFlash()
+    {
+        var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.6) };
+        t.Tick += (_, _) => { t.Stop(); UpdateMusicUi(); };
+        return t;
+    }
+
+    /// <summary>Lautstärke des Musikprogramms um eine Stufe (4 %) ändern; null = keine passende Audio-Sitzung.</summary>
+    private float? ChangeMusicVolume(int dir) =>
+        _media is { HasMedia: true } m && dir != 0 ? AppVolume.Change(m.App, dir * 0.04f) : null;
 
     /// <summary>Mausrad über einem Programm mit mehreren Fenstern: zwischen seinen Fenstern wechseln.</summary>
     private void App_MouseWheel(object s, MouseWheelEventArgs e)

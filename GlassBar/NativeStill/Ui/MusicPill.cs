@@ -44,6 +44,10 @@ public sealed class MusicPill : Pill
 
     // Angezeigter Text (wechselt beim Liedwechsel erst nach dem Ausblenden)
     private string _title = "", _artist = "", _album = "";
+
+    // Lautstärke nach dem Mausrad kurz anzeigen (statt der Album-Zeile); gesetzt aus dem UI-Thread
+    private volatile float _volume;
+    private DateTime _volumeUntil;
     private int _swapPhase;                    // 0 = ruhig, 1 = ausblenden, 2 = einblenden
     private float _swapT, _swapFrom = 1, _swapAlpha = 1, _swapDy;
 
@@ -434,6 +438,10 @@ public sealed class MusicPill : Pill
                 if (hit == pressed) Press(c, hit);
                 return true;
             }
+            case PointerKind.Wheel when e.Wheel != 0:
+                // Mausrad: Lautstärke des Programms, das gerade spielt (Spotify, Browser …)
+                c.Controls.Volume(Math.Sign(e.Wheel), v => { _volume = v; _volumeUntil = DateTime.UtcNow.AddSeconds(1.6); });
+                return true;
             default:
                 return false;
         }
@@ -615,7 +623,16 @@ public sealed class MusicPill : Pill
                 DrawLine(ctx, c, 1, ix, iy, ArtistLine * k, new Color4(fg.X, fg.Y, fg.Z, 0.64f * infoA));
                 iy += ArtistLine * k;
             }
-            if (_album.Length > 0)
+            if (DateTime.UtcNow < _volumeUntil)
+            {
+                // Lautstärke als Balken an Stelle des Albums
+                float bw = (InfoW - 4) * k, bh = 4 * k, by = iy + (AlbumLine * k - bh) / 2;
+                brush.Color = new Color4(fg.X, fg.Y, fg.Z, 0.16f * infoA);
+                ctx.FillRoundedRectangle(RRect(ix, by, bw, bh, bh / 2), brush);
+                brush.Color = new Color4(fg.X, fg.Y, fg.Z, 0.85f * infoA);
+                ctx.FillRoundedRectangle(RRect(ix, by, Math.Max(bh, bw * _volume), bh, bh / 2), brush);
+            }
+            else if (_album.Length > 0)
                 DrawLine(ctx, c, 2, ix, iy, AlbumLine * k, new Color4(fg.X, fg.Y, fg.Z, 0.4f * infoA));
         }
 

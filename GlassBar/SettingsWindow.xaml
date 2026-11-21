@@ -835,7 +835,7 @@
                         <StackPanel Margin="0,12,0,12" IsEnabled="{Binding ShowWallpaper}">
                             <TextBlock Margin="0,0,0,10">
                                 Hintergrund „Still“ auf Nebenbildschirmen
-                                <LineBreak/><Run Text="Pillen und Karten gibt es nur auf dem Hauptbildschirm; ein Dock dort ist nicht nötig." Foreground="{StaticResource Sub}" FontSize="12"/>
+                                <LineBreak/><Run Text="Ein Dock dort ist nicht nötig." Foreground="{StaticResource Sub}" FontSize="12"/>
                             </TextBlock>
                             <WrapPanel>
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondary" Content="Aus"
@@ -845,6 +845,13 @@
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondary" Content="Licht mit Uhr und Datum"
                                              IsChecked="{Binding WallpaperSecondary, Converter={StaticResource Eq}, ConverterParameter=Clock}"/>
                             </WrapPanel>
+                            <DockPanel Margin="0,12,0,0">
+                                <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding WallpaperSecondaryPills}"/>
+                                <TextBlock Style="{StaticResource Label}">
+                                    Pillen auch auf Nebenbildschirmen
+                                    <LineBreak/><Run Text="Musik, Gebetszeiten und Wetter. Wasser, Pomodoro, Workout, Klang und Wecker bleiben auf dem Hauptbildschirm. Nicht bei „Nur Licht“." Foreground="{StaticResource Sub}" FontSize="12"/>
+                                </TextBlock>
+                            </DockPanel>
                             <TextBlock Margin="0,10,0,8" Text="Effekt auf Nebenbildschirmen"/>
                             <WrapPanel>
                                 <RadioButton Style="{StaticResource Segment}" GroupName="WpSecondaryField" Content="Wie Hauptbildschirm"
