@@ -127,6 +127,8 @@ public class AppButton : INotifyPropertyChanged
             string? exe = Pin == null ? ProgramOf(Windows.FirstOrDefault(w => !w.IsUWP))
                 : Pin.Path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? Pin.Path : null;
             if (windowIcon != null && !string.IsNullOrEmpty(exe) && PackagedApps.HasIconResources(exe) == false) return windowIcon;
+            // Prozess ist keine .exe (z. B. .bin): Windows zeigt dafür nur das Symbol des Dateityps -> Fenstersymbol
+            if (windowIcon != null && Pin == null && exe != null && !exe.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) return windowIcon;
             return Pin?.Item.ExtraLargeIcon ?? ExeItem?.ExtraLargeIcon ?? windowIcon;
         }
     }
@@ -201,7 +203,21 @@ public class AppButton : INotifyPropertyChanged
     /// Fenster von steamwebhelper.exe) die, mit der Windows es neu startet.
     /// </summary>
     internal static string? ProgramOf(ApplicationWindow? w) =>
-        w == null || w.IsUWP ? null : JumpList.WindowRelaunchExe(w.Handle, w.WinFileName) ?? w.WinFileName;
+        w == null || w.IsUWP ? null : JumpList.WindowRelaunchExe(w.Handle, w.WinFileName) ?? SiblingExe(w.WinFileName) ?? w.WinFileName;
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string?> Siblings = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Fenster eines Prozesses, der keine .exe ist (NoMachine: nxplayer.bin, gestartet über nxplayer.exe): die
+    /// gleichnamige .exe daneben ist das eigentliche Programm – zum Anheften, Starten und für das Symbol.
+    /// </summary>
+    private static string? SiblingExe(string? file) =>
+        string.IsNullOrEmpty(file) || file.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? null
+        : Siblings.GetOrAdd(file, static f =>
+        {
+            try { var exe = System.IO.Path.ChangeExtension(f, ".exe"); return File.Exists(exe) ? exe : null; }
+            catch { return null; }
+        });
 
     public static string KeyOf(ApplicationWindow w)
     {

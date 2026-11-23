@@ -17,6 +17,15 @@ internal static class WhatsNew
     /// <summary>Neueste zuerst. Kurz halten: das, was man sonst nicht entdeckt.</summary>
     private static readonly Note[] Notes =
     {
+        new("1.6.3",
+            new[]
+            {
+                "NoMachine zeigt sein Symbol: Programme, deren Fenster zu keiner .exe gehört (nxplayer.bin), bekommen das Symbol ihres Fensters bzw. der gleichnamigen .exe – und lassen sich richtig anheften.",
+            },
+            new[]
+            {
+                "NoMachine shows its icon: apps whose window doesn't belong to an .exe (nxplayer.bin) get the icon of their window or of the .exe next to it – and can be pinned properly.",
+            }),
         new("1.6.2",
             new[]
             {
