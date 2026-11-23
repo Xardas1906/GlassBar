@@ -17,6 +17,15 @@ internal static class WhatsNew
     /// <summary>Neueste zuerst. Kurz halten: das, was man sonst nicht entdeckt.</summary>
     private static readonly Note[] Notes =
     {
+        new("1.6.2",
+            new[]
+            {
+                "Steam lässt sich anheften: Programme, deren Fenster ein Hilfsprozess zeigt (Steam: steamwebhelper.exe), werden jetzt als das eigentliche Programm erkannt – Anheften, Starten und Symbol passen.",
+            },
+            new[]
+            {
+                "Steam can be pinned: apps whose window belongs to a helper process (Steam: steamwebhelper.exe) are now recognized as the actual app – pinning, launching and the icon are right.",
+            }),
         new("1.6.1",
             new[]
             {

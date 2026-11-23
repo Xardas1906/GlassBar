@@ -689,6 +689,44 @@ public static class JumpList
         finally { Release(store); }
     }
 
+    private static readonly PROPERTYKEY PKEY_AppUserModel_RelaunchCommand = new("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3", 2);
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<IntPtr, (string? Exe, DateTime At)> RelaunchCache = new();
+
+    /// <summary>
+    /// Programm, mit dem Windows ein Fenster neu startet (PKEY_AppUserModel_RelaunchCommand), wenn es eine andere
+    /// Programmdatei ist als die des Fensters. Beispiel Steam: das Fenster gehört steamwebhelper.exe, angeheftet und
+    /// gestartet wird aber steam.exe. Nur einfache Pfade ohne Argumente (sonst z. B. Web-Apps mit „--app-id“).
+    /// </summary>
+    public static string? WindowRelaunchExe(IntPtr hwnd, string? windowExe)
+    {
+        if (hwnd == IntPtr.Zero) return null;
+        // je Fenster kurz merken: wird bei jedem Neuordnen der Knöpfe gefragt
+        if (RelaunchCache.TryGetValue(hwnd, out var c) && (c.Exe != null || (DateTime.UtcNow - c.At).TotalSeconds < 5))
+            return Differs(c.Exe, windowExe);
+        string? exe = null;
+        try
+        {
+            var iid = typeof(IPropertyStore).GUID;
+            if (SHGetPropertyStoreForWindow(hwnd, ref iid, out var store) == 0 && store != null)
+            {
+                string? cmd;
+                try { cmd = ReadString(store, PKEY_AppUserModel_RelaunchCommand); }
+                finally { Release(store); }
+                cmd = cmd?.Trim();
+                if (cmd is { Length: > 2 } && cmd[0] == '"' && cmd.IndexOf('"', 1) == cmd.Length - 1) cmd = cmd[1..^1];
+                if (cmd != null && cmd.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && !cmd.Contains('"') && File.Exists(cmd))
+                    exe = cmd;
+            }
+        }
+        catch { }
+        if (RelaunchCache.Count > 500) RelaunchCache.Clear();
+        RelaunchCache[hwnd] = (exe, DateTime.UtcNow);
+        return Differs(exe, windowExe);
+
+        static string? Differs(string? exe, string? windowExe) =>
+            exe != null && !string.Equals(exe, windowExe, StringComparison.OrdinalIgnoreCase) ? exe : null;
+    }
+
     private static string? FileProperty(string path)
     {
         var iid = typeof(IPropertyStore).GUID;

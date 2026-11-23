@@ -102,7 +102,7 @@ public class AppButton : INotifyPropertyChanged
     {
         get
         {
-            if (_exeItem == null && Pin == null && Windows.FirstOrDefault(w => !w.IsUWP)?.WinFileName is { Length: > 0 } exe && File.Exists(exe))
+            if (_exeItem == null && Pin == null && ProgramOf(Windows.FirstOrDefault(w => !w.IsUWP)) is { Length: > 0 } exe && File.Exists(exe))
             {
                 _exeItem = new ShellItem(exe);
                 _exeItem.PropertyChanged += OnPinItemChanged;
@@ -124,7 +124,7 @@ public class AppButton : INotifyPropertyChanged
             }
 
             // Programme ohne eigene Symbole: Windows liefert nur einen Platzhalter, das Fenster hat meist das echte
-            string? exe = Pin == null ? Windows.FirstOrDefault(w => !w.IsUWP)?.WinFileName
+            string? exe = Pin == null ? ProgramOf(Windows.FirstOrDefault(w => !w.IsUWP))
                 : Pin.Path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? Pin.Path : null;
             if (windowIcon != null && !string.IsNullOrEmpty(exe) && PackagedApps.HasIconResources(exe) == false) return windowIcon;
             return Pin?.Item.ExtraLargeIcon ?? ExeItem?.ExtraLargeIcon ?? windowIcon;
@@ -151,7 +151,7 @@ public class AppButton : INotifyPropertyChanged
 
     public string? ExecutablePath =>
         Pin?.Target is { } t && t.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && !PackagedApps.IsShellPath(t) ? t
-        : Windows.FirstOrDefault(w => !w.IsUWP)?.WinFileName;
+        : ProgramOf(Windows.FirstOrDefault(w => !w.IsUWP));
 
     /// <summary>AUMID, wenn dieser Knopf eine App aus dem Microsoft Store ist (angeheftet oder laufend).</summary>
     public string? PackagedAumid =>
@@ -196,11 +196,18 @@ public class AppButton : INotifyPropertyChanged
         return PackagedApps.FamilyFromAumid(aumid) is { } family ? new PackagedWindow(aumid!, family, true) : null;
     }
 
+    /// <summary>
+    /// Die Programmdatei, zu der ein Fenster gehört: meist die des Fensters, bei Programmen mit Hilfsprozess (Steam:
+    /// Fenster von steamwebhelper.exe) die, mit der Windows es neu startet.
+    /// </summary>
+    internal static string? ProgramOf(ApplicationWindow? w) =>
+        w == null || w.IsUWP ? null : JumpList.WindowRelaunchExe(w.Handle, w.WinFileName) ?? w.WinFileName;
+
     public static string KeyOf(ApplicationWindow w)
     {
         if (PackagedOf(w) is { } packaged) return PackagedApps.KeyFor(packaged.Aumid);
-        if (!w.IsUWP && !string.IsNullOrEmpty(w.WinFileName))
-            return System.IO.Path.GetFileName(w.WinFileName).ToLowerInvariant();
+        if (!w.IsUWP && !string.IsNullOrEmpty(ProgramOf(w)))
+            return System.IO.Path.GetFileName(ProgramOf(w)).ToLowerInvariant();
         return PackagedApps.WindowKey(w.AppUserModelID, w.Handle);
     }
 }
@@ -368,9 +375,9 @@ public class TaskbarModel
             return pin.Key;
 
         // Pin auf die Programmdatei (z. B. Startalias oder nicht umstellbar)
-        if (!w.IsUWP && !string.IsNullOrEmpty(w.WinFileName))
+        if (!w.IsUWP && !string.IsNullOrEmpty(AppButton.ProgramOf(w)))
         {
-            string exeKey = System.IO.Path.GetFileName(w.WinFileName).ToLowerInvariant();
+            string exeKey = System.IO.Path.GetFileName(AppButton.ProgramOf(w)).ToLowerInvariant();
             if (keysOfPins.Contains(exeKey)) return exeKey;
         }
         return key;
